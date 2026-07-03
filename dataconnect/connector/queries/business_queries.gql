@@ -1,0 +1,270 @@
+query SearchBusinesses($query: String, $cityId: UUID, $categoryId: UUID) @auth(level: PUBLIC) {
+  businesses(
+    where: {
+      status: { eq: "APPROVED" }
+      name: { contains: $query }
+      cityId: { eq: $cityId }
+      categoryId: { eq: $categoryId }
+    }
+    orderBy: [{ isFeatured: DESC }, { name: ASC }]
+  ) {
+    id
+    name
+    slug
+    description
+    category {
+      name
+      slug
+    }
+    city {
+      name
+    }
+    province {
+      name
+    }
+    isFeatured
+    businessPhotos_on_business(where: { isPrimary: { eq: true } }) {
+      photoUrl
+    }
+  }
+}
+
+query GetBusinessBySlug($slug: String!) @auth(level: PUBLIC) {
+  businesses(where: { slug: { eq: $slug } }) {
+    id
+    name
+    slug
+    description
+    status
+    isVerified
+    isFeatured
+    contactEmail
+    contactPhone
+    websiteUrl
+    addressLine1
+    latitude
+    longitude
+    category {
+      id
+      name
+      slug
+    }
+    subcategory {
+      id
+      name
+    }
+    city {
+      name
+    }
+    province {
+      name
+    }
+    region {
+      name
+    }
+    businessPhotos_on_business {
+      id
+      photoUrl
+      isPrimary
+    }
+    businessProducts_on_business {
+      id
+      name
+      description
+      price
+    }
+    businessServices_on_business {
+      id
+      name
+      description
+      priceRange
+    }
+  }
+}
+
+query GetBusinessesByCategory($categoryId: UUID!) @auth(level: PUBLIC) {
+  businesses(
+    where: { categoryId: { eq: $categoryId }, status: { eq: "APPROVED" } }
+    orderBy: [{ isFeatured: DESC }, { name: ASC }]
+  ) {
+    id
+    name
+    slug
+    city {
+      name
+    }
+    businessPhotos_on_business(where: { isPrimary: { eq: true } }) {
+      photoUrl
+    }
+  }
+}
+
+query GetBusinessesByCity($cityId: UUID!) @auth(level: PUBLIC) {
+  businesses(
+    where: { cityId: { eq: $cityId }, status: { eq: "APPROVED" } }
+    orderBy: [{ isFeatured: DESC }, { name: ASC }]
+  ) {
+    id
+    name
+    slug
+    category {
+      name
+    }
+    businessPhotos_on_business(where: { isPrimary: { eq: true } }) {
+      photoUrl
+    }
+  }
+}
+
+query GetBusinessesByProvince($provinceId: UUID!) @auth(level: PUBLIC) {
+  businesses(
+    where: { provinceId: { eq: $provinceId }, status: { eq: "APPROVED" } }
+    orderBy: [{ isFeatured: DESC }, { name: ASC }]
+  ) {
+    id
+    name
+    slug
+    category {
+      name
+    }
+    city {
+      name
+    }
+    businessPhotos_on_business(where: { isPrimary: { eq: true } }) {
+      photoUrl
+    }
+  }
+}
+
+query GetFeaturedBusinesses @auth(level: PUBLIC) {
+  businesses(
+    where: { isFeatured: { eq: true }, status: { eq: "APPROVED" } }
+    orderBy: [{ createdAt: DESC }]
+    limit: 10
+  ) {
+    id
+    name
+    slug
+    category {
+      name
+    }
+    city {
+      name
+    }
+    businessPhotos_on_business(where: { isPrimary: { eq: true } }) {
+      photoUrl
+    }
+  }
+}
+
+query GetRecentlyAddedBusinesses @auth(level: PUBLIC) {
+  businesses(
+    where: { status: { eq: "APPROVED" } }
+    orderBy: [{ createdAt: DESC }]
+    limit: 10
+  ) {
+    id
+    name
+    slug
+    category {
+      name
+    }
+    city {
+      name
+    }
+    businessPhotos_on_business(where: { isPrimary: { eq: true } }) {
+      photoUrl
+    }
+  }
+}
+
+query GetMyBusinesses($ownerId: String!) @auth(level: PUBLIC) {
+  businesses(where: { ownerId: { eq: $ownerId } }, orderBy: [{ createdAt: DESC }]) {
+    id
+    name
+    slug
+    status
+    createdAt
+  }
+}
+
+query GetBusinessById($id: UUID!) @auth(level: PUBLIC) {
+  business(key: { id: $id }) {
+    id
+    name
+    slug
+    description
+    status
+    isVerified
+    isFeatured
+    contactEmail
+    contactPhone
+    websiteUrl
+    addressLine1
+    latitude
+    longitude
+    categoryId
+    subcategoryId
+    cityId
+    provinceId
+    regionId
+    category {
+      id
+      name
+      slug
+    }
+    subcategory {
+      id
+      name
+    }
+    city {
+      id
+      name
+    }
+    province {
+      id
+      name
+    }
+    region {
+      id
+      name
+    }
+    businessPhotos_on_business {
+      id
+      photoUrl
+      isPrimary
+    }
+    businessProducts_on_business {
+      id
+      name
+      description
+      price
+    }
+    businessServices_on_business {
+      id
+      name
+      description
+      priceRange
+    }
+  }
+}
+
+query GetAllBusinesses($status: String) @auth(level: PUBLIC) {
+  businesses(
+    where: { status: { eq: $status } }
+    orderBy: [{ createdAt: DESC }]
+  ) {
+    id
+    name
+    slug
+    status
+    ownerId
+    createdAt
+    category {
+      name
+    }
+    city {
+      name
+    }
+  }
+}

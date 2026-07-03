@@ -1,0 +1,49 @@
+# Metadata Queries
+
+# Get all regions
+query GetRegions @auth(level: PUBLIC) {
+  regions {
+    id
+    name
+    slug
+  }
+}
+
+# Get provinces, optionally filtered by region
+query GetProvinces($regionId: UUID) @auth(level: PUBLIC) {
+  provinces(where: { regionId: { eq: $regionId } }) {
+    id
+    name
+    slug
+    regionId
+  }
+}
+
+# Get cities, optionally filtered by province
+query GetCities($provinceId: UUID) @auth(level: PUBLIC) {
+  cities(where: { provinceId: { eq: $provinceId } }) {
+    id
+    name
+    slug
+    provinceId
+  }
+}
+
+# Get categories
+query GetCategories @auth(level: PUBLIC) {
+  categories {
+    id
+    name
+    slug
+  }
+}
+
+# Get subcategories, optionally filtered by category
+query GetSubcategories($categoryId: UUID) @auth(level: PUBLIC) {
+  subcategories(where: { categoryId: { eq: $categoryId } }) {
+    id
+    name
+    slug
+    categoryId
+  }
+}

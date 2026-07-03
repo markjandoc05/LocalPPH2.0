@@ -1,0 +1,156 @@
+# Users
+type User @table {
+  id: String! @col(name: "id") # UUID from Firebase Auth
+  email: String! @col(name: "email")
+  displayName: String! @col(name: "display_name")
+  photoUrl: String @col(name: "photo_url")
+  role: String! @default(value: "SUBSCRIBER") # ENUM: 'ADMIN', 'MODERATOR', 'BUSINESS', 'SUBSCRIBER'
+  accountStatus: String! @default(value: "ACTIVE") # ENUM: 'ACTIVE', 'SUSPENDED', 'BANNED'
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+# Regions
+type Region @table {
+  id: UUID! @default(expr: "uuidV4()")
+  name: String!
+  slug: String! @unique
+}
+
+# Provinces
+type Province @table {
+  id: UUID! @default(expr: "uuidV4()")
+  region: Region! @ref
+  name: String!
+  slug: String! @unique
+}
+
+# Cities
+type City @table {
+  id: UUID! @default(expr: "uuidV4()")
+  province: Province! @ref
+  name: String!
+  slug: String! @unique
+}
+
+# Barangays
+type Barangay @table {
+  id: UUID! @default(expr: "uuidV4()")
+  city: City! @ref
+  name: String!
+}
+
+# Categories
+type Category @table {
+  id: UUID! @default(expr: "uuidV4()")
+  name: String!
+  slug: String! @unique
+}
+
+# Subcategories
+type Subcategory @table {
+  id: UUID! @default(expr: "uuidV4()")
+  category: Category! @ref
+  name: String!
+  slug: String! @unique
+}
+
+# Businesses
+type Business @table {
+  id: UUID! @default(expr: "uuidV4()")
+  owner: User! @ref
+  name: String!
+  slug: String! @unique
+  description: String!
+  category: Category! @ref
+  subcategory: Subcategory @ref
+  
+  status: String! @default(value: "DRAFT") # ENUM: 'DRAFT', 'PENDING', 'APPROVED', 'REVISION_REQUESTED', 'REJECTED', 'INACTIVE', 'SUSPENDED'
+  isVerified: Boolean! @default(value: false)
+  isFeatured: Boolean! @default(value: false)
+  
+  contactEmail: String
+  contactPhone: String
+  websiteUrl: String
+  
+  addressLine1: String!
+  barangay: Barangay @ref
+  city: City! @ref
+  province: Province! @ref
+  region: Region! @ref
+  latitude: Float
+  longitude: Float
+  
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+# Business Photos
+type BusinessPhoto @table {
+  id: UUID! @default(expr: "uuidV4()")
+  business: Business! @ref
+  photoUrl: String!
+  isPrimary: Boolean! @default(value: false)
+  uploadedAt: Timestamp! @default(expr: "request.time")
+}
+
+# Business Products
+type BusinessProduct @table {
+  id: UUID! @default(expr: "uuidV4()")
+  business: Business! @ref
+  name: String!
+  description: String
+  price: Float
+}
+
+# Business Services
+type BusinessService @table {
+  id: UUID! @default(expr: "uuidV4()")
+  business: Business! @ref
+  name: String!
+  description: String
+  priceRange: String
+}
+
+# Business Documents (For verification)
+type BusinessDocument @table {
+  id: UUID! @default(expr: "uuidV4()")
+  business: Business! @ref
+  documentType: String!
+  documentUrl: String!
+  uploadedAt: Timestamp! @default(expr: "request.time")
+}
+
+# Saved Businesses
+type SavedBusiness @table {
+  user: User! @ref
+  business: Business! @ref
+  savedAt: Timestamp! @default(expr: "request.time")
+}
+
+# Activity Logs
+type ActivityLog @table {
+  id: UUID! @default(expr: "uuidV4()")
+  user: User! @ref
+  action: String!
+  entityType: String!
+  entityId: String!
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+# Notifications
+type Notification @table {
+  id: UUID! @default(expr: "uuidV4()")
+  user: User! @ref
+  title: String!
+  message: String!
+  isRead: Boolean! @default(value: false)
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+# Settings
+type Setting @table {
+  key: String! @col(name: "key") # e.g. "SITE_NAME", "MAINTENANCE_MODE"
+  value: String! # JSON string
+  updatedAt: Timestamp! @default(expr: "request.time")
+}

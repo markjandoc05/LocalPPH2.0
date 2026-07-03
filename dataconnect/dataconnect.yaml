@@ -1,0 +1,12 @@
+specVersion: "v1alpha"
+serviceId: "localpages"
+location: "asia-southeast1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "localpagesdb"
+      cloudSql:
+        instanceId: "ai-studio-0e8f9879"
+connectorDirs:
+  - "./connector"

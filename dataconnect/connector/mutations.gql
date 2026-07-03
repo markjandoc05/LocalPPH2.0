@@ -1,0 +1,136 @@
+# Mutations for LocalPages
+
+# Create User
+mutation CreateUser($id: String!, $email: String!, $displayName: String!, $photoUrl: String, $role: String!) @auth(level: USER) {
+  user_insert(data: {
+    id: $id
+    email: $email
+    displayName: $displayName
+    photoUrl: $photoUrl
+    role: $role
+  })
+}
+
+# Update User Profile
+mutation UpdateUserProfile($id: String!, $displayName: String!, $photoUrl: String) @auth(level: USER) {
+  user_update(key: { id: $id }, data: {
+    displayName: $displayName
+    photoUrl: $photoUrl
+  })
+}
+
+# Create Business Draft
+mutation CreateBusiness(
+  $ownerId: String!
+  $name: String!
+  $slug: String!
+  $description: String!
+  $categoryId: UUID!
+  $subcategoryId: UUID
+  $addressLine1: String!
+  $cityId: UUID!
+  $provinceId: UUID!
+  $regionId: UUID!
+  $barangayId: UUID
+) @auth(level: USER) {
+  business_insert(data: {
+    ownerId: $ownerId
+    name: $name
+    slug: $slug
+    description: $description
+    categoryId: $categoryId
+    subcategoryId: $subcategoryId
+    addressLine1: $addressLine1
+    cityId: $cityId
+    provinceId: $provinceId
+    regionId: $regionId
+    barangayId: $barangayId
+    status: "DRAFT"
+  })
+}
+
+# Update Business
+mutation UpdateBusiness(
+  $id: UUID!
+  $name: String!
+  $description: String!
+  $contactEmail: String
+  $contactPhone: String
+  $websiteUrl: String
+) @auth(level: USER) {
+  business_update(key: { id: $id }, data: {
+    name: $name
+    description: $description
+    contactEmail: $contactEmail
+    contactPhone: $contactPhone
+    websiteUrl: $websiteUrl
+  })
+}
+
+# Submit Business for Review
+mutation SubmitBusiness($id: UUID!) @auth(level: USER) {
+  business_update(key: { id: $id }, data: {
+    status: "PENDING"
+  })
+}
+
+# Approve Business (Admin)
+mutation ApproveBusiness($id: UUID!) @auth(level: USER) {
+  business_update(key: { id: $id }, data: {
+    status: "APPROVED"
+  })
+}
+
+# Reject Business (Admin)
+mutation RejectBusiness($id: UUID!) @auth(level: USER) {
+  business_update(key: { id: $id }, data: {
+    status: "REJECTED"
+  })
+}
+
+# Save Business
+mutation SaveBusiness($userId: String!, $businessId: UUID!) @auth(level: USER) {
+  savedBusiness_insert(data: {
+    userId: $userId
+    businessId: $businessId
+  })
+}
+
+# Seeding Mutations
+mutation UpsertRegion($name: String!, $slug: String!) @auth(level: USER) {
+  region_insert(data: {
+    name: $name
+    slug: $slug
+  })
+}
+
+mutation UpsertProvince($name: String!, $slug: String!, $regionId: UUID!) @auth(level: USER) {
+  province_insert(data: {
+    name: $name
+    slug: $slug
+    regionId: $regionId
+  })
+}
+
+mutation UpsertCity($name: String!, $slug: String!, $provinceId: UUID!) @auth(level: USER) {
+  city_insert(data: {
+    name: $name
+    slug: $slug
+    provinceId: $provinceId
+  })
+}
+
+mutation UpsertCategory($name: String!, $slug: String!) @auth(level: USER) {
+  category_insert(data: {
+    name: $name
+    slug: $slug
+  })
+}
+
+mutation UpsertSubcategory($name: String!, $slug: String!, $categoryId: UUID!) @auth(level: USER) {
+  subcategory_insert(data: {
+    name: $name
+    slug: $slug
+    categoryId: $categoryId
+  })
+}

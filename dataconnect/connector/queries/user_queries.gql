@@ -1,0 +1,22 @@
+query GetUserById($id: String!) @auth(level: PUBLIC) {
+  user(key: { id: $id }) {
+    id
+    email
+    displayName
+    photoUrl
+    role
+    accountStatus
+  }
+}
+
+query GetAllUsers @auth(level: PUBLIC) {
+  users(orderBy: [{ createdAt: DESC }]) {
+    id
+    email
+    displayName
+    photoUrl
+    role
+    accountStatus
+    createdAt
+  }
+}
