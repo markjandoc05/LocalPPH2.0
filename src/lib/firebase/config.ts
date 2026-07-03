@@ -10,7 +10,7 @@ const app = !getApps().length ? initializeApp(config) : getApp();
 const auth = getAuth(app);
 const storage = getStorage(app);
 
-const db = config.firestoreDatabaseId ? getFirestore(app, config.firestoreDatabaseId) : getFirestore(app);
+const db = (config as any).firestoreDatabaseId ? getFirestore(app, (config as any).firestoreDatabaseId) : getFirestore(app);
 
 // Validate Connection to Firestore
 import { doc, getDocFromServer } from 'firebase/firestore';
