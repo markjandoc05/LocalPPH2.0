@@ -5,7 +5,7 @@ import PublicBusinessList from '@/components/search/PublicBusinessList';
 import Link from 'next/link';
 import { LucideArrowRight } from 'lucide-react';
 import { generatePageMetadata } from '@/lib/seo/metadata';
-import { Button, buttonVariants } from '@/components/ui/Button';
+import { buttonVariants } from '@/components/ui/Button';
 
 export const metadata: Metadata = generatePageMetadata(
   'Find Local Businesses in the Philippines',

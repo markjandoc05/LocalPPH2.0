@@ -1,6 +1,6 @@
 {
   "name": "LocalPages.ph",
-  "description": "LocalPages.ph is a modern Philippine Business Directory and Local Discovery Platform that helps people find trusted businesses, products, and services across the country.",
+  "description": "LocalPages.ph is a modern Philippine Business Directory platform, now integrated with Firebase for secure Google Authentication and local discovery.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
