@@ -12,6 +12,10 @@ export interface DataProvider {
   getUserById(variables: {
     id: string;
   }): Promise<{ data: { user: any | null } }>;
+  updateUser(variables: {
+    id: string;
+    data: any;
+  }): Promise<{ data: { user_update: string } }>;
   getAllUsers(): Promise<{ data: { users: any[] } }>;
 
   // Business operations

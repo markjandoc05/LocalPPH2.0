@@ -3,6 +3,7 @@ import {
   signInWithEmailAndPassword, 
   signOut as firebaseSignOut, 
   sendPasswordResetEmail,
+  sendEmailVerification,
   GoogleAuthProvider,
   signInWithPopup,
   updateProfile
@@ -105,5 +106,16 @@ export const resetPassword = async (email: string) => {
   } catch (error) {
     console.error("Error sending password reset email:", error);
     throw error;
+  }
+};
+
+export const sendVerificationEmail = async () => {
+  if (auth.currentUser) {
+    try {
+      await sendEmailVerification(auth.currentUser);
+    } catch (error) {
+      console.error("Error sending verification email:", error);
+      throw error;
+    }
   }
 };

@@ -7,6 +7,7 @@ import { provider } from "./provider";
 export const {
   createUser,
   getUserById,
+  updateUser,
   getAllUsers,
   getMyBusinesses,
   getBusinessById,

@@ -43,6 +43,41 @@ export const databaseProvider: DataProvider = {
     return { data: { user: res || null } };
   },
 
+  async updateUser(variables) {
+    try {
+      const data = variables.data;
+      const setFields: any = {
+        updatedAt: new Date(),
+      };
+      
+      const allowedFields = [
+        'firstName', 'lastName', 'displayName', 'photoUrl', 'mobileNumber',
+        'telephoneNumber', 'dateOfBirth', 'gender', 'addressLine1',
+        'addressLine2', 'barangay', 'city', 'province', 'region',
+        'zipCode', 'country'
+      ];
+      
+      for (const field of allowedFields) {
+        if (field in data) {
+          setFields[field] = data[field];
+        }
+      }
+
+      console.log("Updating user:", variables.id, "Set fields:", setFields);
+      const res = await db.update(users)
+        .set(setFields)
+        .where(eq(users.id, variables.id))
+        .returning({ id: users.id });
+      
+      return {
+        data: { user_update: res[0]?.id || variables.id },
+      };
+    } catch (error) {
+      console.error("Database update error:", error);
+      throw error;
+    }
+  },
+
   async getAllUsers() {
     const res = await db.query.users.findMany();
     return { data: { users: res } };
@@ -52,15 +87,23 @@ export const databaseProvider: DataProvider = {
     const res = await db.query.businesses.findMany({
       where: eq(businesses.ownerId, variables.ownerId),
       with: {
+        owner: true,
         category: true,
+        subcategory: true,
         city: true,
+        province: true,
+        region: true,
       }
     });
     
     const formatted = res.map(b => ({
       ...b,
-      categoryName: b.category?.name,
-      cityName: b.city?.name,
+      ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
+      categoryName: b.category?.name || "Not assigned",
+      subcategoryName: b.subcategory?.name || "Not assigned",
+      cityName: b.city?.name || "Not assigned",
+      provinceName: b.province?.name || "Not assigned",
+      regionName: b.region?.name || "Not assigned",
       createdAt: b.createdAt.toISOString(),
       updatedAt: b.updatedAt.toISOString(),
     })) as unknown as BusinessListing[];
@@ -72,8 +115,12 @@ export const databaseProvider: DataProvider = {
     const res = await db.query.businesses.findFirst({
       where: eq(businesses.id, variables.id),
       with: {
+        owner: true,
         category: true,
+        subcategory: true,
         city: true,
+        province: true,
+        region: true,
       }
     });
     
@@ -81,8 +128,12 @@ export const databaseProvider: DataProvider = {
 
     const formatted = {
       ...res,
-      categoryName: res.category?.name,
-      cityName: res.city?.name,
+      ownerName: res.owner?.displayName || res.owner?.email || "Not assigned",
+      categoryName: res.category?.name || "Not assigned",
+      subcategoryName: res.subcategory?.name || "Not assigned",
+      cityName: res.city?.name || "Not assigned",
+      provinceName: res.province?.name || "Not assigned",
+      regionName: res.region?.name || "Not assigned",
       createdAt: res.createdAt.toISOString(),
       updatedAt: res.updatedAt.toISOString(),
     } as unknown as BusinessListing;
@@ -132,15 +183,27 @@ export const databaseProvider: DataProvider = {
   },
 
   async getAllBusinesses(variables) {
-    const query = db.select().from(businesses);
+    const whereClause = variables?.status ? eq(businesses.status, variables.status) : undefined;
+    const res = await db.query.businesses.findMany({
+      where: whereClause,
+      with: {
+        owner: true,
+        category: true,
+        subcategory: true,
+        city: true,
+        province: true,
+        region: true,
+      }
+    });
     
-    if (variables?.status) {
-      query.where(eq(businesses.status, variables.status));
-    }
-    
-    const res = await query;
     const formatted = res.map(b => ({
       ...b,
+      ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
+      categoryName: b.category?.name || "Not assigned",
+      subcategoryName: b.subcategory?.name || "Not assigned",
+      cityName: b.city?.name || "Not assigned",
+      provinceName: b.province?.name || "Not assigned",
+      regionName: b.region?.name || "Not assigned",
       createdAt: b.createdAt.toISOString(),
       updatedAt: b.updatedAt.toISOString(),
     })) as unknown as BusinessListing[];
@@ -191,8 +254,12 @@ export const databaseProvider: DataProvider = {
       offset,
       orderBy: [desc(businesses.createdAt)],
       with: {
+        owner: true,
         category: true,
+        subcategory: true,
         city: true,
+        province: true,
+        region: true,
       }
     });
     
@@ -200,8 +267,12 @@ export const databaseProvider: DataProvider = {
     
     const formatted = res.map(b => ({
       ...b,
-      categoryName: b.category?.name,
-      cityName: b.city?.name,
+      ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
+      categoryName: b.category?.name || "Not assigned",
+      subcategoryName: b.subcategory?.name || "Not assigned",
+      cityName: b.city?.name || "Not assigned",
+      provinceName: b.province?.name || "Not assigned",
+      regionName: b.region?.name || "Not assigned",
       createdAt: b.createdAt.toISOString(),
       updatedAt: b.updatedAt.toISOString(),
     })) as unknown as BusinessListing[];
@@ -218,8 +289,12 @@ export const databaseProvider: DataProvider = {
     const res = await db.query.businesses.findFirst({
       where: and(eq(businesses.slug, variables.slug), eq(businesses.status, 'APPROVED')),
       with: {
+        owner: true,
         category: true,
+        subcategory: true,
         city: true,
+        province: true,
+        region: true,
       }
     });
     
@@ -227,8 +302,12 @@ export const databaseProvider: DataProvider = {
 
     const formatted = {
       ...res,
-      categoryName: res.category?.name,
-      cityName: res.city?.name,
+      ownerName: res.owner?.displayName || res.owner?.email || "Not assigned",
+      categoryName: res.category?.name || "Not assigned",
+      subcategoryName: res.subcategory?.name || "Not assigned",
+      cityName: res.city?.name || "Not assigned",
+      provinceName: res.province?.name || "Not assigned",
+      regionName: res.region?.name || "Not assigned",
       createdAt: res.createdAt.toISOString(),
       updatedAt: res.updatedAt.toISOString(),
     } as unknown as BusinessListing;
@@ -241,15 +320,23 @@ export const databaseProvider: DataProvider = {
       where: and(eq(businesses.isFeatured, true), eq(businesses.status, 'APPROVED')),
       limit: 6,
       with: {
+        owner: true,
         category: true,
+        subcategory: true,
         city: true,
+        province: true,
+        region: true,
       }
     });
     
     const formatted = res.map(b => ({
       ...b,
-      categoryName: b.category?.name,
-      cityName: b.city?.name,
+      ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
+      categoryName: b.category?.name || "Not assigned",
+      subcategoryName: b.subcategory?.name || "Not assigned",
+      cityName: b.city?.name || "Not assigned",
+      provinceName: b.province?.name || "Not assigned",
+      regionName: b.region?.name || "Not assigned",
       createdAt: b.createdAt.toISOString(),
       updatedAt: b.updatedAt.toISOString(),
     })) as unknown as BusinessListing[];
@@ -263,15 +350,23 @@ export const databaseProvider: DataProvider = {
       limit: 6,
       orderBy: [desc(businesses.createdAt)],
       with: {
+        owner: true,
         category: true,
+        subcategory: true,
         city: true,
+        province: true,
+        region: true,
       }
     });
     
     const formatted = res.map(b => ({
       ...b,
-      categoryName: b.category?.name,
-      cityName: b.city?.name,
+      ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
+      categoryName: b.category?.name || "Not assigned",
+      subcategoryName: b.subcategory?.name || "Not assigned",
+      cityName: b.city?.name || "Not assigned",
+      provinceName: b.province?.name || "Not assigned",
+      regionName: b.region?.name || "Not assigned",
       createdAt: b.createdAt.toISOString(),
       updatedAt: b.updatedAt.toISOString(),
     })) as unknown as BusinessListing[];

@@ -30,6 +30,8 @@ export interface BusinessListing {
   instagramUrl?: string;
   tiktokUrl?: string;
   linkedinUrl?: string;
+  shopeeUrl?: string;
+  lazadaUrl?: string;
   
   // Location
   regionId: string;
@@ -58,8 +60,12 @@ export interface BusinessListing {
   updatedAt: string;
   
   // Relations for UI display
+  ownerName?: string;
   categoryName?: string;
+  subcategoryName?: string;
   cityName?: string;
+  provinceName?: string;
+  regionName?: string;
 }
 
 export interface BusinessStats {

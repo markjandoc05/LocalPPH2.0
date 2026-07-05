@@ -8,6 +8,7 @@ import AdminListingTable from '@/components/admin/AdminListingTable';
 import { getAllBusinesses } from '@/lib/data-connect/admin-service';
 import { BusinessListing } from '@/types/business';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function AdminListingsPage() {
   const { user, role, loading } = useAuth();
@@ -41,7 +42,10 @@ export default function AdminListingsPage() {
       />
 
       {dataLoading ? (
-        <div className="p-8 text-center text-slate-500 bg-white border border-slate-200 rounded-lg shadow-sm">Loading listings...</div>
+        <div className="space-y-4">
+           <Skeleton className="h-10 w-full" />
+           <Skeleton className="h-64 w-full" />
+        </div>
       ) : (
         <AdminListingTable listings={listings} />
       )}

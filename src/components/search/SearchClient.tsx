@@ -10,6 +10,7 @@ import { BusinessListing } from '@/types/business';
 import { LucideSearch } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
+import { trackPage, trackEvent } from '@/lib/analytics';
 
 export default function SearchClient() {
   const searchParams = useSearchParams();
@@ -47,6 +48,29 @@ export default function SearchClient() {
         const result = await searchApprovedBusinesses(filters, { page, limit: itemsPerPage });
         setBusinesses(result.businesses);
         setTotal(result.total);
+
+        // Map filters to a formatted string for tracking dimensions
+        const activeFilters = Object.entries(filters)
+          .filter(([_, val]) => val !== undefined && val !== false)
+          .map(([key, val]) => `${key}:${val}`)
+          .join(',');
+
+        // 1. Track standard Search Page view
+        trackPage({
+          page_type: 'Search',
+          search_term: filters.q || '',
+          results_count: result.total,
+          filters: activeFilters || 'none',
+        });
+
+        // 2. Track search filter action if filters are applied
+        if (activeFilters) {
+          trackEvent('filter_search', {
+            search_term: filters.q || '',
+            results_count: result.total,
+            filters: activeFilters,
+          });
+        }
       } catch (error) {
         console.error("Search failed", error);
       } finally {
@@ -57,16 +81,24 @@ export default function SearchClient() {
     fetchResults();
   }, [searchParams, itemsPerPage]);
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (heroQuery.trim()) {
+        params.set('q', heroQuery.trim());
+      } else {
+        params.delete('q');
+      }
+      params.delete('page');
+      router.push(`/search?${params.toString()}`);
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [heroQuery, searchParams, router]);
+
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const params = new URLSearchParams(searchParams.toString());
-    if (heroQuery.trim()) {
-      params.set('q', heroQuery.trim());
-    } else {
-      params.delete('q');
-    }
-    params.delete('page');
-    router.push(`/search?${params.toString()}`);
+    // Handled by useEffect
   };
 
   return (
@@ -82,9 +114,10 @@ export default function SearchClient() {
             <input
               type="text"
               value={heroQuery}
+              disabled={loading}
               onChange={(e) => setHeroQuery(e.target.value)}
               placeholder="Search by name, category, or location"
-              className="block w-full pl-10 pr-4 py-2.5 border-0 rounded-xl text-gray-900 bg-white placeholder-gray-500 focus:ring-2 focus:ring-[#2563EB] sm:text-sm outline-none shadow-sm"
+              className="block w-full pl-10 pr-4 py-2.5 border-0 rounded-xl text-gray-900 bg-white placeholder-gray-500 focus:ring-2 focus:ring-[#2563EB] sm:text-sm outline-none shadow-sm disabled:opacity-50"
             />
           </form>
         </div>
@@ -97,7 +130,7 @@ export default function SearchClient() {
         <div className="flex flex-col md:flex-row gap-8">
           {/* Sidebar */}
           <div className="w-full md:w-64 flex-shrink-0">
-            <SearchFilters />
+            <SearchFilters isLoading={loading} />
           </div>
           
           {/* Main Results */}
@@ -111,7 +144,7 @@ export default function SearchClient() {
             <PublicBusinessList businesses={businesses} loading={loading} />
             
             {!loading && total > 0 && (
-              <Pagination totalItems={total} itemsPerPage={itemsPerPage} />
+              <Pagination totalItems={total} itemsPerPage={itemsPerPage} isLoading={loading} />
             )}
           </div>
         </div>

@@ -4,6 +4,8 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import SiteIntegrations from "@/components/integrations/SiteIntegrations";
+import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -25,8 +27,10 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white bg-[#F8FAFC]">
         <AuthProvider>
           <Header />
+          <AnalyticsTracker />
           <main className="flex-1 flex flex-col">{children}</main>
           <Footer />
+          <SiteIntegrations />
         </AuthProvider>
       </body>
     </html>

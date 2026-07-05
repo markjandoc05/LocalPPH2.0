@@ -5,7 +5,7 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { getUserById } from '../data-connect';
 import { useRouter, usePathname } from 'next/navigation';
-import { canAccessAdmin, canManageBusiness, isBusiness, isSubscriber, ROLES } from './roles';
+import { canAccessAdmin, canManageBusiness, isBusiness, isSubscriber, normalizeRole, ROLES } from './roles';
 
 interface AuthContextType {
   user: User | null;
@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             userRole = ROLES.ADMIN;
           } else {
             const userData = await getUserById({ id: firebaseUser.uid });
-            userRole = userData?.data?.user?.role || ROLES.SUBSCRIBER;
+            userRole = normalizeRole(userData?.data?.user?.role || ROLES.SUBSCRIBER);
           }
           setRole(userRole);
         } catch (error) {
@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Not logged in, trying to access protected route -> go to login
       // router.push('/auth/login');
       // For now, let's just protect specific paths
-      if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard') || pathname.startsWith('/business')) {
+      if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard') || pathname.startsWith('/business/listings') || pathname === '/business' || pathname.startsWith('/profile')) {
         router.push('/auth/login');
       }
     } else if (user && isAuthRoute) {
@@ -82,9 +82,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } else if (user) {
       // Check role-based access
       if (pathname.startsWith('/admin') && !canAccessAdmin(role)) {
-        router.push('/');
-      } else if (pathname.startsWith('/business') && !canManageBusiness(role)) {
-        router.push('/');
+        if (isBusiness(role)) router.push('/business');
+        else router.push('/dashboard');
+      } else if ((pathname.startsWith('/business/listings') || pathname === '/business') && !canManageBusiness(role)) {
+        router.push('/dashboard');
       } else if (pathname.startsWith('/dashboard') && !isSubscriber(role)) {
         // Business and Admin have their own dashboards
         if (isBusiness(role)) router.push('/business');

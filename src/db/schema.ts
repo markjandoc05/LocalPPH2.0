@@ -24,6 +24,23 @@ export const users = pgTable('users', {
   displayName: text('display_name'),
   photoUrl: text('photo_url'),
   role: userRoleEnum('role').default('SUBSCRIBER').notNull(),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
+  mobileNumber: text('mobile_number'),
+  telephoneNumber: text('telephone_number'),
+  dateOfBirth: text('date_of_birth'),
+  gender: text('gender'),
+  addressLine1: text('address_line_1'),
+  addressLine2: text('address_line_2'),
+  barangay: text('barangay'),
+  city: text('city'),
+  province: text('province'),
+  region: text('region'),
+  zipCode: text('zip_code'),
+  country: text('country').default('Philippines'),
+  accountStatus: text('account_status').default('ACTIVE').notNull(),
+  lastLoginAt: timestamp('last_login_at'),
+  emailVerified: boolean('email_verified').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -33,6 +50,7 @@ export const categories = pgTable('categories', {
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   description: text('description'),
+  status: boolean('status').default(true).notNull(),
 });
 
 export const subcategories = pgTable('subcategories', {
@@ -40,12 +58,14 @@ export const subcategories = pgTable('subcategories', {
   categoryId: uuid('category_id').references(() => categories.id).notNull(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
+  status: boolean('status').default(true).notNull(),
 });
 
 export const regions = pgTable('regions', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
+  status: boolean('status').default(true).notNull(),
 });
 
 export const provinces = pgTable('provinces', {
@@ -53,6 +73,7 @@ export const provinces = pgTable('provinces', {
   regionId: uuid('region_id').references(() => regions.id).notNull(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
+  status: boolean('status').default(true).notNull(),
 });
 
 export const cities = pgTable('cities', {
@@ -60,6 +81,7 @@ export const cities = pgTable('cities', {
   provinceId: uuid('province_id').references(() => provinces.id).notNull(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
+  status: boolean('status').default(true).notNull(),
 });
 
 export const barangays = pgTable('barangays', {
@@ -91,6 +113,8 @@ export const businesses = pgTable('businesses', {
   instagramUrl: text('instagram_url'),
   tiktokUrl: text('tiktok_url'),
   linkedinUrl: text('linkedin_url'),
+  shopeeUrl: text('shopee_url'),
+  lazadaUrl: text('lazada_url'),
   
   // Location
   regionId: uuid('region_id').references(() => regions.id).notNull(),
@@ -140,6 +164,18 @@ export const businessesRelations = relations(businesses, ({ one, many }) => ({
     fields: [businesses.categoryId],
     references: [categories.id],
   }),
+  subcategory: one(subcategories, {
+    fields: [businesses.subcategoryId],
+    references: [subcategories.id],
+  }),
+  region: one(regions, {
+    fields: [businesses.regionId],
+    references: [regions.id],
+  }),
+  province: one(provinces, {
+    fields: [businesses.provinceId],
+    references: [provinces.id],
+  }),
   city: one(cities, {
     fields: [businesses.cityId],
     references: [cities.id],
@@ -158,3 +194,10 @@ export const subcategoriesRelations = relations(subcategories, ({ one }) => ({
     references: [categories.id],
   }),
 }));
+
+export const siteSettings = pgTable('site_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+

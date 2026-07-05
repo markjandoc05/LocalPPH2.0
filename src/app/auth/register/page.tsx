@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { LucideStore, LucideUser, LucideBriefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { trackEvent } from '@/lib/analytics';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -25,6 +26,7 @@ export default function RegisterPage() {
 
     try {
       await registerUser(email, password, name, accountType);
+      trackEvent('signup', { method: 'email', role: accountType, page_type: 'Register' });
       // AuthContext will handle redirect
     } catch (err: any) {
       setError(err.message || 'Failed to register');
@@ -37,6 +39,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await loginWithGoogle(accountType);
+      trackEvent('signup', { method: 'google', role: accountType, page_type: 'Register' });
       // AuthContext will handle redirect
     } catch (err: any) {
       console.error("Google register error:", err);
@@ -69,23 +72,27 @@ export default function RegisterPage() {
         <div className="max-w-md">
           <LucideStore className="w-12 h-12 text-blue-500 mb-8" />
           <h2 className="text-4xl font-bold tracking-tight mb-4">
-            Join the LocalPages Community
+            Grow Your Business. Get Found Locally.
           </h2>
           <p className="text-slate-400 text-lg mb-8">
-            Discover local businesses or create a free listing to reach more customers in the Philippines.
+            Whether you're looking for trusted local businesses or promoting your own, LocalPages.ph helps connect customers with businesses across the Philippines.
           </p>
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold">✓</div>
-              <p className="text-slate-300">Free to join and use</p>
+              <p className="text-slate-300">Free to create your business listing</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold">✓</div>
-              <p className="text-slate-300">Trusted reviews from real customers</p>
+              <p className="text-slate-300">Increase your business and brand visibility</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold">✓</div>
-              <p className="text-slate-300">Support local Philippine businesses</p>
+              <p className="text-slate-300">Trusted and quality business directory</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold">✓</div>
+              <p className="text-slate-300">Supporting local Philippine businesses</p>
             </div>
           </div>
         </div>
@@ -112,33 +119,38 @@ export default function RegisterPage() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="grid grid-cols-2 gap-4 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setAccountType(ROLES.SUBSCRIBER)}
-                    className={cn(
-                      "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all",
-                      accountType === ROLES.SUBSCRIBER 
-                        ? "border-blue-600 bg-blue-50/50 text-blue-700" 
-                        : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
-                    )}
-                  >
-                    <LucideUser className={cn("w-6 h-6 mb-2", accountType === ROLES.SUBSCRIBER ? "text-blue-600" : "text-slate-400")} />
-                    <span className="text-sm font-semibold">User</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAccountType(ROLES.BUSINESS)}
-                    className={cn(
-                      "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all",
-                      accountType === ROLES.BUSINESS 
-                        ? "border-blue-600 bg-blue-50/50 text-blue-700" 
-                        : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
-                    )}
-                  >
-                    <LucideBriefcase className={cn("w-6 h-6 mb-2", accountType === ROLES.BUSINESS ? "text-blue-600" : "text-slate-400")} />
-                    <span className="text-sm font-semibold">Business</span>
-                  </button>
+                <div>
+                  <h3 className="text-sm font-medium text-slate-700 mb-3">Choose your account type</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setAccountType(ROLES.SUBSCRIBER)}
+                      className={cn(
+                        "flex flex-col items-center p-4 rounded-xl border-2 transition-all text-center",
+                        accountType === ROLES.SUBSCRIBER 
+                          ? "border-blue-600 bg-blue-50/50 text-blue-700" 
+                          : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+                      )}
+                    >
+                      <LucideUser className={cn("w-6 h-6 mb-2", accountType === ROLES.SUBSCRIBER ? "text-blue-600" : "text-slate-400")} />
+                      <span className="text-sm font-semibold">Personal</span>
+                      <span className="text-[10px] mt-1 leading-tight text-slate-500">Discover trusted local businesses, save your favorite listings, and manage your profile.</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAccountType(ROLES.BUSINESS)}
+                      className={cn(
+                        "flex flex-col items-center p-4 rounded-xl border-2 transition-all text-center",
+                        accountType === ROLES.BUSINESS 
+                          ? "border-blue-600 bg-blue-50/50 text-blue-700" 
+                          : "border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50"
+                      )}
+                    >
+                      <LucideBriefcase className={cn("w-6 h-6 mb-2", accountType === ROLES.BUSINESS ? "text-blue-600" : "text-slate-400")} />
+                      <span className="text-sm font-semibold">Business</span>
+                      <span className="text-[10px] mt-1 leading-tight text-slate-500">List and manage your business, reach more customers, and grow your online presence.</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div>
@@ -176,8 +188,8 @@ export default function RegisterPage() {
                   <p className="mt-1.5 text-xs text-slate-500">Must be at least 6 characters long.</p>
                 </div>
 
-                <Button type="submit" className="w-full mt-2" size="lg" disabled={loading}>
-                  {loading ? 'Creating account...' : 'Create Account'}
+                <Button type="submit" className="w-full mt-2" size="lg" isLoading={loading}>
+                  Create Account
                 </Button>
               </form>
 
@@ -193,7 +205,7 @@ export default function RegisterPage() {
                 size="lg"
                 className="w-full"
                 onClick={handleGoogleLogin}
-                disabled={loading}
+                isLoading={loading}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />

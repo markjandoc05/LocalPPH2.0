@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BusinessListing } from '@/types/business';
 import { validateBusinessForm } from '@/lib/validation/business';
 import MediaUploader from './MediaUploader';
@@ -7,21 +7,22 @@ import DocumentUploadCard from './DocumentUploadCard';
 import { 
   validateLogo, 
   validateCover, 
-  validateGalleryImage, 
   validateDocument 
 } from '@/lib/validation/media';
 import { 
   uploadBusinessLogo, 
   uploadBusinessCover, 
-  uploadBusinessGalleryImage, 
   uploadBusinessDocument,
   deleteBusinessMedia 
 } from '@/lib/firebase/storage';
 import { Button } from '../ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Input } from '../ui/Input';
-import { Textarea } from '../ui/Textarea';
-import { Select } from '../ui/Select';
+import { Card, CardContent } from '../ui/Card';
+import {
+  getAllCategories,
+  getAllRegions,
+  getProvincesByRegion,
+  getCitiesByProvince
+} from '@/lib/data-connect/directory-service';
 
 interface BusinessFormProps {
   initialData?: Partial<BusinessListing>;
@@ -44,23 +45,113 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  // Media State Placeholders (since they aren't part of BusinessListing yet in full detail)
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  // Unique ID for uploads (either editing business ID or generated client-side)
+  const [businessId] = useState(() => initialData.id || crypto.randomUUID());
+
+  // Dynamic dropdown lists
+  const [categoriesList, setCategoriesList] = useState<any[]>([]);
+  const [regionsList, setRegionsList] = useState<any[]>([]);
+  const [provincesList, setProvincesList] = useState<any[]>([]);
+  const [citiesList, setCitiesList] = useState<any[]>([]);
+
+  // Media State
+  const [logoUrl, setLogoUrl] = useState<string | null>((initialData as any).logoUrl || null);
   const [logoProgress, setLogoProgress] = useState(0);
   const [isLogoUploading, setIsLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
 
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string | null>((initialData as any).coverUrl || null);
   const [coverProgress, setCoverProgress] = useState(0);
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const [coverError, setCoverError] = useState<string | null>(null);
 
-  const [gallery, setGallery] = useState<{ url: string; id: string }[]>([]);
-  const [documents, setDocuments] = useState<{ url: string; name: string; id: string }[]>([]);
+  const [documents, setDocuments] = useState<{ url: string; name: string; id: string; path?: string }[]>((initialData as any).documents || []);
+
+  // Fetch Categories & Regions on Mount
+  useEffect(() => {
+    let active = true;
+    const loadInitialMetadata = async () => {
+      try {
+        const [cats, regs] = await Promise.all([
+          getAllCategories(),
+          getAllRegions()
+        ]);
+        if (active) {
+          setCategoriesList(cats);
+          setRegionsList(regs);
+        }
+      } catch (err) {
+        console.error('Error loading metadata:', err);
+      }
+    };
+    loadInitialMetadata();
+    return () => { active = false; };
+  }, []);
+
+  // Fetch Provinces when regionId changes
+  useEffect(() => {
+    let active = true;
+    const loadProvinces = async () => {
+      if (!formData.regionId) {
+        await Promise.resolve();
+        if (active) {
+          setProvincesList([]);
+          setCitiesList([]);
+        }
+        return;
+      }
+      try {
+        const provs = await getProvincesByRegion(formData.regionId);
+        if (active) {
+          setProvincesList(provs);
+        }
+      } catch (err) {
+        console.error('Error loading provinces:', err);
+      }
+    };
+    loadProvinces();
+    return () => { active = false; };
+  }, [formData.regionId]);
+
+  // Fetch Cities when provinceId changes
+  useEffect(() => {
+    let active = true;
+    const loadCities = async () => {
+      if (!formData.provinceId) {
+        await Promise.resolve();
+        if (active) {
+          setCitiesList([]);
+        }
+        return;
+      }
+      try {
+        const cts = await getCitiesByProvince(formData.provinceId);
+        if (active) {
+          setCitiesList(cts);
+        }
+      } catch (err) {
+        console.error('Error loading cities:', err);
+      }
+    };
+    loadCities();
+    return () => { active = false; };
+  }, [formData.provinceId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      // Cascade resets
+      if (name === 'regionId') {
+        updated.provinceId = '';
+        updated.cityId = '';
+      } else if (name === 'provinceId') {
+        updated.cityId = '';
+      }
+      return updated;
+    });
+
     // Clear error for this field
     if (errors[name]) {
       setErrors(prev => {
@@ -87,16 +178,83 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
     }
   };
 
+  const handleLogoUpload = async (file: File) => {
+    const error = validateLogo(file);
+    if (error) { setLogoError(error); return; }
+    setLogoError(null);
+    setIsLogoUploading(true);
+    setLogoProgress(0);
+    try {
+      const result = await uploadBusinessLogo(file, businessId, (p) => {
+        setLogoProgress(Math.round(p));
+      });
+      setLogoUrl(result.url);
+    } catch (err: any) {
+      setLogoError(err.message || 'Failed to upload logo');
+    } finally {
+      setIsLogoUploading(false);
+    }
+  };
+
+  const handleCoverUpload = async (file: File) => {
+    const error = validateCover(file);
+    if (error) { setCoverError(error); return; }
+    setCoverError(null);
+    setIsCoverUploading(true);
+    setCoverProgress(0);
+    try {
+      const result = await uploadBusinessCover(file, businessId, (p) => {
+        setCoverProgress(Math.round(p));
+      });
+      setCoverUrl(result.url);
+    } catch (err: any) {
+      setCoverError(err.message || 'Failed to upload cover image');
+    } finally {
+      setIsCoverUploading(false);
+    }
+  };
+
+  const handleDocumentUpload = async (file: File) => {
+    const error = validateDocument(file);
+    if (error) { alert(error); return; }
+    try {
+      const result = await uploadBusinessDocument(file, businessId);
+      const newDoc = { url: result.url, name: file.name, id: Date.now().toString(), path: result.path };
+      setDocuments(prev => [...prev, newDoc]);
+    } catch (err: any) {
+      alert(err.message || 'Failed to upload document');
+    }
+  };
+
+  const handleDocumentRemove = async (docId: string, path?: string) => {
+    if (path) {
+      try {
+        await deleteBusinessMedia(path);
+      } catch (err) {
+        console.error('Error deleting document:', err);
+      }
+    }
+    setDocuments(prev => prev.filter(d => d.id !== docId));
+  };
+
   const handleSubmit = async (action: 'save' | 'submit') => {
     const formErrors = validateBusinessForm(formData);
     if (Object.keys(formErrors).length > 0) {
       setErrors(formErrors);
-      // Scroll to top
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     
-    await onSubmit(formData, action);
+    // Explicitly add business ID and media state when submitting
+    await onSubmit({ 
+      ...formData, 
+      id: businessId,
+      ...({
+        logoUrl,
+        coverUrl,
+        documents
+      } as any)
+    }, action);
   };
 
   return (
@@ -157,10 +315,9 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none bg-white ${errors.categoryId ? 'border-red-500' : 'border-gray-300'}`}
               >
                 <option value="">Select Category</option>
-                <option value="c1">Food & Beverage</option>
-                <option value="c2">IT Services</option>
-                <option value="c3">Retail</option>
-                {/* Mock options */}
+                {categoriesList.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
               </select>
               {errors.categoryId && <p className="mt-1 text-sm text-red-500">{errors.categoryId}</p>}
             </div>
@@ -235,6 +392,66 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
               placeholder="https://www.example.com"
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Facebook URL</label>
+            <input 
+              type="url" 
+              name="facebookUrl"
+              value={formData.facebookUrl || ''}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
+              placeholder="https://facebook.com/..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Instagram URL</label>
+            <input 
+              type="url" 
+              name="instagramUrl"
+              value={formData.instagramUrl || ''}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
+              placeholder="https://instagram.com/..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">TikTok URL</label>
+            <input 
+              type="url" 
+              name="tiktokUrl"
+              value={formData.tiktokUrl || ''}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
+              placeholder="https://tiktok.com/..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Shopee URL</label>
+            <input 
+              type="url" 
+              name="shopeeUrl"
+              value={formData.shopeeUrl || ''}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
+              placeholder="https://shopee.ph/..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Lazada URL</label>
+            <input 
+              type="url" 
+              name="lazadaUrl"
+              value={formData.lazadaUrl || ''}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
+              placeholder="https://lazada.com.ph/..."
+            />
+          </div>
         </div>
         </CardContent>
       </Card>
@@ -254,8 +471,9 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
               className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none bg-white ${errors.regionId ? 'border-red-500' : 'border-gray-300'}`}
             >
               <option value="">Select Region</option>
-              <option value="r1">NCR</option>
-              <option value="r2">Region IV-A</option>
+              {regionsList.map(reg => (
+                <option key={reg.id} value={reg.id}>{reg.name}</option>
+              ))}
             </select>
             {errors.regionId && <p className="mt-1 text-sm text-red-500">{errors.regionId}</p>}
           </div>
@@ -266,11 +484,13 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
               name="provinceId"
               value={formData.provinceId || ''}
               onChange={handleChange}
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none bg-white ${errors.provinceId ? 'border-red-500' : 'border-gray-300'}`}
+              disabled={!formData.regionId}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none bg-white ${errors.provinceId ? 'border-red-500' : 'border-gray-300'} disabled:bg-gray-100 disabled:text-gray-400`}
             >
               <option value="">Select Province</option>
-              <option value="p1">Metro Manila</option>
-              <option value="p2">Cavite</option>
+              {provincesList.map(prov => (
+                <option key={prov.id} value={prov.id}>{prov.name}</option>
+              ))}
             </select>
             {errors.provinceId && <p className="mt-1 text-sm text-red-500">{errors.provinceId}</p>}
           </div>
@@ -281,11 +501,13 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
               name="cityId"
               value={formData.cityId || ''}
               onChange={handleChange}
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none bg-white ${errors.cityId ? 'border-red-500' : 'border-gray-300'}`}
+              disabled={!formData.provinceId}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none bg-white ${errors.cityId ? 'border-red-500' : 'border-gray-300'} disabled:bg-gray-100 disabled:text-gray-400`}
             >
               <option value="">Select City</option>
-              <option value="city1">Manila</option>
-              <option value="city2">Makati</option>
+              {citiesList.map(city => (
+                <option key={city.id} value={city.id}>{city.name}</option>
+              ))}
             </select>
             {errors.cityId && <p className="mt-1 text-sm text-red-500">{errors.cityId}</p>}
           </div>
@@ -332,7 +554,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
               {logoUrl ? (
                 <ImagePreviewCard 
                   url={logoUrl} 
-                  onRemove={() => setLogoUrl(null)} 
+                  onRemove={() => { setLogoUrl(null); setFormData(prev => ({ ...prev, logoUrl: undefined })); }} 
                   isUploading={isLogoUploading}
                   progress={logoProgress}
                   className="w-32 h-32 flex-shrink-0"
@@ -340,16 +562,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
               ) : (
                 <div className="w-full sm:w-64">
                   <MediaUploader 
-                    onFileSelect={(file) => {
-                      const error = validateLogo(file);
-                      if (error) { setLogoError(error); return; }
-                      setLogoError(null);
-                      // Placeholder for actual upload
-                      console.log('Would upload logo:', file);
-                      // Simulated upload for UI
-                      setIsLogoUploading(true);
-                      setTimeout(() => { setIsLogoUploading(false); setLogoUrl(URL.createObjectURL(file)); }, 1000);
-                    }}
+                    onFileSelect={handleLogoUpload}
                     accept="image/jpeg, image/png, image/webp"
                     label="Upload Logo"
                     helperText="JPG, PNG, WEBP. Max 2MB. Square format recommended."
@@ -369,7 +582,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
               {coverUrl ? (
                 <ImagePreviewCard 
                   url={coverUrl} 
-                  onRemove={() => setCoverUrl(null)} 
+                  onRemove={() => { setCoverUrl(null); setFormData(prev => ({ ...prev, coverUrl: undefined })); }} 
                   isUploading={isCoverUploading}
                   progress={coverProgress}
                   className="w-full max-w-2xl h-48"
@@ -378,14 +591,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
               ) : (
                 <div className="w-full max-w-2xl">
                   <MediaUploader 
-                    onFileSelect={(file) => {
-                      const error = validateCover(file);
-                      if (error) { setCoverError(error); return; }
-                      setCoverError(null);
-                      // Simulated upload
-                      setIsCoverUploading(true);
-                      setTimeout(() => { setIsCoverUploading(false); setCoverUrl(URL.createObjectURL(file)); }, 1000);
-                    }}
+                    onFileSelect={handleCoverUpload}
                     accept="image/jpeg, image/png, image/webp"
                     label="Upload Cover Image"
                     helperText="JPG, PNG, WEBP. Max 5MB. 16:9 ratio recommended."
@@ -404,13 +610,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
             <div className="space-y-4">
               <div className="w-full max-w-2xl">
                 <MediaUploader 
-                  onFileSelect={(file) => {
-                    const error = validateDocument(file);
-                    if (error) { alert(error); return; }
-                    // Simulated upload
-                    const newDoc = { url: URL.createObjectURL(file), name: file.name, id: Date.now().toString() };
-                    setDocuments(prev => [...prev, newDoc]);
-                  }}
+                  onFileSelect={handleDocumentUpload}
                   accept="application/pdf, image/jpeg, image/png"
                   label="Upload Document"
                   helperText="Upload DTI/SEC registration, Mayor's Permit, or BIR Form 2303. PDF, JPG, PNG. Max 10MB."
@@ -424,7 +624,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                     <DocumentUploadCard 
                       key={doc.id}
                       fileName={doc.name}
-                      onRemove={() => setDocuments(prev => prev.filter(d => d.id !== doc.id))}
+                      onRemove={() => handleDocumentRemove(doc.id, doc.path)}
                     />
                   ))}
                 </div>
@@ -441,18 +641,18 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
           type="button"
           variant="outline"
           onClick={() => handleSubmit('save')}
-          disabled={isLoading}
+          isLoading={isLoading}
           className="w-full sm:w-auto"
         >
-          {isLoading ? 'Saving...' : 'Save as Draft'}
+          Save as Draft
         </Button>
         <Button
           type="button"
           onClick={() => handleSubmit('submit')}
-          disabled={isLoading}
+          isLoading={isLoading}
           className="w-full sm:w-auto"
         >
-          {isLoading ? 'Submitting...' : 'Submit for Approval'}
+          Submit for Approval
         </Button>
       </div>
     </div>

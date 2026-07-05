@@ -12,6 +12,9 @@ import Link from 'next/link';
 import { LucideArrowLeft } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { trackEvent } from '@/lib/analytics';
+
+import { parseError, handleAuthRedirect } from '@/lib/utils/error';
 
 export default function NewBusinessListingPage() {
   const { user, role, loading } = useAuth();
@@ -32,14 +35,37 @@ export default function NewBusinessListingPage() {
       // 2. If submit action, run submit mutation
       if (action === 'submit') {
         await submitBusiness(businessId);
+        trackEvent('submit_listing', {
+          business_id: businessId,
+          business_name: data.name || '',
+          category: data.categoryId || '',
+          city: data.cityId || '',
+          province: data.provinceId || '',
+          region: data.regionId || '',
+          action_type: 'submit',
+          page_type: 'New Listing',
+        });
+      } else {
+        trackEvent('register_business', {
+          business_id: businessId,
+          business_name: data.name || '',
+          category: data.categoryId || '',
+          city: data.cityId || '',
+          province: data.provinceId || '',
+          region: data.regionId || '',
+          action_type: 'draft_save',
+          page_type: 'New Listing',
+        });
       }
       
       // Redirect back to listings
       router.push('/business/listings');
       router.refresh(); // Force refresh to show new data
     } catch (err: any) {
-      setError(err.message || 'Failed to create listing');
+      const friendly = parseError(err);
+      setError(friendly.message);
       setIsSubmitting(false);
+      handleAuthRedirect(friendly, router);
     }
   };
 

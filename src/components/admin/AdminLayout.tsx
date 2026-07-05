@@ -14,7 +14,9 @@ import {
   LucideActivity,
   LucideDatabase,
   LucideMenu,
-  LucideX
+  LucideX,
+  LucideSettings,
+  LucideUpload
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { canAccessAdmin } from "@/lib/auth/roles";
@@ -74,6 +76,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     },
     { name: "Users", href: "/admin/users", icon: LucideUsers, exact: false },
     {
+      name: "Integrations",
+      href: "/admin/settings/integrations",
+      icon: LucideSettings,
+      exact: false,
+    },
+    {
       name: "System Readiness",
       href: "/admin/system/backend-readiness",
       icon: LucideActivity,
@@ -83,6 +91,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       name: "Firebase Test",
       href: "/admin/system/firebase-test",
       icon: LucideDatabase,
+      exact: false,
+    },
+    {
+      name: "Directory Management",
+      href: "/admin/directory/categories",
+      icon: LucideDatabase,
+      exact: false,
+    },
+    {
+      name: "Data Import",
+      href: "/admin/system/data-import",
+      icon: LucideUpload,
       exact: false,
     },
   ];

@@ -32,7 +32,11 @@ export default function ListingReviewPanel({ business }: ListingReviewPanelProps
               <dl className="space-y-3">
                 <div>
                   <dt className="text-sm text-slate-500">Category</dt>
-                  <dd className="font-medium text-slate-900">{business.categoryName || business.categoryId}</dd>
+                  <dd className="font-medium text-slate-900">{business.categoryName || 'Not assigned'}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-slate-500">Subcategory</dt>
+                  <dd className="font-medium text-slate-900">{business.subcategoryName || 'Not assigned'}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-slate-500">Description</dt>
@@ -51,7 +55,7 @@ export default function ListingReviewPanel({ business }: ListingReviewPanelProps
                 <div>
                   <dt className="text-sm text-slate-500">Address</dt>
                   <dd className="text-sm text-slate-900">{business.addressLine1}</dd>
-                  <dd className="text-sm text-slate-900">{business.cityName || business.cityId}, {business.provinceId}, {business.regionId}</dd>
+                  <dd className="text-sm text-slate-900">{business.cityName}, {business.provinceName}, {business.regionName}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-slate-500">Contact</dt>
@@ -59,11 +63,29 @@ export default function ListingReviewPanel({ business }: ListingReviewPanelProps
                   <dd className="text-sm text-blue-600">{business.contactEmail}</dd>
                   <dd className="text-sm text-blue-600">{business.websiteUrl}</dd>
                 </div>
+                {business.facebookUrl && <dd className="text-sm text-blue-600">Facebook: {business.facebookUrl}</dd>}
+                {business.instagramUrl && <dd className="text-sm text-blue-600">Instagram: {business.instagramUrl}</dd>}
+                {business.tiktokUrl && <dd className="text-sm text-blue-600">TikTok: {business.tiktokUrl}</dd>}
+                {business.shopeeUrl && <dd className="text-sm text-blue-600">Shopee: {business.shopeeUrl}</dd>}
+                {business.lazadaUrl && <dd className="text-sm text-blue-600">Lazada: {business.lazadaUrl}</dd>}
                 <div>
-                  <dt className="text-sm text-slate-500">Owner ID</dt>
-                  <dd className="text-sm font-mono text-xs text-slate-900">{business.ownerId}</dd>
+                  <dt className="text-sm text-slate-500">Owner</dt>
+                  <dd className="text-sm text-slate-900">{business.ownerName}</dd>
                 </div>
               </dl>
+
+              <details className="mt-8 border border-slate-200 rounded-lg p-4">
+                <summary className="font-semibold text-sm cursor-pointer">Technical Details</summary>
+                <div className="mt-2 text-xs font-mono text-slate-500 space-y-1">
+                  <div>ID: {business.id}</div>
+                  <div>Owner ID: {business.ownerId}</div>
+                  <div>Category ID: {business.categoryId}</div>
+                  <div>Subcategory ID: {business.subcategoryId}</div>
+                  <div>Region ID: {business.regionId}</div>
+                  <div>Province ID: {business.provinceId}</div>
+                  <div>City ID: {business.cityId}</div>
+                </div>
+              </details>
             </div>
           </div>
 

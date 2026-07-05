@@ -3,11 +3,16 @@
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function SearchFilters() {
+interface SearchFiltersProps {
+  isLoading?: boolean;
+}
+
+export default function SearchFilters({ isLoading }: SearchFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const handleFilterChange = (name: string, value: string) => {
+    if (isLoading) return;
     const params = new URLSearchParams(searchParams.toString());
     if (value) {
       params.set(name, value);
@@ -20,6 +25,7 @@ export default function SearchFilters() {
   };
 
   const handleCheckboxChange = (name: string, checked: boolean) => {
+    if (isLoading) return;
     const params = new URLSearchParams(searchParams.toString());
     if (checked) {
       params.set(name, 'true');
@@ -31,6 +37,7 @@ export default function SearchFilters() {
   };
 
   const handleClearFilters = () => {
+    if (isLoading) return;
     router.push('/search');
   };
 
@@ -43,7 +50,8 @@ export default function SearchFilters() {
         {hasFilters && (
           <button 
             onClick={handleClearFilters}
-            className="text-sm text-[#2563EB] hover:underline"
+            disabled={isLoading}
+            className="text-sm text-[#2563EB] hover:underline disabled:opacity-50"
           >
             Clear all
           </button>
@@ -55,8 +63,9 @@ export default function SearchFilters() {
           <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
           <select
             value={searchParams.get('category') || ''}
+            disabled={isLoading}
             onChange={(e) => handleFilterChange('category', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none text-sm"
+            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none text-sm disabled:opacity-50"
           >
             <option value="">All Categories</option>
             <option value="c1">Food & Beverage</option>
@@ -70,8 +79,9 @@ export default function SearchFilters() {
           <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
           <select
             value={searchParams.get('city') || ''}
+            disabled={isLoading}
             onChange={(e) => handleFilterChange('city', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none text-sm"
+            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none text-sm disabled:opacity-50"
           >
             <option value="">All Cities</option>
             <option value="city1">Manila</option>
@@ -85,9 +95,10 @@ export default function SearchFilters() {
           <label className="flex items-center gap-2">
             <input 
               type="checkbox" 
+              disabled={isLoading}
               checked={searchParams.get('verifiedOnly') === 'true'}
               onChange={(e) => handleCheckboxChange('verifiedOnly', e.target.checked)}
-              className="w-4 h-4 text-[#2563EB] rounded border-gray-300 focus:ring-[#2563EB]"
+              className="w-4 h-4 text-[#2563EB] rounded border-gray-300 focus:ring-[#2563EB] disabled:opacity-50"
             />
             <span className="text-sm text-gray-700">Verified Business</span>
           </label>
@@ -95,9 +106,10 @@ export default function SearchFilters() {
           <label className="flex items-center gap-2">
             <input 
               type="checkbox" 
+              disabled={isLoading}
               checked={searchParams.get('featuredOnly') === 'true'}
               onChange={(e) => handleCheckboxChange('featuredOnly', e.target.checked)}
-              className="w-4 h-4 text-[#2563EB] rounded border-gray-300 focus:ring-[#2563EB]"
+              className="w-4 h-4 text-[#2563EB] rounded border-gray-300 focus:ring-[#2563EB] disabled:opacity-50"
             />
             <span className="text-sm text-gray-700">Featured</span>
           </label>

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { LucideStore } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,9 +22,10 @@ export default function LoginPage() {
 
     try {
       await loginUser(email, password);
+      trackEvent('login', { method: 'email', page_type: 'Login' });
       // AuthContext will handle the redirect
     } catch (err: any) {
-      setError(err.message || 'Failed to log in');
+      setError('Incorrect email or password. Please try again.');
       setLoading(false);
     }
   };
@@ -33,6 +35,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await loginWithGoogle();
+      trackEvent('login', { method: 'google', page_type: 'Login' });
       // AuthContext will handle the redirect
     } catch (err: any) {
       console.error("Google login error:", err);
@@ -65,23 +68,27 @@ export default function LoginPage() {
         <div className="max-w-md">
           <LucideStore className="w-12 h-12 text-blue-500 mb-8" />
           <h2 className="text-4xl font-bold tracking-tight mb-4">
-            Grow your business with LocalPages.ph
+            Everything Local. All in One Place.
           </h2>
           <p className="text-slate-400 text-lg mb-8">
-            Connect with thousands of customers looking for your services in the Philippines.
+            Continue discovering trusted local businesses or managing your business profile with LocalPages.ph.
           </p>
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold">1</div>
-              <p className="text-slate-300">Create your free business listing</p>
+              <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold">✓</div>
+              <p className="text-slate-300">Discover trusted businesses across the Philippines</p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold">2</div>
-              <p className="text-slate-300">Get verified and stand out</p>
+              <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold">✓</div>
+              <p className="text-slate-300">Manage your business listings anytime</p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold">3</div>
-              <p className="text-slate-300">Reach more local customers</p>
+              <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold">✓</div>
+              <p className="text-slate-300">Increase your business and brand visibility</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold">✓</div>
+              <p className="text-slate-300">Secure and easy account access</p>
             </div>
           </div>
         </div>
@@ -98,7 +105,7 @@ export default function LoginPage() {
           <Card className="border-slate-200 shadow-sm">
             <CardHeader className="text-center pb-6">
               <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
-              <CardDescription>Enter your details to access your account</CardDescription>
+              <CardDescription>Sign in to continue exploring or managing your LocalPages account.</CardDescription>
             </CardHeader>
             <CardContent>
               {error && (
@@ -135,8 +142,8 @@ export default function LoginPage() {
                   />
                 </div>
 
-                <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                  {loading ? 'Signing in...' : 'Sign In'}
+                <Button type="submit" className="w-full" size="lg" isLoading={loading}>
+                  Sign In
                 </Button>
               </form>
 
@@ -152,7 +159,7 @@ export default function LoginPage() {
                 size="lg"
                 className="w-full"
                 onClick={handleGoogleLogin}
-                disabled={loading}
+                isLoading={loading}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />

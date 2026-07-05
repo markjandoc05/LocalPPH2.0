@@ -14,6 +14,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Button } from '@/components/ui/Button';
 
+import { parseError, handleAuthRedirect } from '@/lib/utils/error';
+
 export default function EditBusinessListingPage() {
   const { user, role, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -32,12 +34,14 @@ export default function EditBusinessListingPage() {
           const data = await getBusinessById(id);
           // Verify ownership in UI (backend should also verify)
           if (data && data.ownerId !== user.uid && role !== 'ADMIN') {
-            setError('You do not have permission to edit this listing.');
+            setError("You don't have permission to perform this action.");
           } else {
             setBusiness(data);
           }
         } catch (err: any) {
-          setError('Failed to load business listing.');
+          const friendly = parseError(err);
+          setError(friendly.message);
+          handleAuthRedirect(friendly, router);
         } finally {
           setDataLoading(false);
         }
@@ -65,8 +69,10 @@ export default function EditBusinessListingPage() {
       router.push('/business/listings');
       router.refresh();
     } catch (err: any) {
-      setError(err.message || 'Failed to update listing');
+      const friendly = parseError(err);
+      setError(friendly.message);
       setIsSubmitting(false);
+      handleAuthRedirect(friendly, router);
     }
   };
 

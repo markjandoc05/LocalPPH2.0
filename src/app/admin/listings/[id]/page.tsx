@@ -20,6 +20,8 @@ import { LucideArrowLeft } from 'lucide-react';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Button } from '@/components/ui/Button';
 
+import { parseError, handleAuthRedirect } from '@/lib/utils/error';
+
 export default function ReviewListingPage() {
   const { user, role, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -29,6 +31,7 @@ export default function ReviewListingPage() {
   const [business, setBusiness] = useState<BusinessListing | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
   
   const [modalOpen, setModalOpen] = useState(false);
   const [actionType, setActionType] = useState<'APPROVE' | 'REJECT' | 'REVISION' | 'SUSPEND' | null>(null);
@@ -45,7 +48,9 @@ export default function ReviewListingPage() {
             setError('Listing not found.');
           }
         } catch (err: any) {
-          setError('Failed to load business listing.');
+          const friendly = parseError(err);
+          setError(friendly.message);
+          handleAuthRedirect(friendly, router);
         } finally {
           setDataLoading(false);
         }
@@ -57,12 +62,14 @@ export default function ReviewListingPage() {
   const openAction = (type: 'APPROVE' | 'REJECT' | 'REVISION' | 'SUSPEND') => {
     setActionType(type);
     setModalOpen(true);
+    setActionError('');
   };
 
   const handleConfirmAction = async (reason: string) => {
     if (!user || !business || !actionType) return;
     
     setIsSubmitting(true);
+    setActionError('');
     try {
       if (actionType === 'APPROVE') {
         await approveBusiness(id, user.uid);
@@ -79,7 +86,9 @@ export default function ReviewListingPage() {
       const updated = await getBusinessForReview(id);
       setBusiness(updated);
     } catch (err: any) {
-      alert(`Failed to ${actionType.toLowerCase()} listing: ${err.message}`);
+      const friendly = parseError(err);
+      setActionError(friendly.message);
+      handleAuthRedirect(friendly, router);
     } finally {
       setIsSubmitting(false);
     }
@@ -119,6 +128,7 @@ export default function ReviewListingPage() {
             {business.status !== 'APPROVED' && (
               <Button
                 onClick={() => openAction('APPROVE')}
+                isLoading={isSubmitting && actionType === 'APPROVE'}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
                 Approve
@@ -128,6 +138,7 @@ export default function ReviewListingPage() {
             {(business.status === 'PENDING' || business.status === 'APPROVED') && (
               <Button
                 onClick={() => openAction('REVISION')}
+                isLoading={isSubmitting && actionType === 'REVISION'}
                 className="bg-yellow-600 hover:bg-yellow-700 text-white"
               >
                 Request Revision
@@ -138,6 +149,7 @@ export default function ReviewListingPage() {
               <Button
                 onClick={() => openAction('REJECT')}
                 variant="outline"
+                isLoading={isSubmitting && actionType === 'REJECT'}
                 className="text-red-600 border-red-200 hover:bg-red-50"
               >
                 Reject
@@ -147,6 +159,7 @@ export default function ReviewListingPage() {
             {business.status === 'APPROVED' && (
               <Button
                 onClick={() => openAction('SUSPEND')}
+                isLoading={isSubmitting && actionType === 'SUSPEND'}
                 className="bg-red-600 hover:bg-red-700 text-white ml-2"
               >
                 Suspend
@@ -155,6 +168,12 @@ export default function ReviewListingPage() {
           </div>
         )}
       </div>
+
+      {actionError && (
+        <div className="mb-6">
+          <ErrorState title="Action Failed" message={actionError} />
+        </div>
+      )}
 
       {business && (
         <>

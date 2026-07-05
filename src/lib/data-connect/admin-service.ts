@@ -1,6 +1,7 @@
 import { provider } from "./provider";
 import { BusinessListing, BusinessStatus } from "@/types/business";
 import { UserAccount, AdminDashboardStats } from "@/types/admin";
+import { normalizeRole } from "@/lib/auth/roles";
 
 // Wrapper service around the Data Connect operations (or mocks) for Admin functionality
 
@@ -23,7 +24,7 @@ export const getAdminDashboardStats =
       rejected: businesses.filter((b) => b.status === "REJECTED").length,
       suspended: businesses.filter((b) => b.status === "SUSPENDED").length,
       totalUsers: users.length,
-      businessAccounts: users.filter((u) => u.role === "BUSINESS").length,
+      businessAccounts: users.filter((u) => normalizeRole(u.role) === "BUSINESS").length,
     };
   };
 

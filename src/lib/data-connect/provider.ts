@@ -3,7 +3,7 @@ import { firebaseProvider } from "./firebase-provider";
 import { DataProvider } from "./types";
 import { validateEnvironment } from "../config/env";
 
-const dataMode = process.env.NEXT_PUBLIC_DATA_MODE || "mock";
+const dataMode = process.env.NEXT_PUBLIC_DATA_MODE || "firebase";
 const envValidation = validateEnvironment();
 
 export const provider: DataProvider =

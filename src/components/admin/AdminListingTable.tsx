@@ -37,11 +37,11 @@ export default function AdminListingTable({ listings }: AdminListingTableProps) 
           <TableRow key={listing.id}>
             <TableCell>
               <div className="font-medium text-slate-900">{listing.name}</div>
-              <div className="text-xs text-slate-500 mt-1">Owner ID: {listing.ownerId}</div>
+              <div className="text-xs text-slate-500 mt-1">Owner: {listing.ownerName}</div>
             </TableCell>
             <TableCell>
-              <div className="text-sm text-slate-900">{listing.cityName || listing.cityId}</div>
-              <div className="text-xs text-slate-500">{listing.categoryName || listing.categoryId}</div>
+              <div className="text-sm text-slate-900">{listing.cityName}</div>
+              <div className="text-xs text-slate-500">{listing.categoryName}</div>
             </TableCell>
             <TableCell>
               <BusinessStatusBadge status={listing.status} />

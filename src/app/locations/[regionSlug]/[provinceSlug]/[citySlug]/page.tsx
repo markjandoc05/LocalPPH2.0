@@ -14,6 +14,7 @@ import { generatePageMetadata } from "@/lib/seo/metadata";
 import { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Tag, Info } from "lucide-react";
+import PageTracker from "@/components/analytics/PageTracker";
 
 interface PageParams {
   regionSlug: string;
@@ -79,6 +80,14 @@ export default async function CityDetailPage({ params, searchParams }: PageProps
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-12">
+      <PageTracker
+        params={{
+          page_type: "City",
+          region: region.name,
+          province: province.name,
+          city: city.name,
+        }}
+      />
       <DirectoryPageHeader
         title={`${city.name} Business Directory`}
         description={`Find approved and verified local businesses, service providers, and shops in ${city.name}, ${province.name}.`}

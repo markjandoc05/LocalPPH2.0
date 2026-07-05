@@ -44,13 +44,15 @@ export default function PublicBusinessCard({ business }: PublicBusinessCardProps
 
         <div className="mb-3">
           <Badge variant="info" className="font-medium text-[11px] uppercase tracking-wider">
-            {business.categoryName || business.categoryId}
+            {business.subcategoryName !== "Not assigned" 
+              ? `${business.categoryName} - ${business.subcategoryName}`
+              : business.categoryName}
           </Badge>
         </div>
         
         <div className="flex items-center text-sm text-slate-500 mb-4 line-clamp-1">
           <LucideMapPin className="w-4 h-4 mr-1 flex-shrink-0" />
-          {business.cityName || business.cityId}, {business.provinceId}
+          {business.cityName}, {business.provinceName}
         </div>
         
         <p className="text-sm text-slate-600 line-clamp-3 mb-6 flex-grow">

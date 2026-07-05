@@ -41,10 +41,10 @@ export default function BusinessListingTable({ listings }: { listings: BusinessL
               <div className="text-sm text-slate-500">Updated: {new Date(listing.updatedAt).toLocaleDateString()}</div>
             </TableCell>
             <TableCell className="text-slate-500">
-              {listing.categoryName || listing.categoryId}
+              {listing.categoryName}
             </TableCell>
             <TableCell className="text-slate-500">
-              {listing.cityName || listing.cityId}
+              {listing.cityName}
             </TableCell>
             <TableCell>
               <BusinessStatusBadge status={listing.status} />

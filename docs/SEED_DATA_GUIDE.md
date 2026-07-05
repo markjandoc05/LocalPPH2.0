@@ -6,12 +6,12 @@ This guide explains how the core directory data (locations, categories) is struc
 
 ### Locations
 The location hierarchy is as follows:
-- **Region**: Broad geographical area (e.g., NCR, CALABARZON).
+- **Region**: Broad geographical area (e.g., NCR, Region III - Central Luzon).
 - **Province**: Specifically for non-NCR areas (e.g., Cavite, Laguna).
 - **City/Municipality**: Individual cities or towns (e.g., Manila, Makati, Cebu City).
 
 ### Categories
-- **Category**: Main business category (e.g., Food & Beverage, Health & Medical).
+- **Category**: Main business category (e.g., Food & Dining, Health & Medical).
 - **Subcategory**: Specific niche within a category (e.g., Restaurants, Coffee Shops).
 
 ## Seed Files
@@ -44,22 +44,30 @@ The seeder uses **Slugs** as the unique identifier for duplicate prevention.
 - It uses the `upsert` mutation (in real mode) or a manual find-and-update (in mock mode).
 - If a record with the same slug exists, it updates the name; otherwise, it creates a new record.
 
-## Priority Locations Included
-- **NCR**: Metro Manila (16 cities + 1 municipality)
-- **CALABARZON**: Cavite, Laguna, Batangas, Rizal, Quezon
-- **Central Luzon**: Pampanga, Bulacan, Tarlac
-- **Cebu**: Cebu City, Mandaue, Lapu-Lapu
-- **Davao**: Davao City
-- **Bicol**: Legazpi, Naga
+## Regions Included
+- All 18 Philippine Regions (NCR, CAR, Region I-XIII, BARMM, NIR)
+
+## Provinces Included
+- All 82 Philippine Provinces
+
+## Cities & Municipalities Included
+- Representative major urban centers for all provinces.
+- *Note: Due to code size limitations, this includes the most populated cities/municipalities. To add all 1600+ municipalities, bulk import scripts are recommended for production.*
 
 ## Categories Included
-- Food & Beverage
+- Food & Dining
 - Health & Medical
-- Travel & Hospitality
-- Wellness & Beauty
-- Construction & Home
-- Education
-- Tech & Digital
+- Beauty & Wellness
+- Retail & Shopping
+- Home & Construction
 - Automotive
 - Professional Services
-- Pets
+- Education & Training
+- Travel & Hospitality
+- Finance & Legal
+- Real Estate
+- Events & Entertainment
+- Technology & Digital Services
+- Government & Public Services
+- Community & Religious
+- Agriculture & Local Trade

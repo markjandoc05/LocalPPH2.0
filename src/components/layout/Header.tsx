@@ -1,19 +1,23 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { logoutUser } from '@/lib/auth/auth-utils';
 import { useRouter } from 'next/navigation';
 import { canAccessAdmin, isBusiness } from '@/lib/auth/roles';
 import { Button, buttonVariants } from '@/components/ui/Button';
+import { Menu, X } from 'lucide-react';
 
 export default function Header() {
-  const { user, role, loading } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, role } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
     try {
       await logoutUser();
+      setIsMenuOpen(false);
       router.push('/');
     } catch (error) {
       console.error('Logout failed', error);
@@ -49,44 +53,112 @@ export default function Header() {
           </nav>
         </div>
 
-        <nav className="flex items-center gap-4">
-          {!loading && (
-            <>
-              {user ? (
-                <>
-                  <Link 
-                    href={getDashboardLink()} 
-                    className={buttonVariants({ variant: 'ghost' })}
-                  >
-                    Dashboard
-                  </Link>
-                  <Button 
-                    variant="outline"
-                    onClick={handleLogout}
-                  >
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Link 
-                    href="/auth/login" 
-                    className={buttonVariants({ variant: 'ghost' })}
-                  >
-                    Log In
-                  </Link>
-                  <Link 
-                    href="/auth/register" 
-                    className={buttonVariants({ variant: 'default' })}
-                  >
-                    Register
-                  </Link>
-                </>
-              )}
-            </>
-          )}
-        </nav>
+        <div className="flex items-center gap-4">
+          <div className="md:hidden">
+            <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+          </div>
+          
+          <nav className="hidden md:flex items-center gap-4">
+            {user ? (
+              <>
+                <Link 
+                  href={getDashboardLink()} 
+                  className={buttonVariants({ variant: 'ghost' })}
+                >
+                  Dashboard
+                </Link>
+                <Link 
+                  href="/profile" 
+                  className={buttonVariants({ variant: 'ghost' })}
+                >
+                  My Profile
+                </Link>
+                <Button 
+                  variant="outline"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link 
+                  href="/auth/login" 
+                  className={buttonVariants({ variant: 'ghost' })}
+                >
+                  Log In
+                </Link>
+                <Link 
+                  href="/auth/register" 
+                  className={buttonVariants({ variant: 'default' })}
+                >
+                  Register
+                </Link>
+              </>
+            )}
+          </nav>
+        </div>
       </div>
+      
+      {isMenuOpen && (
+        <div className="md:hidden bg-white border-t border-gray-100 p-4">
+          <nav className="flex flex-col gap-4">
+            <Link href="/categories" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C]" onClick={() => setIsMenuOpen(false)}>
+              Browse Categories
+            </Link>
+            <Link href="/locations" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C]" onClick={() => setIsMenuOpen(false)}>
+              Browse Locations
+            </Link>
+            <Link href="/business/listings/new" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C]" onClick={() => setIsMenuOpen(false)}>
+              List Your Business
+            </Link>
+            {user ? (
+              <>
+                <Link 
+                  href={getDashboardLink()} 
+                  className="text-sm font-medium text-slate-600"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link 
+                  href="/profile" 
+                  className="text-sm font-medium text-slate-600"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  My Profile
+                </Link>
+                <Button 
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="w-full"
+                >
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link 
+                  href="/auth/login" 
+                  className="text-sm font-medium text-slate-600"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Log In
+                </Link>
+                <Link 
+                  href="/auth/register" 
+                  className={buttonVariants({ variant: 'default' })}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Register
+                </Link>
+              </>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

@@ -7,9 +7,10 @@ import { LucideChevronLeft, LucideChevronRight } from 'lucide-react';
 interface PaginationProps {
   totalItems: number;
   itemsPerPage: number;
+  isLoading?: boolean;
 }
 
-export default function Pagination({ totalItems, itemsPerPage }: PaginationProps) {
+export default function Pagination({ totalItems, itemsPerPage, isLoading }: PaginationProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -17,7 +18,7 @@ export default function Pagination({ totalItems, itemsPerPage }: PaginationProps
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
 
   const handlePageChange = (newPage: number) => {
-    if (newPage < 1 || newPage > totalPages) return;
+    if (newPage < 1 || newPage > totalPages || isLoading) return;
     
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', newPage.toString());
@@ -32,14 +33,14 @@ export default function Pagination({ totalItems, itemsPerPage }: PaginationProps
       <div className="flex flex-1 justify-between sm:hidden">
         <button
           onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
+          disabled={currentPage === 1 || isLoading}
           className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
         >
           Previous
         </button>
         <button
           onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
+          disabled={currentPage === totalPages || isLoading}
           className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
         >
           Next
@@ -56,7 +57,7 @@ export default function Pagination({ totalItems, itemsPerPage }: PaginationProps
           <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
+              disabled={currentPage === 1 || isLoading}
               className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
             >
               <span className="sr-only">Previous</span>
@@ -69,7 +70,7 @@ export default function Pagination({ totalItems, itemsPerPage }: PaginationProps
             
             <button
               onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              disabled={currentPage === totalPages || isLoading}
               className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
             >
               <span className="sr-only">Next</span>

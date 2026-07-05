@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import { generateBusinessMetadata } from '@/lib/seo/metadata';
 import { generateLocalBusinessJsonLd } from '@/lib/seo/jsonld';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
+import PageTracker from '@/components/analytics/PageTracker';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
@@ -31,6 +32,21 @@ export default async function BusinessProfilePage({ params }: { params: Promise<
 
   return (
     <div className="flex-1 bg-slate-50 flex flex-col min-h-screen">
+      <PageTracker
+        params={{
+          page_type: "Business Profile",
+          business_id: business.id,
+          business_slug: business.slug,
+          business_name: business.name,
+          category: business.categoryName || business.categoryId || "",
+          city: business.cityName || business.cityId || "",
+          province: business.provinceId || "",
+          region: business.regionId || "",
+          verified: !!business.isVerified,
+          featured: !!business.isFeatured,
+          premium: !!(business as any).isPremium,
+        }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

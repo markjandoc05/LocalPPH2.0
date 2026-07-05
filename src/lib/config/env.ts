@@ -1,7 +1,7 @@
 import firebaseConfig from '../../../firebase-applet-config.json';
 
 export const validateEnvironment = () => {
-  const mode = process.env.NEXT_PUBLIC_DATA_MODE || "mock";
+  const mode = process.env.NEXT_PUBLIC_DATA_MODE || "firebase";
   const nodeEnv = process.env.NODE_ENV;
 
   const isConfigured = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "dummy-api-key-for-build";

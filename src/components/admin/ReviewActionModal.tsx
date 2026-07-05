@@ -52,10 +52,11 @@ export default function ReviewActionModal({ isOpen, actionType, onClose, onConfi
       </Button>
       <Button 
         onClick={handleSubmit} 
-        disabled={isSubmitting || (requiresReason && !reason.trim())}
+        disabled={requiresReason && !reason.trim()}
+        isLoading={isSubmitting}
         className={getButtonClass()}
       >
-        {isSubmitting ? 'Processing...' : 'Confirm'}
+        Confirm
       </Button>
     </>
   );

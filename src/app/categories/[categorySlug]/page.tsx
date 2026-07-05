@@ -14,6 +14,7 @@ import { generatePageMetadata } from "@/lib/seo/metadata";
 import { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Filter, MapPin } from "lucide-react";
+import PageTracker from "@/components/analytics/PageTracker";
 
 interface PageParams {
   categorySlug: string;
@@ -83,6 +84,13 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-12">
+      <PageTracker
+        params={{
+          page_type: "Category",
+          category_name: category.name,
+          business_count: total,
+        }}
+      />
       <DirectoryPageHeader
         title={category.name}
         description={category.description}

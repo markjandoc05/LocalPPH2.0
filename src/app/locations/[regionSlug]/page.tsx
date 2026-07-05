@@ -10,6 +10,7 @@ import { generatePageMetadata } from "@/lib/seo/metadata";
 import { Metadata } from "next";
 import Link from "next/link";
 import { Map, ArrowRight } from "lucide-react";
+import PageTracker from "@/components/analytics/PageTracker";
 
 interface PageParams {
   regionSlug: string;
@@ -50,6 +51,12 @@ export default async function RegionDetailPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-12">
+      <PageTracker
+        params={{
+          page_type: "Region",
+          region: region.name,
+        }}
+      />
       <DirectoryPageHeader
         title={region.name}
         description={`Explore cities, provinces, and businesses within the ${region.name} region.`}

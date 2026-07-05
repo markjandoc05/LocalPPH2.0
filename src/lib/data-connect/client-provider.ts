@@ -1,17 +1,33 @@
 import { DataProvider } from "./types";
+import { auth } from "@/lib/firebase/config";
+
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+    this.name = "ApiError";
+  }
+}
 
 const apiFetch = async (method: string, variables?: any) => {
+  const token = await auth.currentUser?.getIdToken();
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const res = await fetch("/api/data", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({ method, variables }),
   });
   
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || `API error: ${res.status}`);
+    throw new ApiError(error.error || `API error: ${res.status}`, res.status);
   }
   
   return res.json();
@@ -20,6 +36,7 @@ const apiFetch = async (method: string, variables?: any) => {
 export const clientProvider: DataProvider = {
   createUser: (vars) => apiFetch("createUser", vars),
   getUserById: (vars) => apiFetch("getUserById", vars),
+  updateUser: (vars) => apiFetch("updateUser", vars),
   getAllUsers: () => apiFetch("getAllUsers"),
   getMyBusinesses: (vars) => apiFetch("getMyBusinesses", vars),
   getBusinessById: (vars) => apiFetch("getBusinessById", vars),

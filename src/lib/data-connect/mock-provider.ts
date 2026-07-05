@@ -101,6 +101,19 @@ export const mockProvider: DataProvider = {
     return { data: { user: user || null } };
   },
 
+  async updateUser(variables) {
+    console.warn("⚠️ TEMPORARY MOCK ONLY: updateUser", variables);
+    const index = mockUsers.findIndex((u) => u.id === variables.id);
+    if (index !== -1) {
+      mockUsers[index] = {
+        ...mockUsers[index],
+        ...variables.data,
+      };
+      return { data: { user_update: mockUsers[index].id } };
+    }
+    throw new Error("User not found");
+  },
+
   async getAllUsers() {
     console.warn("⚠️ TEMPORARY MOCK ONLY: getAllUsers");
     return { data: { users: mockUsers } };
