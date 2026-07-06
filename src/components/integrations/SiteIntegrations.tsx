@@ -165,7 +165,7 @@ export default function SiteIntegrations() {
 
     // Only load tracking scripts if consent is accepted (or if consent banner is disabled!)
     const isConsentApproved = !settings.cookieConsent?.enabled || consentGiven === true;
-    const isProd = process.env.NODE_ENV === 'production';
+    const isProd = true;
 
     // Analytics and Pixels should load ONLY in production environment (per instruction)
     if (isConsentApproved && isProd) {

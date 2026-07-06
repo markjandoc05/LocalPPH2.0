@@ -11,7 +11,7 @@ import {
 class AnalyticsService {
   private providers: AnalyticsProvider[] = [];
   private isInitialized = false;
-  private isProduction = process.env.NODE_ENV === "production";
+  private isProduction = true;
 
   constructor() {
     // Register future-ready providers

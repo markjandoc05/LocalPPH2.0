@@ -12,9 +12,11 @@ import {
 import { 
   uploadBusinessLogo, 
   uploadBusinessCover, 
+  uploadBusinessGalleryImage,
   uploadBusinessDocument,
   deleteBusinessMedia 
 } from '@/lib/firebase/storage';
+import { auth } from '@/lib/firebase/config';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import {
@@ -66,6 +68,11 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
   const [coverError, setCoverError] = useState<string | null>(null);
 
   const [documents, setDocuments] = useState<{ url: string; name: string; id: string; path?: string }[]>((initialData as any).documents || []);
+
+  const [gallery, setGallery] = useState<string[]>((initialData as any).gallery || []);
+  const [galleryProgress, setGalleryProgress] = useState<{ [filename: string]: number }>({});
+  const [isGalleryUploading, setIsGalleryUploading] = useState(false);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
 
   // Fetch Categories & Regions on Mount
   useEffect(() => {
@@ -179,6 +186,10 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
   };
 
   const handleLogoUpload = async (file: File) => {
+    if (!auth.currentUser) {
+      setLogoError('You must be logged in to upload files');
+      return;
+    }
     const error = validateLogo(file);
     if (error) { setLogoError(error); return; }
     setLogoError(null);
@@ -197,6 +208,10 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
   };
 
   const handleCoverUpload = async (file: File) => {
+    if (!auth.currentUser) {
+      setCoverError('You must be logged in to upload files');
+      return;
+    }
     const error = validateCover(file);
     if (error) { setCoverError(error); return; }
     setCoverError(null);
@@ -215,6 +230,10 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
   };
 
   const handleDocumentUpload = async (file: File) => {
+    if (!auth.currentUser) {
+      alert('You must be logged in to upload files');
+      return;
+    }
     const error = validateDocument(file);
     if (error) { alert(error); return; }
     try {
@@ -237,6 +256,37 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
     setDocuments(prev => prev.filter(d => d.id !== docId));
   };
 
+  const handleGalleryUpload = async (file: File) => {
+    if (!auth.currentUser) {
+      setGalleryError('You must be logged in to upload files');
+      return;
+    }
+    const error = validateCover(file);
+    if (error) { setGalleryError(error); return; }
+    setGalleryError(null);
+    setIsGalleryUploading(true);
+    try {
+      const result = await uploadBusinessGalleryImage(file, businessId, (p) => {
+        setGalleryProgress(prev => ({ ...prev, [file.name]: Math.round(p) }));
+      });
+      setGallery(prev => [...prev, result.url]);
+    } catch (err: any) {
+      setGalleryError(err.message || 'Failed to upload gallery image');
+    } finally {
+      setIsGalleryUploading(false);
+    }
+  };
+
+  const handleGalleryRemove = async (url: string) => {
+    try {
+      const decodedPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
+      await deleteBusinessMedia(decodedPath);
+    } catch (err) {
+      console.error('Error deleting gallery image from storage:', err);
+    }
+    setGallery(prev => prev.filter(g => g !== url));
+  };
+
   const handleSubmit = async (action: 'save' | 'submit') => {
     const formErrors = validateBusinessForm(formData);
     if (Object.keys(formErrors).length > 0) {
@@ -252,7 +302,8 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
       ...({
         logoUrl,
         coverUrl,
-        documents
+        documents,
+        gallery
       } as any)
     }, action);
   };
@@ -603,6 +654,37 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
             {coverError && <p className="mt-2 text-sm text-red-500">{coverError}</p>}
           </div>
           
+          <hr className="border-gray-200" />
+
+          <div>
+            <h3 className="text-base font-semibold text-gray-900 mb-4">Gallery Images</h3>
+            <div className="space-y-4">
+              <div className="w-full max-w-2xl">
+                <MediaUploader 
+                  onFileSelect={handleGalleryUpload}
+                  accept="image/jpeg, image/png, image/webp"
+                  label="Upload Gallery Image"
+                  helperText="JPG, PNG, WEBP. Max 5MB. You can upload multiple images."
+                  isUploading={isGalleryUploading}
+                />
+              </div>
+              
+              {gallery.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-2xl">
+                  {gallery.map((imgUrl, idx) => (
+                    <ImagePreviewCard 
+                      key={idx}
+                      url={imgUrl} 
+                      onRemove={() => handleGalleryRemove(imgUrl)} 
+                      className="w-full h-24"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            {galleryError && <p className="mt-2 text-sm text-red-500">{galleryError}</p>}
+          </div>
+
           <hr className="border-gray-200" />
 
           <div>

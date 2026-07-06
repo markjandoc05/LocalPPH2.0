@@ -89,15 +89,82 @@ export default function ListingReviewPanel({ business }: ListingReviewPanelProps
             </div>
           </div>
 
-          <div className="mt-8 border-t border-slate-100 pt-6">
-            <h3 className="font-semibold text-lg mb-4">Media (Placeholders)</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="h-32 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-200">
-                <span className="text-sm text-slate-400">Logo</span>
+          <div className="mt-8 border-t border-slate-100 pt-6 space-y-6">
+            <div>
+              <h3 className="font-semibold text-lg mb-4">Uploaded Media</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div>
+                  <h4 className="text-xs font-medium text-slate-500 uppercase mb-2">Business Logo</h4>
+                  <div className="h-32 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-200 overflow-hidden relative">
+                    {business.logoUrl ? (
+                      <img src={business.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-sm text-slate-400">No logo uploaded</span>
+                    )}
+                  </div>
+                </div>
+                <div className="sm:col-span-2">
+                  <h4 className="text-xs font-medium text-slate-500 uppercase mb-2">Cover Image</h4>
+                  <div className="h-32 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-200 overflow-hidden relative">
+                    {business.coverUrl ? (
+                      <img src={business.coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-sm text-slate-400">No cover image uploaded</span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="h-32 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-200 col-span-2">
-                <span className="text-sm text-slate-400">Cover Image</span>
+            </div>
+
+            {/* Gallery Images */}
+            {business.gallery && Array.isArray(business.gallery) && business.gallery.length > 0 && (
+              <div>
+                <h4 className="text-xs font-medium text-slate-500 uppercase mb-2">Gallery Images</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {business.gallery.map((imgUrl, idx) => (
+                    <div key={idx} className="aspect-video relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+                      <img src={imgUrl} alt={`Gallery Image ${idx + 1}`} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* Verification Documents */}
+            <div>
+              <h3 className="font-semibold text-lg border-t border-slate-100 pt-6 mb-4">Verification Documents</h3>
+              {business.documents && Array.isArray(business.documents) && business.documents.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {business.documents.map((doc: any, idx: number) => {
+                    const isPdf = doc.url?.toLowerCase().includes('.pdf') || doc.name?.toLowerCase().includes('.pdf');
+                    return (
+                      <div key={doc.id || idx} className="p-4 border border-slate-200 rounded-xl bg-white shadow-sm flex flex-col justify-between hover:border-slate-300 transition-colors">
+                        <div>
+                          <p className="font-semibold text-slate-800 text-sm truncate">{doc.name || `Document ${idx + 1}`}</p>
+                          <p className="text-[10px] text-slate-400 font-mono mt-1">ID: {doc.id}</p>
+                        </div>
+                        <div className="mt-4 flex gap-2">
+                          <a 
+                            href={doc.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="inline-flex items-center justify-center px-3 py-1.5 bg-[#2563EB] text-white hover:bg-blue-600 rounded-lg text-xs font-medium transition-colors"
+                          >
+                            View Document
+                          </a>
+                          {isPdf && (
+                            <span className="inline-flex items-center px-2 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-semibold border border-red-150">
+                              PDF
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">No verification documents uploaded</p>
+              )}
             </div>
           </div>
         </CardContent>

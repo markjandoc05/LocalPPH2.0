@@ -3,14 +3,40 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BusinessListing } from '@/types/business';
 import BusinessStatusBadge from './BusinessStatusBadge';
-import { LucideEdit, LucideEye } from 'lucide-react';
+import { LucideEdit, LucideEye, LucideTrash2 } from 'lucide-react';
 import { EmptyState } from '../ui/EmptyState';
 import { Button } from '../ui/Button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/Table';
+import { auth } from '@/lib/firebase/config';
 
 export default function BusinessListingTable({ listings }: { listings: BusinessListing[] }) {
   const router = useRouter();
   
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to delete this listing? This action cannot be undone.")) {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        const res = await fetch('/api/business/delete-listing', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ businessId: id })
+        });
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            const data = await res.json();
+            alert(data.error || "Failed to delete listing.");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("An error occurred while deleting the listing.");
+      }
+    }
+  }
+
   if (!listings || listings.length === 0) {
     return (
       <EmptyState 
@@ -63,6 +89,9 @@ export default function BusinessListingTable({ listings }: { listings: BusinessL
                     </Button>
                   </Link>
                 )}
+                <Button variant="ghost" size="icon" onClick={() => handleDelete(listing.id)} title="Delete" className="text-red-500 hover:text-red-700">
+                  <LucideTrash2 className="w-4 h-4" />
+                </Button>
               </div>
             </TableCell>
           </TableRow>

@@ -56,6 +56,12 @@ export interface BusinessListing {
   // Moderator Notes
   moderatorNotes?: string;
   
+  // Media and documents
+  logoUrl?: string;
+  coverUrl?: string;
+  documents?: { id: string; url: string; name: string; path?: string }[] | string; // Can be parsed or string from DB
+  gallery?: string[] | string; // Can be parsed or string from DB
+  
   createdAt: string;
   updatedAt: string;
   

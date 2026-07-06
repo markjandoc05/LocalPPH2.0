@@ -138,6 +138,12 @@ export const businesses = pgTable('businesses', {
   
   moderatorNotes: text('moderator_notes'),
   
+  // Media and documents
+  logoUrl: text('logo_url'),
+  coverUrl: text('cover_url'),
+  documents: text('documents'), // JSON-serialized array of documents
+  gallery: text('gallery'), // JSON-serialized array of gallery images
+  
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

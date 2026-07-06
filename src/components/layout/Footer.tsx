@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Mail } from 'lucide-react';
+import CombinedStatsAndCategories from '../home/CombinedStatsAndCategories';
 
 export default function Footer() {
   return (
@@ -50,6 +51,7 @@ export default function Footer() {
         </div>
         
         <div className="mt-12 pt-8 border-t border-slate-200">
+          <CombinedStatsAndCategories />
           <p className="text-sm text-slate-400 text-center">
             &copy; {new Date().getFullYear()} LocalPages.ph. All rights reserved.
           </p>

@@ -9,8 +9,41 @@ import {
   provinces, 
   cities, 
 } from "../../db/schema";
-import { eq, and, or, ilike, sql, desc } from "drizzle-orm";
+import { eq, and, or, ilike, sql, desc, inArray } from "drizzle-orm";
 import { BusinessListing } from "@/types/business";
+
+const formatBusinessRow = (b: any): BusinessListing => {
+  if (!b) return b;
+  let parsedDocuments = [];
+  if (b.documents) {
+    try {
+      parsedDocuments = typeof b.documents === 'string' ? JSON.parse(b.documents) : b.documents;
+    } catch (e) {
+      console.error("Error parsing business documents JSON:", e);
+    }
+  }
+  let parsedGallery = [];
+  if (b.gallery) {
+    try {
+      parsedGallery = typeof b.gallery === 'string' ? JSON.parse(b.gallery) : b.gallery;
+    } catch (e) {
+      console.error("Error parsing business gallery JSON:", e);
+    }
+  }
+  return {
+    ...b,
+    ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
+    categoryName: b.category?.name || "Not assigned",
+    subcategoryName: b.subcategory?.name || "Not assigned",
+    cityName: b.city?.name || "Not assigned",
+    provinceName: b.province?.name || "Not assigned",
+    regionName: b.region?.name || "Not assigned",
+    documents: parsedDocuments,
+    gallery: parsedGallery,
+    createdAt: b.createdAt instanceof Date ? b.createdAt.toISOString() : (b.createdAt || new Date().toISOString()),
+    updatedAt: b.updatedAt instanceof Date ? b.updatedAt.toISOString() : (b.updatedAt || new Date().toISOString()),
+  } as unknown as BusinessListing;
+};
 
 export const databaseProvider: DataProvider = {
   async createUser(variables) {
@@ -96,18 +129,7 @@ export const databaseProvider: DataProvider = {
       }
     });
     
-    const formatted = res.map(b => ({
-      ...b,
-      ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
-      categoryName: b.category?.name || "Not assigned",
-      subcategoryName: b.subcategory?.name || "Not assigned",
-      cityName: b.city?.name || "Not assigned",
-      provinceName: b.province?.name || "Not assigned",
-      regionName: b.region?.name || "Not assigned",
-      createdAt: b.createdAt.toISOString(),
-      updatedAt: b.updatedAt.toISOString(),
-    })) as unknown as BusinessListing[];
-
+    const formatted = res.map(formatBusinessRow);
     return { data: { businesses: formatted } };
   },
 
@@ -125,27 +147,21 @@ export const databaseProvider: DataProvider = {
     });
     
     if (!res) return { data: { business: null } };
-
-    const formatted = {
-      ...res,
-      ownerName: res.owner?.displayName || res.owner?.email || "Not assigned",
-      categoryName: res.category?.name || "Not assigned",
-      subcategoryName: res.subcategory?.name || "Not assigned",
-      cityName: res.city?.name || "Not assigned",
-      provinceName: res.province?.name || "Not assigned",
-      regionName: res.region?.name || "Not assigned",
-      createdAt: res.createdAt.toISOString(),
-      updatedAt: res.updatedAt.toISOString(),
-    } as unknown as BusinessListing;
-
-    return { data: { business: formatted } };
+    return { data: { business: formatBusinessRow(res) } };
   },
 
   async createBusinessDraft(variables) {
     const id = variables.id || crypto.randomUUID();
+    const insertData = { ...variables };
+    if (insertData.documents !== undefined) {
+      insertData.documents = insertData.documents ? (typeof insertData.documents === 'string' ? insertData.documents : JSON.stringify(insertData.documents)) : null;
+    }
+    if (insertData.gallery !== undefined) {
+      insertData.gallery = insertData.gallery ? (typeof insertData.gallery === 'string' ? insertData.gallery : JSON.stringify(insertData.gallery)) : null;
+    }
     const res = await db.insert(businesses)
       .values({
-        ...variables,
+        ...insertData,
         id,
         status: 'DRAFT',
       })
@@ -155,9 +171,32 @@ export const databaseProvider: DataProvider = {
   },
 
   async updateBusiness(variables) {
+    const updateData = { ...variables.data };
+    if (updateData.documents !== undefined) {
+      updateData.documents = updateData.documents ? (typeof updateData.documents === 'string' ? updateData.documents : JSON.stringify(updateData.documents)) : null;
+    }
+    if (updateData.gallery !== undefined) {
+      updateData.gallery = updateData.gallery ? (typeof updateData.gallery === 'string' ? updateData.gallery : JSON.stringify(updateData.gallery)) : null;
+    }
+
+    const allowedColumns = [
+      'categoryId', 'subcategoryId', 'regionId', 'provinceId', 'cityId',
+      'name', 'description', 'address', 'contactNumber', 'email',
+      'websiteUrl', 'logoUrl', 'coverUrl', 'gallery', 'documents',
+      'facebookUrl', 'instagramUrl', 'tiktokUrl', 'shopeeUrl', 'lazadaUrl',
+      'status', 'slug', 'isFeatured', 'keywords', 'moderatorNotes'
+    ];
+
+    const filteredData: any = {};
+    for (const key of allowedColumns) {
+      if (key in updateData) {
+        filteredData[key] = updateData[key];
+      }
+    }
+
     const res = await db.update(businesses)
       .set({
-        ...variables.data,
+        ...filteredData,
         updatedAt: new Date(),
       })
       .where(eq(businesses.id, variables.id))
@@ -196,18 +235,7 @@ export const databaseProvider: DataProvider = {
       }
     });
     
-    const formatted = res.map(b => ({
-      ...b,
-      ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
-      categoryName: b.category?.name || "Not assigned",
-      subcategoryName: b.subcategory?.name || "Not assigned",
-      cityName: b.city?.name || "Not assigned",
-      provinceName: b.province?.name || "Not assigned",
-      regionName: b.region?.name || "Not assigned",
-      createdAt: b.createdAt.toISOString(),
-      updatedAt: b.updatedAt.toISOString(),
-    })) as unknown as BusinessListing[];
-
+    const formatted = res.map(formatBusinessRow);
     return { data: { businesses: formatted } };
   },
 
@@ -230,28 +258,72 @@ export const databaseProvider: DataProvider = {
 
   async searchApprovedBusinesses(variables) {
     const limit = variables.limit || 20;
-    const offset = variables.offset || 0;
+    const page = variables.page || 1;
+    const offset = (page - 1) * limit;
     
-    const where = [eq(businesses.status, 'APPROVED')];
+    const baseWhere = [];
     
+    if (variables.categoryId) baseWhere.push(eq(businesses.categoryId, variables.categoryId));
+    if (variables.regionId) baseWhere.push(eq(businesses.regionId, variables.regionId));
+    if (variables.provinceId) baseWhere.push(eq(businesses.provinceId, variables.provinceId));
+    if (variables.cityId) baseWhere.push(eq(businesses.cityId, variables.cityId));
+    if (variables.featuredOnly) baseWhere.push(eq(businesses.isFeatured, true));
+    if (variables.verifiedOnly) baseWhere.push(eq(businesses.isVerified, true));
+
+    // For keyword search across joined tables, we need to join
+    const query = db.select({
+      id: businesses.id,
+    })
+    .from(businesses)
+    .leftJoin(categories, eq(businesses.categoryId, categories.id))
+    .leftJoin(subcategories, eq(businesses.subcategoryId, subcategories.id))
+    .leftJoin(regions, eq(businesses.regionId, regions.id))
+    .leftJoin(provinces, eq(businesses.provinceId, provinces.id))
+    .leftJoin(cities, eq(businesses.cityId, cities.id));
+
+    const searchFilters = [...baseWhere];
     if (variables.q) {
-      where.push(or(
-        ilike(businesses.name, `%${variables.q}%`),
-        ilike(businesses.description, `%${variables.q}%`),
-        ilike(businesses.keywords, `%${variables.q}%`)
-      ) as any);
+      const words = variables.q.split(/\s+/).filter(Boolean);
+      for (const word of words) {
+        searchFilters.push(or(
+          ilike(businesses.name, `%${word}%`),
+          ilike(businesses.description, `%${word}%`),
+          ilike(businesses.keywords, `%${word}%`),
+          sql`COALESCE(${categories.name}, '') ILIKE ${'%' + word + '%'}`,
+          sql`COALESCE(${subcategories.name}, '') ILIKE ${'%' + word + '%'}`,
+          sql`COALESCE(${regions.name}, '') ILIKE ${'%' + word + '%'}`,
+          sql`COALESCE(${provinces.name}, '') ILIKE ${'%' + word + '%'}`,
+          sql`COALESCE(${cities.name}, '') ILIKE ${'%' + word + '%'}`
+        ) as any);
+      }
     }
-    
-    if (variables.categoryId) where.push(eq(businesses.categoryId, variables.categoryId));
-    if (variables.regionId) where.push(eq(businesses.regionId, variables.regionId));
-    if (variables.provinceId) where.push(eq(businesses.provinceId, variables.provinceId));
-    if (variables.cityId) where.push(eq(businesses.cityId, variables.cityId));
-    if (variables.featuredOnly) where.push(eq(businesses.isFeatured, true));
+
+    const businessIds = searchFilters.length > 0
+      ? await query.where(and(...searchFilters))
+      : await query;
+    const ids = businessIds.map(b => b.id);
+
+    if (ids.length === 0) {
+      return {
+        data: {
+          businesses: [],
+          total: 0,
+        },
+      };
+    }
+
+    const paginatedIds = ids.slice(offset, offset + limit);
+    if (paginatedIds.length === 0) {
+      return {
+        data: {
+          businesses: [],
+          total: ids.length,
+        },
+      };
+    }
 
     const res = await db.query.businesses.findMany({
-      where: and(...where),
-      limit,
-      offset,
+      where: inArray(businesses.id, paginatedIds),
       orderBy: [desc(businesses.createdAt)],
       with: {
         owner: true,
@@ -263,31 +335,57 @@ export const databaseProvider: DataProvider = {
       }
     });
     
-    const countRes = await db.select({ count: sql<number>`count(*)` }).from(businesses).where(and(...where));
-    
-    const formatted = res.map(b => ({
-      ...b,
-      ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
-      categoryName: b.category?.name || "Not assigned",
-      subcategoryName: b.subcategory?.name || "Not assigned",
-      cityName: b.city?.name || "Not assigned",
-      provinceName: b.province?.name || "Not assigned",
-      regionName: b.region?.name || "Not assigned",
-      createdAt: b.createdAt.toISOString(),
-      updatedAt: b.updatedAt.toISOString(),
-    })) as unknown as BusinessListing[];
+    const formatted = res.map(formatBusinessRow);
 
     return {
       data: {
         businesses: formatted,
-        total: Number(countRes[0].count),
+        total: ids.length,
       },
     };
   },
 
+  async getSearchSuggestions(variables) {
+    const q = variables.q;
+    if (!q || q.length < 2) return { data: { suggestions: [] } };
+
+    const searchPattern = `%${q}%`;
+
+    const res = await db.select({
+      id: businesses.id,
+      name: businesses.name,
+      slug: businesses.slug,
+      categoryName: categories.name,
+      cityName: cities.name,
+      provinceName: provinces.name,
+    })
+    .from(businesses)
+    .leftJoin(categories, eq(businesses.categoryId, categories.id))
+    .leftJoin(cities, eq(businesses.cityId, cities.id))
+    .leftJoin(provinces, eq(businesses.provinceId, provinces.id))
+    .where(or(
+      ilike(businesses.name, searchPattern),
+      ilike(categories.name, searchPattern),
+      ilike(cities.name, searchPattern),
+      ilike(provinces.name, searchPattern),
+      ilike(businesses.keywords, searchPattern)
+    ))
+    .limit(10);
+
+    const suggestions = res.map(r => ({
+      id: r.id,
+      slug: r.slug,
+      text: r.name,
+      subtext: `${r.categoryName} • ${r.cityName}, ${r.provinceName}`,
+      type: 'business'
+    }));
+
+    return { data: { suggestions } };
+  },
+
   async getApprovedBusinessBySlug(variables) {
     const res = await db.query.businesses.findFirst({
-      where: and(eq(businesses.slug, variables.slug), eq(businesses.status, 'APPROVED')),
+      where: eq(businesses.slug, variables.slug),
       with: {
         owner: true,
         category: true,
@@ -299,25 +397,12 @@ export const databaseProvider: DataProvider = {
     });
     
     if (!res) return { data: { business: null } };
-
-    const formatted = {
-      ...res,
-      ownerName: res.owner?.displayName || res.owner?.email || "Not assigned",
-      categoryName: res.category?.name || "Not assigned",
-      subcategoryName: res.subcategory?.name || "Not assigned",
-      cityName: res.city?.name || "Not assigned",
-      provinceName: res.province?.name || "Not assigned",
-      regionName: res.region?.name || "Not assigned",
-      createdAt: res.createdAt.toISOString(),
-      updatedAt: res.updatedAt.toISOString(),
-    } as unknown as BusinessListing;
-
-    return { data: { business: formatted } };
+    return { data: { business: formatBusinessRow(res) } };
   },
 
   async getFeaturedApprovedBusinesses() {
     const res = await db.query.businesses.findMany({
-      where: and(eq(businesses.isFeatured, true), eq(businesses.status, 'APPROVED')),
+      where: eq(businesses.isFeatured, true),
       limit: 6,
       with: {
         owner: true,
@@ -329,24 +414,12 @@ export const databaseProvider: DataProvider = {
       }
     });
     
-    const formatted = res.map(b => ({
-      ...b,
-      ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
-      categoryName: b.category?.name || "Not assigned",
-      subcategoryName: b.subcategory?.name || "Not assigned",
-      cityName: b.city?.name || "Not assigned",
-      provinceName: b.province?.name || "Not assigned",
-      regionName: b.region?.name || "Not assigned",
-      createdAt: b.createdAt.toISOString(),
-      updatedAt: b.updatedAt.toISOString(),
-    })) as unknown as BusinessListing[];
-
+    const formatted = res.map(formatBusinessRow);
     return { data: { businesses: formatted } };
   },
 
   async getRecentlyApprovedBusinesses() {
     const res = await db.query.businesses.findMany({
-      where: eq(businesses.status, 'APPROVED'),
       limit: 6,
       orderBy: [desc(businesses.createdAt)],
       with: {
@@ -359,18 +432,7 @@ export const databaseProvider: DataProvider = {
       }
     });
     
-    const formatted = res.map(b => ({
-      ...b,
-      ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
-      categoryName: b.category?.name || "Not assigned",
-      subcategoryName: b.subcategory?.name || "Not assigned",
-      cityName: b.city?.name || "Not assigned",
-      provinceName: b.province?.name || "Not assigned",
-      regionName: b.region?.name || "Not assigned",
-      createdAt: b.createdAt.toISOString(),
-      updatedAt: b.updatedAt.toISOString(),
-    })) as unknown as BusinessListing[];
-
+    const formatted = res.map(formatBusinessRow);
     return { data: { businesses: formatted } };
   },
 

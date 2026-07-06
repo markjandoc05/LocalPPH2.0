@@ -187,14 +187,24 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
 
   return (
     <Card className="border-slate-200 shadow-sm overflow-hidden">
-      {/* Cover Image Placeholder */}
-      <div className="h-64 bg-gradient-to-r from-slate-100 to-slate-200 flex items-center justify-center relative">
-        <span className="text-slate-400 font-medium text-sm">Cover Image Placeholder</span>
+      {/* Cover Image */}
+      <div className="h-64 bg-slate-100 flex items-center justify-center relative overflow-hidden">
+        {business.coverUrl ? (
+          <img src={business.coverUrl} alt={`${business.name} Cover`} className="w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-100 to-slate-200 flex items-center justify-center">
+            <span className="text-slate-400 font-medium text-sm">Cover Image Placeholder</span>
+          </div>
+        )}
         
-        {/* Logo Placeholder */}
+        {/* Logo */}
         <div className="absolute -bottom-16 left-8 w-32 h-32 bg-white rounded-2xl border-4 border-white shadow-md flex items-center justify-center overflow-hidden">
           <div className="w-full h-full bg-slate-50 flex items-center justify-center">
-            <span className="text-slate-400 text-sm font-bold">{business.name.slice(0, 2).toUpperCase()}</span>
+            {business.logoUrl ? (
+              <img src={business.logoUrl} alt={`${business.name} Logo`} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-slate-400 text-sm font-bold">{business.name.slice(0, 2).toUpperCase()}</span>
+            )}
           </div>
         </div>
       </div>
@@ -339,6 +349,20 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
                 <p className="whitespace-pre-wrap leading-relaxed">{business.description}</p>
               </div>
             </section>
+
+            {/* Gallery Section */}
+            {business.gallery && Array.isArray(business.gallery) && business.gallery.length > 0 && (
+              <section className="border-t border-slate-100 pt-8">
+                <h2 className="text-xl font-bold text-slate-900 mb-4 font-sans">Gallery</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {business.gallery.map((imgUrl, idx) => (
+                    <div key={idx} className="aspect-video relative rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:opacity-95 transition-opacity">
+                      <img src={imgUrl} alt={`${business.name} Gallery Image ${idx + 1}`} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
             
             {business.products && (
               <section className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">

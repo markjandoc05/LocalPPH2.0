@@ -33,6 +33,34 @@ const apiFetch = async (method: string, variables?: any) => {
   return res.json();
 };
 
+const publicApiFetch = async (method: string, variables?: any) => {
+  const res = await fetch("/api/public/data", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ method, variables }),
+  });
+  
+  if (!res.ok) {
+    const error = await res.json();
+    throw new ApiError(error.error || `API error: ${res.status}`, res.status);
+  }
+  
+  return res.json();
+};
+
+export const publicClientProvider: DataProvider = {
+  getCategories: () => publicApiFetch("getCategories"),
+  getRegions: () => publicApiFetch("getRegions"),
+  getProvinces: (vars: any) => publicApiFetch("getProvinces", vars),
+  getCities: (vars: any) => publicApiFetch("getCities", vars),
+  getSubcategories: (vars: any) => publicApiFetch("getSubcategories", vars),
+  getSearchSuggestions: (vars: any) => publicApiFetch("getSearchSuggestions", vars),
+  searchApprovedBusinesses: (vars: any) => publicApiFetch("searchApprovedBusinesses", vars),
+  // Other methods not needed for public filters...
+} as any;
+
 export const clientProvider: DataProvider = {
   createUser: (vars) => apiFetch("createUser", vars),
   getUserById: (vars) => apiFetch("getUserById", vars),
@@ -46,6 +74,7 @@ export const clientProvider: DataProvider = {
   getAllBusinesses: (vars) => apiFetch("getAllBusinesses", vars),
   updateBusinessStatus: (vars) => apiFetch("updateBusinessStatus", vars),
   searchApprovedBusinesses: (vars) => apiFetch("searchApprovedBusinesses", vars),
+  getSearchSuggestions: (vars) => apiFetch("getSearchSuggestions", vars),
   getApprovedBusinessBySlug: (vars) => apiFetch("getApprovedBusinessBySlug", vars),
   getFeaturedApprovedBusinesses: () => apiFetch("getFeaturedApprovedBusinesses"),
   getRecentlyApprovedBusinesses: () => apiFetch("getRecentlyApprovedBusinesses"),

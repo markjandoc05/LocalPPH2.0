@@ -3,11 +3,10 @@ import { BusinessListing } from "@/types/business";
 
 export interface SearchFilters {
   q?: string;
-  category?: string;
-  city?: string;
-  region?: string;
-  province?: string;
-  barangay?: string;
+  categoryId?: string;
+  cityId?: string;
+  regionId?: string;
+  provinceId?: string;
   verifiedOnly?: boolean;
   featuredOnly?: boolean;
 }
@@ -28,9 +27,15 @@ export const searchApprovedBusinesses = async (
 ): Promise<SearchResult> => {
   const result = await provider.searchApprovedBusinesses({
     ...filters,
-    ...pagination,
+    page: pagination.page,
+    limit: pagination.limit,
   });
   return result.data as unknown as SearchResult;
+};
+
+export const getSearchSuggestions = async (q: string): Promise<any[]> => {
+  const result = await provider.getSearchSuggestions({ q });
+  return result.data.suggestions;
 };
 
 export const getApprovedBusinessBySlug = async (

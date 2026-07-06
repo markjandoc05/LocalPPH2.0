@@ -11,7 +11,7 @@ import { Menu, X } from 'lucide-react';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, role } = useAuth();
+  const { user, role, loading } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -41,13 +41,10 @@ export default function Header() {
           </div>
           
           <nav className="hidden md:flex items-center gap-6">
-            <Link href="/categories" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C] transition-colors">
-              Browse Categories
+            <Link href="/search" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C] transition-colors">
+              Listing
             </Link>
-            <Link href="/locations" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C] transition-colors">
-              Browse Locations
-            </Link>
-            <Link href="/business/listings/new" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C] transition-colors">
+            <Link href="/business/listings/new" prefetch={false} className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C] transition-colors">
               List Your Business
             </Link>
           </nav>
@@ -61,16 +58,22 @@ export default function Header() {
           </div>
           
           <nav className="hidden md:flex items-center gap-4">
-            {user ? (
+            {loading ? (
+              <span className="text-xs text-slate-400 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-md animate-pulse select-none cursor-not-allowed">
+                Checking login...
+              </span>
+            ) : user ? (
               <>
                 <Link 
                   href={getDashboardLink()} 
+                  prefetch={false}
                   className={buttonVariants({ variant: 'ghost' })}
                 >
                   Dashboard
                 </Link>
                 <Link 
                   href="/profile" 
+                  prefetch={false}
                   className={buttonVariants({ variant: 'ghost' })}
                 >
                   My Profile
@@ -86,12 +89,14 @@ export default function Header() {
               <>
                 <Link 
                   href="/auth/login" 
+                  prefetch={false}
                   className={buttonVariants({ variant: 'ghost' })}
                 >
                   Log In
                 </Link>
                 <Link 
                   href="/auth/register" 
+                  prefetch={false}
                   className={buttonVariants({ variant: 'default' })}
                 >
                   Register
@@ -105,19 +110,21 @@ export default function Header() {
       {isMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 p-4">
           <nav className="flex flex-col gap-4">
-            <Link href="/categories" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C]" onClick={() => setIsMenuOpen(false)}>
-              Browse Categories
+            <Link href="/search" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C]" onClick={() => setIsMenuOpen(false)}>
+              Listing
             </Link>
-            <Link href="/locations" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C]" onClick={() => setIsMenuOpen(false)}>
-              Browse Locations
-            </Link>
-            <Link href="/business/listings/new" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C]" onClick={() => setIsMenuOpen(false)}>
+            <Link href="/business/listings/new" prefetch={false} className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C]" onClick={() => setIsMenuOpen(false)}>
               List Your Business
             </Link>
-            {user ? (
+            {loading ? (
+              <div className="text-xs text-slate-400 bg-slate-50 border border-slate-100 text-center py-2 rounded-md animate-pulse select-none cursor-not-allowed">
+                Checking login...
+              </div>
+            ) : user ? (
               <>
                 <Link 
                   href={getDashboardLink()} 
+                  prefetch={false}
                   className="text-sm font-medium text-slate-600"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -125,6 +132,7 @@ export default function Header() {
                 </Link>
                 <Link 
                   href="/profile" 
+                  prefetch={false}
                   className="text-sm font-medium text-slate-600"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -142,6 +150,7 @@ export default function Header() {
               <>
                 <Link 
                   href="/auth/login" 
+                  prefetch={false}
                   className="text-sm font-medium text-slate-600"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -149,6 +158,7 @@ export default function Header() {
                 </Link>
                 <Link 
                   href="/auth/register" 
+                  prefetch={false}
                   className={buttonVariants({ variant: 'default' })}
                   onClick={() => setIsMenuOpen(false)}
                 >

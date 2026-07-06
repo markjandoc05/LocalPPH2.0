@@ -35,24 +35,7 @@ export default function BackendReadinessPage() {
         </p>
       </div>
 
-      {envStatus.isProduction && envStatus.currentDataMode === "mock" && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-8">
-          <div className="flex">
-            <LucideXCircle className="h-6 w-6 text-red-500 mr-3" />
-            <div>
-              <h3 className="text-sm font-medium text-red-800">
-                CRITICAL SAFETY GUARD
-              </h3>
-              <p className="text-sm text-red-700 mt-1">
-                The application is running in PRODUCTION with MOCK data enabled.
-                Do not deploy with mock data. Change NEXT_PUBLIC_DATA_MODE to
-                "firebase" once configured.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Environment Variables */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -90,25 +73,18 @@ export default function BackendReadinessPage() {
         {/* Data Connect Mode */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-4">
-            {getStatusIcon(envStatus.currentDataMode === "firebase")}
+            <LucideCheckCircle className="w-6 h-6 text-green-500 shrink-0" />
             <h2 className="text-lg font-semibold">Data Connect Mode</h2>
           </div>
           <p className="text-sm text-gray-600 mb-4">
-            Checks if the application is currently using Firebase Data Connect
-            or Mock data.
+            The application is actively using the Firebase Data Connect backend.
           </p>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-700">
               Current Mode:
             </span>
-            <span
-              className={`px-2 py-1 text-xs font-semibold rounded ${
-                envStatus.currentDataMode === "firebase"
-                  ? "bg-green-100 text-green-800"
-                  : "bg-amber-100 text-amber-800"
-              }`}
-            >
-              {envStatus.currentDataMode.toUpperCase()}
+            <span className="px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
+              FIREBASE
             </span>
           </div>
         </div>

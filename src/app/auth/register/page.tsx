@@ -30,6 +30,7 @@ export default function RegisterPage() {
       // AuthContext will handle redirect
     } catch (err: any) {
       setError(err.message || 'Failed to register');
+    } finally {
       setLoading(false);
     }
   };
@@ -61,6 +62,7 @@ export default function RegisterPage() {
       }
       
       setError(userFriendlyMessage);
+    } finally {
       setLoading(false);
     }
   };

@@ -26,6 +26,7 @@ export default function LoginPage() {
       // AuthContext will handle the redirect
     } catch (err: any) {
       setError('Incorrect email or password. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
@@ -57,6 +58,7 @@ export default function LoginPage() {
       }
       
       setError(userFriendlyMessage);
+    } finally {
       setLoading(false);
     }
   };

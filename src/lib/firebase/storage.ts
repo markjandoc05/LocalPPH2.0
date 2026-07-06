@@ -1,16 +1,47 @@
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from './config';
+import { storage, auth } from './config';
 import { MediaUploadResult } from '@/types/media';
 
-// TODO: Add production storage security rules allowing writes only by business owners and reads by public.
+const requestPermission = async (businessId: string, category: string) => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not logged in');
+  const token = await user.getIdToken();
+  const res = await fetch('/api/business/upload-permission', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ businessId, category })
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'You do not have permission to upload files for this business.');
+  }
+  return await res.json();
+};
 
 const uploadFile = async (
   file: File, 
-  path: string, 
+  businessId: string,
+  category: string,
   onProgress?: (progress: number) => void
 ): Promise<MediaUploadResult> => {
-  // If not configured properly (or using dummy key during build)
-  const isMockOrUnconfigured = !storage || !process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === 'dummy-api-key-for-build';
+  if (!auth.currentUser) {
+    throw new Error('Please log in before uploading files.');
+  }
+
+  try {
+    await auth.currentUser.getIdToken(true);
+  } catch (error) {
+    throw new Error('Upload failed. Please make sure you are logged in and try again.');
+  }
+
+  const { uploadPath } = await requestPermission(businessId, category);
+  const path = `${uploadPath}${Date.now()}_${file.name}`;
+  
+  // Check if storage is initialized
+  const isMockOrUnconfigured = !storage;
 
   if (isMockOrUnconfigured) {
     console.error('⚠️ Developer Error: Firebase Storage is not configured. Mocking upload success to prevent UI crash.');
@@ -34,9 +65,13 @@ const uploadFile = async (
         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
         if (onProgress) onProgress(progress);
       },
-      (error) => {
+      (error: any) => {
         console.error('Upload error:', error);
-        reject(error);
+        if (error.code === 'storage/unauthorized') {
+          reject(new Error('Upload failed. Please make sure you are logged in and try again.'));
+        } else {
+          reject(error);
+        }
       },
       async () => {
         const url = await getDownloadURL(uploadTask.snapshot.ref);
@@ -51,37 +86,43 @@ const uploadFile = async (
 };
 
 export const uploadBusinessLogo = (file: File, businessId: string, onProgress?: (p: number) => void) => {
-  const path = `businesses/${businessId}/logo/${Date.now()}_${file.name}`;
-  return uploadFile(file, path, onProgress);
+  return uploadFile(file, businessId, 'logo', onProgress);
 };
 
 export const uploadBusinessCover = (file: File, businessId: string, onProgress?: (p: number) => void) => {
-  const path = `businesses/${businessId}/cover/${Date.now()}_${file.name}`;
-  return uploadFile(file, path, onProgress);
+  return uploadFile(file, businessId, 'cover', onProgress);
 };
 
 export const uploadBusinessGalleryImage = (file: File, businessId: string, onProgress?: (p: number) => void) => {
-  const path = `businesses/${businessId}/gallery/${Date.now()}_${file.name}`;
-  return uploadFile(file, path, onProgress);
+  return uploadFile(file, businessId, 'gallery', onProgress);
 };
 
 export const uploadBusinessDocument = (file: File, businessId: string, onProgress?: (p: number) => void) => {
-  const path = `businesses/${businessId}/documents/${Date.now()}_${file.name}`;
-  return uploadFile(file, path, onProgress);
+  return uploadFile(file, businessId, 'documents', onProgress);
 };
 
-export const deleteBusinessMedia = async (path: string): Promise<void> => {
-  const isMockOrUnconfigured = !storage || !process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === 'dummy-api-key-for-build';
-  if (isMockOrUnconfigured) {
-    console.warn('⚠️ Developer Warning: Firebase Storage not configured. Mocking delete success.');
-    return;
+export const deleteBusinessMedia = async (filePath: string): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not logged in');
+  const token = await user.getIdToken();
+  
+  const res = await fetch('/api/business/delete-media', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ filePath })
+  });
+  
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || 'You do not have permission to delete files for this business.');
   }
-  const storageRef = ref(storage, path);
-  await deleteObject(storageRef);
 };
 
 export const getPublicDownloadUrl = async (path: string): Promise<string> => {
-  const isMockOrUnconfigured = !storage || !process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_API_KEY === 'dummy-api-key-for-build';
+  const isMockOrUnconfigured = !storage;
   if (isMockOrUnconfigured) {
     console.warn('⚠️ Developer Warning: Firebase Storage not configured. Returning empty string for URL.');
     return '';

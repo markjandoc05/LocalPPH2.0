@@ -157,12 +157,12 @@ export const getApprovedBusinessesByCategory = async (
   categoryId: string,
   pagination: { page: number; limit: number }
 ): Promise<SearchResult> => {
-  return searchApprovedBusinesses({ category: categoryId }, pagination);
+  return searchApprovedBusinesses({ categoryId: categoryId }, pagination);
 };
 
 export const getApprovedBusinessesByCity = async (
   cityId: string,
   pagination: { page: number; limit: number }
 ): Promise<SearchResult> => {
-  return searchApprovedBusinesses({ city: cityId }, pagination);
+  return searchApprovedBusinesses({ cityId: cityId }, pagination);
 };

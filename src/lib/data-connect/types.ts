@@ -48,9 +48,18 @@ export interface DataProvider {
   }): Promise<{ data: { business_update: string } }>;
 
   // Public operations
-  searchApprovedBusinesses(
-    variables: any,
-  ): Promise<{ data: { businesses: BusinessListing[]; total: number } }>;
+  searchApprovedBusinesses(variables: {
+    q?: string;
+    categoryId?: string;
+    regionId?: string;
+    provinceId?: string;
+    cityId?: string;
+    verifiedOnly?: boolean;
+    featuredOnly?: boolean;
+    limit?: number;
+    page?: number;
+  }): Promise<{ data: { businesses: BusinessListing[]; total: number } }>;
+  getSearchSuggestions(variables: { q: string }): Promise<{ data: { suggestions: any[] } }>;
   getApprovedBusinessBySlug(variables: {
     slug: string;
   }): Promise<{ data: { business: BusinessListing | null } }>;

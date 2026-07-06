@@ -1,8 +1,6 @@
 import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import * as fs from "fs";
-import * as path from "path";
 
 export interface IntegrationServiceConfig {
   enabled: boolean;
@@ -36,22 +34,7 @@ const DEFAULT_SETTINGS: IntegrationSettings = {
   favicon: { enabled: true, url: "/favicon.ico" }
 };
 
-const MOCK_FILE_PATH = path.join(process.cwd(), "public", "settings-mock.json");
-
 export async function getSettings(): Promise<IntegrationSettings> {
-  const mode = process.env.NEXT_PUBLIC_DATA_MODE || "firebase";
-  if (mode === "mock") {
-    try {
-      if (fs.existsSync(MOCK_FILE_PATH)) {
-        const raw = fs.readFileSync(MOCK_FILE_PATH, "utf-8");
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-      }
-    } catch (e) {
-      console.error("Failed to read mock settings file, using defaults:", e);
-    }
-    return DEFAULT_SETTINGS;
-  }
-
   // Real Database mode
   try {
     const record = await db.query.siteSettings.findFirst({
@@ -67,22 +50,7 @@ export async function getSettings(): Promise<IntegrationSettings> {
 }
 
 export async function saveSettings(settings: IntegrationSettings): Promise<void> {
-  const mode = process.env.NEXT_PUBLIC_DATA_MODE || "firebase";
   const jsonStr = JSON.stringify(settings);
-
-  if (mode === "mock") {
-    try {
-      const dir = path.dirname(MOCK_FILE_PATH);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(MOCK_FILE_PATH, jsonStr, "utf-8");
-      return;
-    } catch (e) {
-      console.error("Failed to save mock settings file:", e);
-      throw new Error("Failed to save mock settings.");
-    }
-  }
 
   // Real Database mode
   try {
