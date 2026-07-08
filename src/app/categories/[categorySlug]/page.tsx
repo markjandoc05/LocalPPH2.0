@@ -26,6 +26,7 @@ interface PageProps {
     page?: string;
     limit?: string;
     regionId?: string;
+    region?: string;
   }>;
 }
 
@@ -50,7 +51,7 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
   
   const pageStr = resolvedSearchParams.page;
   const limitStr = resolvedSearchParams.limit;
-  const selectedRegionId = resolvedSearchParams.regionId;
+  const selectedRegionSlug = resolvedSearchParams.region || resolvedSearchParams.regionId;
 
   const category = await getCategoryBySlug(categorySlug);
   if (!category) {
@@ -70,8 +71,9 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
   let businesses = listingsResult.businesses;
   let total = listingsResult.total;
   
-  if (selectedRegionId) {
-    businesses = businesses.filter((b) => b.regionId === selectedRegionId);
+  if (selectedRegionSlug) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedRegionSlug);
+    businesses = businesses.filter((b) => isUuid ? b.regionId === selectedRegionSlug : b.regionSlug === selectedRegionSlug);
     total = businesses.length; // Approximate total for filtered set
   }
 
@@ -117,7 +119,7 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
                 <Link
                   href={`/categories/${categorySlug}`}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                    !selectedRegionId
+                    !selectedRegionSlug
                       ? "bg-blue-50 text-[#2563EB]"
                       : "text-slate-600 hover:bg-slate-50"
                   }`}
@@ -126,20 +128,23 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
                   <span>All Regions</span>
                 </Link>
                 
-                {regions.map((reg) => (
-                  <Link
-                    key={reg.id}
-                    href={`/categories/${categorySlug}?regionId=${reg.id}`}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                      selectedRegionId === reg.id
-                        ? "bg-blue-50 text-[#2563EB]"
-                        : "text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    <MapPin className="h-3.5 w-3.5" />
-                    <span className="truncate">{reg.name}</span>
-                  </Link>
-                ))}
+                {regions.map((reg) => {
+                  const isSelected = selectedRegionSlug === reg.slug || selectedRegionSlug === reg.id;
+                  return (
+                    <Link
+                      key={reg.id}
+                      href={`/categories/${categorySlug}?region=${reg.slug}`}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        isSelected
+                          ? "bg-blue-50 text-[#2563EB]"
+                          : "text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span className="truncate">{reg.name}</span>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -191,7 +196,7 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
               <div className="flex items-center justify-center gap-2 mt-8">
                 {page > 1 ? (
                   <Link
-                    href={`/categories/${categorySlug}?page=${page - 1}${selectedRegionId ? `&regionId=${selectedRegionId}` : ""}`}
+                    href={`/categories/${categorySlug}?page=${page - 1}${selectedRegionSlug ? `&region=${selectedRegionSlug}` : ""}`}
                     className="p-2 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg text-slate-600 transition-colors"
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -211,7 +216,7 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
 
                 {page < totalPages ? (
                   <Link
-                    href={`/categories/${categorySlug}?page=${page + 1}${selectedRegionId ? `&regionId=${selectedRegionId}` : ""}`}
+                    href={`/categories/${categorySlug}?page=${page + 1}${selectedRegionSlug ? `&region=${selectedRegionSlug}` : ""}`}
                     className="p-2 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg text-slate-600 transition-colors"
                   >
                     <ChevronRight className="h-4 w-4" />

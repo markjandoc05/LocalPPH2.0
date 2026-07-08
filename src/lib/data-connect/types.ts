@@ -56,6 +56,7 @@ export interface DataProvider {
     cityId?: string;
     verifiedOnly?: boolean;
     featuredOnly?: boolean;
+    sort?: string;
     limit?: number;
     page?: number;
   }): Promise<{ data: { businesses: BusinessListing[]; total: number } }>;

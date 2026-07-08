@@ -81,6 +81,7 @@ export default function SearchClient() {
           cityId: searchParams.get('city') || undefined,
           verifiedOnly: searchParams.get('verifiedOnly') === 'true',
           featuredOnly: searchParams.get('featuredOnly') === 'true',
+          sort: searchParams.get('sort') || 'newest',
         };
         
         const page = parseInt(searchParams.get('page') || '1', 10);

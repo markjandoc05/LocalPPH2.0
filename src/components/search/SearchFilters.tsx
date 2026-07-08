@@ -108,93 +108,93 @@ export default function SearchFilters({ isLoading }: SearchFiltersProps) {
 
       <div className="flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
+          <label className="block text-xs font-semibold text-gray-800 mb-1.5">Category</label>
           <select
             value={searchParams.get('category') || ''}
             disabled={isLoading}
             onChange={(e) => handleFilterChange('category', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none text-sm disabled:opacity-50"
+            className="w-full px-3 py-2 bg-white border border-gray-300 text-gray-900 font-medium rounded-lg focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] outline-none text-sm shadow-sm transition-colors duration-150 disabled:opacity-50"
           >
-            <option value="">All</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option className="text-gray-900 font-medium" value="">All</option>
+            {categories.map(c => <option className="text-gray-900 font-medium" key={c.id} value={c.slug}>{c.name}</option>)}
           </select>
         </div>
 
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-xs font-medium text-gray-700 mb-1">Region</label>
+          <label className="block text-xs font-semibold text-gray-800 mb-1.5">Region</label>
           <select
             value={searchParams.get('region') || ''}
             disabled={isLoading}
             onChange={(e) => handleFilterChange('region', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none text-sm disabled:opacity-50"
+            className="w-full px-3 py-2 bg-white border border-gray-300 text-gray-900 font-medium rounded-lg focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] outline-none text-sm shadow-sm transition-colors duration-150 disabled:opacity-50"
           >
-            <option value="">All</option>
-            {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            <option className="text-gray-900 font-medium" value="">All</option>
+            {regions.map(r => <option className="text-gray-900 font-medium" key={r.id} value={r.slug}>{r.name}</option>)}
           </select>
         </div>
         
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-xs font-medium text-gray-700 mb-1">Province</label>
+          <label className="block text-xs font-semibold text-gray-800 mb-1.5">Province</label>
           <select
             value={searchParams.get('province') || ''}
             disabled={isLoading || provinces.length === 0}
             onChange={(e) => handleFilterChange('province', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none text-sm disabled:opacity-50"
+            className="w-full px-3 py-2 bg-white border border-gray-300 text-gray-900 font-medium rounded-lg focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] outline-none text-sm shadow-sm transition-colors duration-150 disabled:opacity-50"
           >
-            <option value="">All</option>
-            {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            <option className="text-gray-900 font-medium" value="">All</option>
+            {provinces.map(p => <option className="text-gray-900 font-medium" key={p.id} value={p.slug}>{p.name}</option>)}
           </select>
         </div>
 
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-xs font-medium text-gray-700 mb-1">City</label>
+          <label className="block text-xs font-semibold text-gray-800 mb-1.5">City</label>
           <select
             value={searchParams.get('city') || ''}
             disabled={isLoading || cities.length === 0}
             onChange={(e) => handleFilterChange('city', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none text-sm disabled:opacity-50"
+            className="w-full px-3 py-2 bg-white border border-gray-300 text-gray-900 font-medium rounded-lg focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] outline-none text-sm shadow-sm transition-colors duration-150 disabled:opacity-50"
           >
-            <option value="">All</option>
-            {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option className="text-gray-900 font-medium" value="">All</option>
+            {cities.map(c => <option className="text-gray-900 font-medium" key={c.id} value={c.slug}>{c.name}</option>)}
           </select>
         </div>
 
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-xs font-medium text-gray-700 mb-1">Sort By</label>
+          <label className="block text-xs font-semibold text-gray-800 mb-1.5">Sort By</label>
           <select
             value={searchParams.get('sort') || 'newest'}
             disabled={isLoading}
             onChange={(e) => handleFilterChange('sort', e.target.value)}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none text-sm disabled:opacity-50"
+            className="w-full px-3 py-2 bg-white border border-gray-300 text-gray-900 font-medium rounded-lg focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] outline-none text-sm shadow-sm transition-colors duration-150 disabled:opacity-50"
           >
-            <option value="newest">Newest</option>
-            <option value="featured">Featured</option>
-            <option value="verified">Verified</option>
-            <option value="name">Name (A-Z)</option>
+            <option className="text-gray-900 font-medium" value="newest">Newest</option>
+            <option className="text-gray-900 font-medium" value="featured">Featured</option>
+            <option className="text-gray-900 font-medium" value="verified">Verified</option>
+            <option className="text-gray-900 font-medium" value="name">Name (A-Z)</option>
           </select>
         </div>
         
         <div className="flex items-center gap-4 py-2">
-          <label className="flex items-center gap-2">
+          <label className="flex items-center gap-2 cursor-pointer">
             <input 
               type="checkbox" 
               disabled={isLoading}
               checked={searchParams.get('verifiedOnly') === 'true'}
               onChange={(e) => handleCheckboxChange('verifiedOnly', e.target.checked)}
-              className="w-4 h-4 text-[#2563EB] rounded border-gray-300 focus:ring-[#2563EB] disabled:opacity-50"
+              className="w-4 h-4 text-[#2563EB] rounded border-gray-300 focus:ring-[#2563EB] cursor-pointer disabled:opacity-50"
             />
-            <span className="text-xs text-gray-700">Verified</span>
+            <span className="text-xs font-semibold text-gray-800">Verified</span>
           </label>
           
-          <label className="flex items-center gap-2">
+          <label className="flex items-center gap-2 cursor-pointer">
             <input 
               type="checkbox" 
               disabled={isLoading}
               checked={searchParams.get('featuredOnly') === 'true'}
               onChange={(e) => handleCheckboxChange('featuredOnly', e.target.checked)}
-              className="w-4 h-4 text-[#2563EB] rounded border-gray-300 focus:ring-[#2563EB] disabled:opacity-50"
+              className="w-4 h-4 text-[#2563EB] rounded border-gray-300 focus:ring-[#2563EB] cursor-pointer disabled:opacity-50"
             />
-            <span className="text-xs text-gray-700">Featured</span>
+            <span className="text-xs font-semibold text-gray-800">Featured</span>
           </label>
         </div>
       </div>

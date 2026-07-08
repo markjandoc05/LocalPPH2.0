@@ -9,7 +9,7 @@ import {
   provinces, 
   cities, 
 } from "../../db/schema";
-import { eq, and, or, ilike, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, or, ilike, sql, desc, asc, inArray } from "drizzle-orm";
 import { BusinessListing } from "@/types/business";
 
 const formatBusinessRow = (b: any): BusinessListing => {
@@ -34,10 +34,15 @@ const formatBusinessRow = (b: any): BusinessListing => {
     ...b,
     ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
     categoryName: b.category?.name || "Not assigned",
+    categorySlug: b.category?.slug || undefined,
     subcategoryName: b.subcategory?.name || "Not assigned",
+    subcategorySlug: b.subcategory?.slug || undefined,
     cityName: b.city?.name || "Not assigned",
+    citySlug: b.city?.slug || undefined,
     provinceName: b.province?.name || "Not assigned",
+    provinceSlug: b.province?.slug || undefined,
     regionName: b.region?.name || "Not assigned",
+    regionSlug: b.region?.slug || undefined,
     documents: parsedDocuments,
     gallery: parsedGallery,
     createdAt: b.createdAt instanceof Date ? b.createdAt.toISOString() : (b.createdAt || new Date().toISOString()),
@@ -261,12 +266,38 @@ export const databaseProvider: DataProvider = {
     const page = variables.page || 1;
     const offset = (page - 1) * limit;
     
-    const baseWhere = [];
+    const baseWhere = [eq(businesses.status, 'APPROVED')];
     
-    if (variables.categoryId) baseWhere.push(eq(businesses.categoryId, variables.categoryId));
-    if (variables.regionId) baseWhere.push(eq(businesses.regionId, variables.regionId));
-    if (variables.provinceId) baseWhere.push(eq(businesses.provinceId, variables.provinceId));
-    if (variables.cityId) baseWhere.push(eq(businesses.cityId, variables.cityId));
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (variables.categoryId) {
+      if (uuidRegex.test(variables.categoryId)) {
+        baseWhere.push(eq(businesses.categoryId, variables.categoryId));
+      } else {
+        baseWhere.push(or(eq(categories.slug, variables.categoryId), eq(subcategories.slug, variables.categoryId)) as any);
+      }
+    }
+    if (variables.regionId) {
+      if (uuidRegex.test(variables.regionId)) {
+        baseWhere.push(eq(businesses.regionId, variables.regionId));
+      } else {
+        baseWhere.push(eq(regions.slug, variables.regionId));
+      }
+    }
+    if (variables.provinceId) {
+      if (uuidRegex.test(variables.provinceId)) {
+        baseWhere.push(eq(businesses.provinceId, variables.provinceId));
+      } else {
+        baseWhere.push(eq(provinces.slug, variables.provinceId));
+      }
+    }
+    if (variables.cityId) {
+      if (uuidRegex.test(variables.cityId)) {
+        baseWhere.push(eq(businesses.cityId, variables.cityId));
+      } else {
+        baseWhere.push(eq(cities.slug, variables.cityId));
+      }
+    }
     if (variables.featuredOnly) baseWhere.push(eq(businesses.isFeatured, true));
     if (variables.verifiedOnly) baseWhere.push(eq(businesses.isVerified, true));
 
@@ -298,9 +329,18 @@ export const databaseProvider: DataProvider = {
       }
     }
 
+    let orderByList: any[] = [desc(businesses.createdAt)];
+    if (variables.sort === 'featured') {
+      orderByList = [desc(businesses.isFeatured), desc(businesses.createdAt)];
+    } else if (variables.sort === 'verified') {
+      orderByList = [desc(businesses.isVerified), desc(businesses.createdAt)];
+    } else if (variables.sort === 'name') {
+      orderByList = [asc(businesses.name), desc(businesses.createdAt)];
+    }
+
     const businessIds = searchFilters.length > 0
-      ? await query.where(and(...searchFilters))
-      : await query;
+      ? await query.where(and(...searchFilters)).orderBy(...orderByList)
+      : await query.orderBy(...orderByList);
     const ids = businessIds.map(b => b.id);
 
     if (ids.length === 0) {
@@ -324,7 +364,7 @@ export const databaseProvider: DataProvider = {
 
     const res = await db.query.businesses.findMany({
       where: inArray(businesses.id, paginatedIds),
-      orderBy: [desc(businesses.createdAt)],
+      orderBy: orderByList,
       with: {
         owner: true,
         category: true,
@@ -442,12 +482,36 @@ export const databaseProvider: DataProvider = {
     return { data: { regions: res } };
   },
   async getProvinces(variables) {
-    const where = variables?.regionId ? eq(provinces.regionId, variables.regionId) : undefined;
+    let where;
+    if (variables?.regionId) {
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(variables.regionId)) {
+        where = eq(provinces.regionId, variables.regionId);
+      } else {
+        const r = await db.query.regions.findFirst({ where: eq(regions.slug, variables.regionId) });
+        if (r) {
+          where = eq(provinces.regionId, r.id);
+        } else {
+          return { data: { provinces: [] } };
+        }
+      }
+    }
     const res = await db.query.provinces.findMany({ where });
     return { data: { provinces: res } };
   },
   async getCities(variables) {
-    const where = variables?.provinceId ? eq(cities.provinceId, variables.provinceId) : undefined;
+    let where;
+    if (variables?.provinceId) {
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(variables.provinceId)) {
+        where = eq(cities.provinceId, variables.provinceId);
+      } else {
+        const p = await db.query.provinces.findFirst({ where: eq(provinces.slug, variables.provinceId) });
+        if (p) {
+          where = eq(cities.provinceId, p.id);
+        } else {
+          return { data: { cities: [] } };
+        }
+      }
+    }
     const res = await db.query.cities.findMany({ where });
     return { data: { cities: res } };
   },
@@ -456,7 +520,19 @@ export const databaseProvider: DataProvider = {
     return { data: { categories: res } };
   },
   async getSubcategories(variables) {
-    const where = variables?.categoryId ? eq(subcategories.categoryId, variables.categoryId) : undefined;
+    let where;
+    if (variables?.categoryId) {
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(variables.categoryId)) {
+        where = eq(subcategories.categoryId, variables.categoryId);
+      } else {
+        const c = await db.query.categories.findFirst({ where: eq(categories.slug, variables.categoryId) });
+        if (c) {
+          where = eq(subcategories.categoryId, c.id);
+        } else {
+          return { data: { subcategories: [] } };
+        }
+      }
+    }
     const res = await db.query.subcategories.findMany({ where });
     return { data: { subcategories: res } };
   },

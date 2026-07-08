@@ -25,8 +25,8 @@ export default async function BusinessProfilePage({ params }: { params: Promise<
   const jsonLd = generateLocalBusinessJsonLd(business);
 
   const breadcrumbs = [
-    { label: business.categoryName || business.categoryId || 'Category', href: `/search?category=${business.categoryId}` },
-    { label: business.cityName || business.cityId || 'City', href: `/search?city=${business.cityId}` },
+    { label: business.categoryName || business.categoryId || 'Category', href: `/search?category=${business.categorySlug || business.categoryId}` },
+    { label: business.cityName || business.cityId || 'City', href: `/search?city=${business.citySlug || business.cityId}` },
     { label: business.name },
   ];
 

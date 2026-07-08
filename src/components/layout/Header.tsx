@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { logoutUser } from '@/lib/auth/auth-utils';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { canAccessAdmin, isBusiness } from '@/lib/auth/roles';
 import { Button, buttonVariants } from '@/components/ui/Button';
 import { Menu, X } from 'lucide-react';

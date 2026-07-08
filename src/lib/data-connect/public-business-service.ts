@@ -9,6 +9,7 @@ export interface SearchFilters {
   provinceId?: string;
   verifiedOnly?: boolean;
   featuredOnly?: boolean;
+  sort?: string;
 }
 
 export interface PaginationParams {

@@ -12,7 +12,8 @@ export async function POST(req: NextRequest) {
     // Only allow public methods
     const allowedPublicMethods = [
       'getCategories', 'getRegions', 'getProvinces', 'getCities', 'getSubcategories',
-      'getSearchSuggestions', 'searchApprovedBusinesses'
+      'getSearchSuggestions', 'searchApprovedBusinesses', 'getApprovedBusinessBySlug',
+      'getFeaturedApprovedBusinesses', 'getRecentlyApprovedBusinesses'
     ];
 
     if (!allowedPublicMethods.includes(method)) {

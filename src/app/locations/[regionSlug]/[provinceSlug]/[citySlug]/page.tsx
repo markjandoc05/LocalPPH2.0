@@ -108,7 +108,7 @@ export default async function CityDetailPage({ params, searchParams }: PageProps
                 {categories.map((cat) => (
                   <Link
                     key={cat.id}
-                    href={`/search?category=${encodeURIComponent(cat.id)}&city=${encodeURIComponent(city.id)}`}
+                    href={`/search?category=${encodeURIComponent(cat.slug)}&city=${encodeURIComponent(city.slug)}`}
                     className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-[#2563EB] hover:bg-slate-50 transition-colors"
                   >
                     <span className="truncate">{cat.name}</span>

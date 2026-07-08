@@ -36,7 +36,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
               </span>
               
               <Link
-                href={`/search?category=${category.id}`}
+                href={`/search?category=${category.slug}`}
                 className="inline-flex items-center gap-1 text-sm font-semibold text-[#2563EB] group-hover:text-[#1D4ED8] transition-colors"
               >
                 <span>Browse</span>

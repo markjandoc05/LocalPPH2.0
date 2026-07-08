@@ -22,7 +22,7 @@ export default function SubcategoryList({ subcategories, mainCategoryName }: Sub
         {subcategories.map((sub) => (
           <Link
             key={sub.id}
-            href={`/search?category=${encodeURIComponent(sub.id)}`}
+            href={`/search?category=${encodeURIComponent(sub.slug)}`}
             className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-[#2563EB] rounded-full text-xs font-medium transition-colors border border-slate-100 hover:border-blue-100"
           >
             {sub.name}

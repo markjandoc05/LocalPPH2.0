@@ -68,10 +68,15 @@ export interface BusinessListing {
   // Relations for UI display
   ownerName?: string;
   categoryName?: string;
+  categorySlug?: string;
   subcategoryName?: string;
+  subcategorySlug?: string;
   cityName?: string;
+  citySlug?: string;
   provinceName?: string;
+  provinceSlug?: string;
   regionName?: string;
+  regionSlug?: string;
 }
 
 export interface BusinessStats {

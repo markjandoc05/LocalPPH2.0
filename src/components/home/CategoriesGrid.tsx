@@ -32,7 +32,7 @@ export default async function CategoriesGrid() {
         return (
           <Link
             key={category.id}
-            href={`/search?category=${category.id}`}
+            href={`/search?category=${category.slug}`}
             className="flex flex-col items-center p-6 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1"
           >
             <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-4 text-blue-600">

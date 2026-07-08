@@ -46,12 +46,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.error("Failed to fetch user role", error);
           const userRole = firebaseUser.email === 'markjandoc@gmail.com' ? ROLES.ADMIN : ROLES.SUBSCRIBER;
           setRole(userRole);
+        } finally {
+          setLoading(false);
         }
       } else {
         setUser(null);
         setRole(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
