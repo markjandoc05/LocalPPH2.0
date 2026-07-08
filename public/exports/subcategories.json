@@ -1,0 +1,205 @@
+[
+  {
+    "id": "772c7997-7f7e-479f-8c18-8268982d8503",
+    "categoryId": "6e3f20cb-880c-4689-a682-536c52d83230",
+    "name": "Restaurants",
+    "slug": "restaurants",
+    "status": true
+  },
+  {
+    "id": "48e0d33c-916f-42ca-a0d1-5c80ea9b2a5b",
+    "categoryId": "6e3f20cb-880c-4689-a682-536c52d83230",
+    "name": "Coffee Shops",
+    "slug": "coffee-shops",
+    "status": true
+  },
+  {
+    "id": "852aa02d-63bb-4b7d-be39-170b2dc2a30f",
+    "categoryId": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+    "name": "Clinics",
+    "slug": "clinics",
+    "status": true
+  },
+  {
+    "id": "b645785b-b697-4bd6-8653-fed58868fdf4",
+    "categoryId": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+    "name": "Hospitals",
+    "slug": "hospitals",
+    "status": true
+  },
+  {
+    "id": "de90d465-ca27-41b1-9457-219aa0681e00",
+    "categoryId": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+    "name": "Dental Clinics",
+    "slug": "dental-clinics",
+    "status": true
+  },
+  {
+    "id": "84cfa6c8-07b5-4378-b667-f96a2979096c",
+    "categoryId": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+    "name": "Aesthetic Clinics",
+    "slug": "aesthetic-clinics",
+    "status": true
+  },
+  {
+    "id": "f33132a6-d199-4137-b367-dba4fe98524e",
+    "categoryId": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+    "name": "Pharmacies",
+    "slug": "pharmacies",
+    "status": true
+  },
+  {
+    "id": "8343a182-0f61-484e-a60a-7f726cd5f970",
+    "categoryId": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+    "name": "Medical Suppliers",
+    "slug": "medical-suppliers",
+    "status": true
+  },
+  {
+    "id": "8521f84e-3baf-4349-81c4-2d680ad36b1c",
+    "categoryId": "466c165e-a0d6-41c0-b428-b2beda353996",
+    "name": "Hotels",
+    "slug": "hotels",
+    "status": true
+  },
+  {
+    "id": "ad98237d-24ef-4bed-8fbc-2eab3a0adec0",
+    "categoryId": "466c165e-a0d6-41c0-b428-b2beda353996",
+    "name": "Resorts",
+    "slug": "resorts",
+    "status": true
+  },
+  {
+    "id": "c0e31c2b-aa45-41c1-8409-e325800cc2fb",
+    "categoryId": "466c165e-a0d6-41c0-b428-b2beda353996",
+    "name": "Travel Agencies",
+    "slug": "travel-agencies",
+    "status": true
+  },
+  {
+    "id": "b02a563f-40f5-4489-9389-15761a0fc4fd",
+    "categoryId": "fad2e01a-0925-4cce-9280-5a7d3154c1ea",
+    "name": "Salons",
+    "slug": "salons",
+    "status": true
+  },
+  {
+    "id": "cf50d6bf-9963-4a82-add8-0313e5503c69",
+    "categoryId": "fad2e01a-0925-4cce-9280-5a7d3154c1ea",
+    "name": "Spas",
+    "slug": "spas",
+    "status": true
+  },
+  {
+    "id": "3b72d017-f135-4fff-975a-164a9691c736",
+    "categoryId": "fad2e01a-0925-4cce-9280-5a7d3154c1ea",
+    "name": "Gyms",
+    "slug": "gyms",
+    "status": true
+  },
+  {
+    "id": "15823da9-0543-45f8-b26a-62a8d55144a5",
+    "categoryId": "8e5b902a-f6b1-4622-bb91-b5b7f0c610eb",
+    "name": "Hardware Stores",
+    "slug": "hardware-stores",
+    "status": true
+  },
+  {
+    "id": "4754e25d-06c9-42cf-91a4-90a2f46c3f9d",
+    "categoryId": "8e5b902a-f6b1-4622-bb91-b5b7f0c610eb",
+    "name": "Construction Services",
+    "slug": "construction-services",
+    "status": true
+  },
+  {
+    "id": "1581c610-a535-4e08-a24e-0da373a46d85",
+    "categoryId": "8e5b902a-f6b1-4622-bb91-b5b7f0c610eb",
+    "name": "Real Estate",
+    "slug": "real-estate",
+    "status": true
+  },
+  {
+    "id": "9ed74b2a-dc4c-4099-b83b-d46348e87575",
+    "categoryId": "87ee5c86-92c1-4f2f-87d6-63b1ff6df4d1",
+    "name": "Schools",
+    "slug": "schools",
+    "status": true
+  },
+  {
+    "id": "26a59233-f9c0-4fab-96c1-a3325a0ea423",
+    "categoryId": "87ee5c86-92c1-4f2f-87d6-63b1ff6df4d1",
+    "name": "Universities",
+    "slug": "universities",
+    "status": true
+  },
+  {
+    "id": "38e99c1a-f51c-4f81-89bd-da0b0e5412f7",
+    "categoryId": "34f0d74e-8813-43d7-8d5d-59cebf96fcc6",
+    "name": "IT Services",
+    "slug": "it-services",
+    "status": true
+  },
+  {
+    "id": "7b624b68-991c-4cf0-8823-b8a2f424babb",
+    "categoryId": "34f0d74e-8813-43d7-8d5d-59cebf96fcc6",
+    "name": "Web Developers",
+    "slug": "web-developers",
+    "status": true
+  },
+  {
+    "id": "3fd5744d-3899-46b4-a4db-bc3664f1bfb6",
+    "categoryId": "34f0d74e-8813-43d7-8d5d-59cebf96fcc6",
+    "name": "Marketing Agencies",
+    "slug": "marketing-agencies",
+    "status": true
+  },
+  {
+    "id": "ea6d6523-4763-49d7-97dd-19f5ea94aad4",
+    "categoryId": "34f0d74e-8813-43d7-8d5d-59cebf96fcc6",
+    "name": "Printing Services",
+    "slug": "printing-services",
+    "status": true
+  },
+  {
+    "id": "3fdfc76c-ecb5-4cf2-8cb5-74268cc65e70",
+    "categoryId": "b6757868-cbcf-4564-822a-72dd98e12d40",
+    "name": "Auto Repair",
+    "slug": "auto-repair",
+    "status": true
+  },
+  {
+    "id": "bba5fb1a-01ce-4955-8269-0549ae6c55cc",
+    "categoryId": "b6757868-cbcf-4564-822a-72dd98e12d40",
+    "name": "Car Dealers",
+    "slug": "car-dealers",
+    "status": true
+  },
+  {
+    "id": "9bd974c2-968e-4800-a613-912e58b35173",
+    "categoryId": "fc32d32a-6bbb-458f-8167-fd06ddc7e74d",
+    "name": "Accounting Services",
+    "slug": "accounting-services",
+    "status": true
+  },
+  {
+    "id": "292d520f-367d-4d05-be18-8db67ac90572",
+    "categoryId": "fc32d32a-6bbb-458f-8167-fd06ddc7e74d",
+    "name": "Law Firms",
+    "slug": "law-firms",
+    "status": true
+  },
+  {
+    "id": "9022bd4a-44ae-4b86-ae5b-6dac3b6c877b",
+    "categoryId": "9a381494-51d7-4a82-ae9f-c331d2b48b4b",
+    "name": "Veterinary Clinics",
+    "slug": "veterinary-clinics",
+    "status": true
+  },
+  {
+    "id": "5cad4bad-eef5-47c4-b290-f3aee7c05b6c",
+    "categoryId": "9a381494-51d7-4a82-ae9f-c331d2b48b4b",
+    "name": "Pet Shops",
+    "slug": "pet-shops",
+    "status": true
+  }
+]

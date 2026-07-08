@@ -1,0 +1,233 @@
+[
+  {
+    "id": "aeace4fb-dbc8-4778-919f-7b1f8ef5e51b",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Manila",
+    "slug": "manila",
+    "status": true
+  },
+  {
+    "id": "89423b59-ebec-47a5-80a2-f2ebe8493d5c",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Quezon City",
+    "slug": "quezon-city",
+    "status": true
+  },
+  {
+    "id": "30fa7e17-ecb9-47e0-bbcf-4f1d97ecfc0b",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Makati",
+    "slug": "makati",
+    "status": true
+  },
+  {
+    "id": "86c6e524-d9cf-41be-8708-8395968cc577",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Taguig",
+    "slug": "taguig",
+    "status": true
+  },
+  {
+    "id": "c324a792-44c1-4475-90c0-22804a57fbd2",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Pasig",
+    "slug": "pasig",
+    "status": true
+  },
+  {
+    "id": "da49d6af-cf34-4e79-88aa-f147cd508eb3",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Mandaluyong",
+    "slug": "mandaluyong",
+    "status": true
+  },
+  {
+    "id": "18192059-405f-4f31-b674-5ea8d3a4ce08",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "San Juan",
+    "slug": "san-juan",
+    "status": true
+  },
+  {
+    "id": "d7a3d38a-b920-4efa-adc5-0cf659da5f3a",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Parañaque",
+    "slug": "paranaque",
+    "status": true
+  },
+  {
+    "id": "a737720a-d0b9-4f54-9677-3488a085fd6e",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Las Piñas",
+    "slug": "las-pinas",
+    "status": true
+  },
+  {
+    "id": "d0d6cb21-fba2-4761-a013-c0359057610e",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Muntinlupa",
+    "slug": "muntinlupa",
+    "status": true
+  },
+  {
+    "id": "d9b7b1a8-662c-4440-8a8c-4222c440e25d",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Pasay",
+    "slug": "pasay",
+    "status": true
+  },
+  {
+    "id": "9ae74ae3-b9f1-4ee9-b853-d6670c8d8329",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Marikina",
+    "slug": "marikina",
+    "status": true
+  },
+  {
+    "id": "ee6ccab8-fdb4-4f37-87c1-6a4a35ec95af",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Valenzuela",
+    "slug": "valenzuela",
+    "status": true
+  },
+  {
+    "id": "1773c298-82e6-4690-b471-5c9cfe93c342",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Malabon",
+    "slug": "malabon",
+    "status": true
+  },
+  {
+    "id": "8b323f61-c58b-43ec-9c90-8b18445ab1f0",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Navotas",
+    "slug": "navotas",
+    "status": true
+  },
+  {
+    "id": "79742a32-5351-4037-a27d-40c98db3b448",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Caloocan",
+    "slug": "caloocan",
+    "status": true
+  },
+  {
+    "id": "fa6760bd-22ad-4ede-9552-aa8528c30e85",
+    "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "name": "Pateros",
+    "slug": "pateros",
+    "status": true
+  },
+  {
+    "id": "52ef2abc-b70a-421f-ad90-5ff38da355aa",
+    "provinceId": "e3d24bb5-9d31-4ba9-ad85-5c47fc2319d6",
+    "name": "Dasmarinas",
+    "slug": "dasmarinas",
+    "status": true
+  },
+  {
+    "id": "81ca3b14-ab95-48fd-a374-da42f2e177c6",
+    "provinceId": "e3d24bb5-9d31-4ba9-ad85-5c47fc2319d6",
+    "name": "Bacoor",
+    "slug": "bacoor",
+    "status": true
+  },
+  {
+    "id": "badf66c2-e96f-4099-8b99-a43a912ee85b",
+    "provinceId": "e3d24bb5-9d31-4ba9-ad85-5c47fc2319d6",
+    "name": "Imus",
+    "slug": "imus",
+    "status": true
+  },
+  {
+    "id": "09e7bc0c-dff7-4edd-91ab-457de7faa999",
+    "provinceId": "e3d24bb5-9d31-4ba9-ad85-5c47fc2319d6",
+    "name": "Tagaytay",
+    "slug": "tagaytay",
+    "status": true
+  },
+  {
+    "id": "f2da7191-a730-444a-9663-92b40222171d",
+    "provinceId": "9215fa72-db14-4c0f-90cc-095a5bcae15e",
+    "name": "Santa Rosa",
+    "slug": "santa-rosa",
+    "status": true
+  },
+  {
+    "id": "56188609-39a2-470e-ba62-8ae833d9c4bc",
+    "provinceId": "9215fa72-db14-4c0f-90cc-095a5bcae15e",
+    "name": "Calamba",
+    "slug": "calamba",
+    "status": true
+  },
+  {
+    "id": "cdd58aad-3555-4744-be46-674bcf5bbdf0",
+    "provinceId": "9215fa72-db14-4c0f-90cc-095a5bcae15e",
+    "name": "Biñan",
+    "slug": "binan",
+    "status": true
+  },
+  {
+    "id": "a57e5b88-8e39-452f-9e68-34591d4f3460",
+    "provinceId": "a8e1e59a-54ad-421c-80d2-e08d5cd47db0",
+    "name": "San Fernando",
+    "slug": "san-fernando-pampanga",
+    "status": true
+  },
+  {
+    "id": "f409168c-694c-4d23-a114-3dd7903fd4ce",
+    "provinceId": "a8e1e59a-54ad-421c-80d2-e08d5cd47db0",
+    "name": "Angeles",
+    "slug": "angeles",
+    "status": true
+  },
+  {
+    "id": "321db674-804a-4032-9496-178f573f7f23",
+    "provinceId": "49d8a645-0a8c-4cdf-b8d0-d78722de0857",
+    "name": "Cebu City",
+    "slug": "cebu-city",
+    "status": true
+  },
+  {
+    "id": "51d9a0d5-bae6-46e6-af45-13e5769c096e",
+    "provinceId": "49d8a645-0a8c-4cdf-b8d0-d78722de0857",
+    "name": "Mandaue",
+    "slug": "mandaue",
+    "status": true
+  },
+  {
+    "id": "ebbd82ab-a65c-4004-ba29-c854c0b246a8",
+    "provinceId": "49d8a645-0a8c-4cdf-b8d0-d78722de0857",
+    "name": "Lapu-Lapu",
+    "slug": "lapu-lapu",
+    "status": true
+  },
+  {
+    "id": "283e032c-8fbb-45e3-8a14-9a857559eeb7",
+    "provinceId": "1ad7bba4-e1f3-4cfa-aa19-9402fa5b5c49",
+    "name": "Davao City",
+    "slug": "davao-city",
+    "status": true
+  },
+  {
+    "id": "42bb6ff7-d227-4226-a703-7028e0134bb2",
+    "provinceId": "5ceb5811-013d-4126-9f1e-bf09502c55b8",
+    "name": "Legazpi",
+    "slug": "legazpi",
+    "status": true
+  },
+  {
+    "id": "83687c70-1cad-4fa8-8f2a-65a172988240",
+    "provinceId": "e63a1f10-7ef8-49d7-8dbe-1ccd6647838e",
+    "name": "Naga",
+    "slug": "naga",
+    "status": true
+  },
+  {
+    "id": "96e88910-4320-4ba5-8e90-1d0f34b14a3f",
+    "provinceId": "96322222-d886-4074-93d9-1958dc54da7f",
+    "name": "Antipolo",
+    "slug": "antipolo",
+    "status": true
+  }
+]

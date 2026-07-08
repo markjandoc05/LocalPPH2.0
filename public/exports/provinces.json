@@ -1,0 +1,93 @@
+[
+  {
+    "id": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+    "regionId": "2d499f1d-114e-4bef-87db-63703c3664fa",
+    "name": "Metro Manila",
+    "slug": "metro-manila",
+    "status": true
+  },
+  {
+    "id": "e3d24bb5-9d31-4ba9-ad85-5c47fc2319d6",
+    "regionId": "327bac5b-8f68-484f-a3ac-dd04b957e1c2",
+    "name": "Cavite",
+    "slug": "cavite",
+    "status": true
+  },
+  {
+    "id": "9215fa72-db14-4c0f-90cc-095a5bcae15e",
+    "regionId": "327bac5b-8f68-484f-a3ac-dd04b957e1c2",
+    "name": "Laguna",
+    "slug": "laguna",
+    "status": true
+  },
+  {
+    "id": "3e55b5b9-981d-4664-ae6e-e412a275baa1",
+    "regionId": "327bac5b-8f68-484f-a3ac-dd04b957e1c2",
+    "name": "Batangas",
+    "slug": "batangas",
+    "status": true
+  },
+  {
+    "id": "96322222-d886-4074-93d9-1958dc54da7f",
+    "regionId": "327bac5b-8f68-484f-a3ac-dd04b957e1c2",
+    "name": "Rizal",
+    "slug": "rizal",
+    "status": true
+  },
+  {
+    "id": "c4535c09-e522-4c7d-b831-881ff66643f1",
+    "regionId": "327bac5b-8f68-484f-a3ac-dd04b957e1c2",
+    "name": "Quezon",
+    "slug": "quezon",
+    "status": true
+  },
+  {
+    "id": "a8e1e59a-54ad-421c-80d2-e08d5cd47db0",
+    "regionId": "776944d7-9d39-4393-8c22-b32438d6a555",
+    "name": "Pampanga",
+    "slug": "pampanga",
+    "status": true
+  },
+  {
+    "id": "2aac4c8e-8933-4332-a40a-42fb2a0c9e4d",
+    "regionId": "776944d7-9d39-4393-8c22-b32438d6a555",
+    "name": "Bulacan",
+    "slug": "bulacan",
+    "status": true
+  },
+  {
+    "id": "2f6061b2-6eb4-4729-8b79-8f6130703e28",
+    "regionId": "776944d7-9d39-4393-8c22-b32438d6a555",
+    "name": "Tarlac",
+    "slug": "tarlac",
+    "status": true
+  },
+  {
+    "id": "49d8a645-0a8c-4cdf-b8d0-d78722de0857",
+    "regionId": "fc96ae81-b57d-4e4b-aace-b0cf031fd727",
+    "name": "Cebu",
+    "slug": "cebu",
+    "status": true
+  },
+  {
+    "id": "1ad7bba4-e1f3-4cfa-aa19-9402fa5b5c49",
+    "regionId": "3ac4340c-c728-4df1-98ba-c485fb19faff",
+    "name": "Davao del Sur",
+    "slug": "davao-del-sur",
+    "status": true
+  },
+  {
+    "id": "5ceb5811-013d-4126-9f1e-bf09502c55b8",
+    "regionId": "63f8f381-1381-4e88-a8be-67e849c967a7",
+    "name": "Albay",
+    "slug": "albay",
+    "status": true
+  },
+  {
+    "id": "e63a1f10-7ef8-49d7-8dbe-1ccd6647838e",
+    "regionId": "63f8f381-1381-4e88-a8be-67e849c967a7",
+    "name": "Camarines Sur",
+    "slug": "camarines-sur",
+    "status": true
+  }
+]

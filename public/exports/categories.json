@@ -1,0 +1,100 @@
+[
+  {
+    "id": "6e3f20cb-880c-4689-a682-536c52d83230",
+    "name": "Food & Beverage",
+    "slug": "food-and-beverage",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+    "name": "Health & Medical",
+    "slug": "health-and-medical",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "466c165e-a0d6-41c0-b428-b2beda353996",
+    "name": "Travel & Hospitality",
+    "slug": "travel-and-hospitality",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "fad2e01a-0925-4cce-9280-5a7d3154c1ea",
+    "name": "Wellness & Beauty",
+    "slug": "wellness-and-beauty",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "8e5b902a-f6b1-4622-bb91-b5b7f0c610eb",
+    "name": "Construction & Home",
+    "slug": "construction-and-home",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "87ee5c86-92c1-4f2f-87d6-63b1ff6df4d1",
+    "name": "Education",
+    "slug": "education",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "34f0d74e-8813-43d7-8d5d-59cebf96fcc6",
+    "name": "Tech & Digital",
+    "slug": "tech-and-digital",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "b6757868-cbcf-4564-822a-72dd98e12d40",
+    "name": "Automotive",
+    "slug": "automotive",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "fc32d32a-6bbb-458f-8167-fd06ddc7e74d",
+    "name": "Professional Services",
+    "slug": "professional-services",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "9a381494-51d7-4a82-ae9f-c331d2b48b4b",
+    "name": "Pets",
+    "slug": "pets",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "902e0b9b-915d-41f6-80a0-a6d9bb0f8a44",
+    "name": "Food & Beverage",
+    "slug": "food-beverage",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "082a5047-29cb-43a6-a72a-0280fa78ccb6",
+    "name": "Retail",
+    "slug": "retail",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "19f15ede-ee02-4d3c-9811-d767a6a930e5",
+    "name": "Services",
+    "slug": "services",
+    "description": null,
+    "status": true
+  },
+  {
+    "id": "41d24f1b-620d-42b4-97b3-ea2e597abf6f",
+    "name": "Health & Wellness",
+    "slug": "health-wellness",
+    "description": null,
+    "status": true
+  }
+]

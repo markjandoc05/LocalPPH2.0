@@ -1,0 +1,802 @@
+{
+  "users": [
+    {
+      "id": "system-seed-user",
+      "email": "admin@localpages.ph",
+      "displayName": "System Seeder",
+      "photoUrl": null,
+      "role": "ADMIN",
+      "firstName": null,
+      "lastName": null,
+      "mobileNumber": null,
+      "telephoneNumber": null,
+      "dateOfBirth": null,
+      "gender": null,
+      "addressLine1": null,
+      "addressLine2": null,
+      "barangay": null,
+      "city": null,
+      "province": null,
+      "region": null,
+      "zipCode": null,
+      "country": "Philippines",
+      "accountStatus": "ACTIVE",
+      "lastLoginAt": null,
+      "emailVerified": false,
+      "createdAt": "2026-07-03T06:31:19.590Z",
+      "updatedAt": "2026-07-03T06:31:19.590Z"
+    },
+    {
+      "id": "yEqBlteVSoMBqgSf7AqoFxAH6L93",
+      "email": "icr8group@gmail.com",
+      "displayName": "The icr8group",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocLfp16fj2OAqLqmotlXXEHZXSy9RHg8sfMHCwm-8ai0N9YpDWE=s96-c",
+      "role": "SUBSCRIBER",
+      "firstName": null,
+      "lastName": null,
+      "mobileNumber": null,
+      "telephoneNumber": null,
+      "dateOfBirth": null,
+      "gender": null,
+      "addressLine1": null,
+      "addressLine2": null,
+      "barangay": null,
+      "city": null,
+      "province": null,
+      "region": null,
+      "zipCode": null,
+      "country": "Philippines",
+      "accountStatus": "ACTIVE",
+      "lastLoginAt": null,
+      "emailVerified": false,
+      "createdAt": "2026-07-03T20:46:24.922Z",
+      "updatedAt": "2026-07-03T20:46:24.922Z"
+    },
+    {
+      "id": "sjXYcFCSFrV93F7PXJuoayZIITp2",
+      "email": "markjandoc@gmail.com",
+      "displayName": "Mark Garcia Jandoc",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocJvkYffp2e_T1faxxYifakRDcbmv8JvIL8XP4UDNRcmf1V2zhssAQ=s96-c",
+      "role": "ADMIN",
+      "firstName": "Mark Kenneth",
+      "lastName": "Jandoc",
+      "mobileNumber": "09190025527",
+      "telephoneNumber": "800007000",
+      "dateOfBirth": null,
+      "gender": null,
+      "addressLine1": "Unit 2216, Tower 4, Avida Centera Towers",
+      "addressLine2": "Brgy. Highway Hills",
+      "barangay": "Highway Hills",
+      "city": "Mandaluyong",
+      "province": "Metro Manila",
+      "region": "NCR",
+      "zipCode": "5051",
+      "country": "Philippines",
+      "accountStatus": "ACTIVE",
+      "lastLoginAt": null,
+      "emailVerified": false,
+      "createdAt": "2026-07-04T08:57:36.613Z",
+      "updatedAt": "2026-07-04T11:40:02.486Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "6e3f20cb-880c-4689-a682-536c52d83230",
+      "name": "Food & Beverage",
+      "slug": "food-and-beverage",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+      "name": "Health & Medical",
+      "slug": "health-and-medical",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "466c165e-a0d6-41c0-b428-b2beda353996",
+      "name": "Travel & Hospitality",
+      "slug": "travel-and-hospitality",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "fad2e01a-0925-4cce-9280-5a7d3154c1ea",
+      "name": "Wellness & Beauty",
+      "slug": "wellness-and-beauty",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "8e5b902a-f6b1-4622-bb91-b5b7f0c610eb",
+      "name": "Construction & Home",
+      "slug": "construction-and-home",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "87ee5c86-92c1-4f2f-87d6-63b1ff6df4d1",
+      "name": "Education",
+      "slug": "education",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "34f0d74e-8813-43d7-8d5d-59cebf96fcc6",
+      "name": "Tech & Digital",
+      "slug": "tech-and-digital",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "b6757868-cbcf-4564-822a-72dd98e12d40",
+      "name": "Automotive",
+      "slug": "automotive",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "fc32d32a-6bbb-458f-8167-fd06ddc7e74d",
+      "name": "Professional Services",
+      "slug": "professional-services",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "9a381494-51d7-4a82-ae9f-c331d2b48b4b",
+      "name": "Pets",
+      "slug": "pets",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "902e0b9b-915d-41f6-80a0-a6d9bb0f8a44",
+      "name": "Food & Beverage",
+      "slug": "food-beverage",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "082a5047-29cb-43a6-a72a-0280fa78ccb6",
+      "name": "Retail",
+      "slug": "retail",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "19f15ede-ee02-4d3c-9811-d767a6a930e5",
+      "name": "Services",
+      "slug": "services",
+      "description": null,
+      "status": true
+    },
+    {
+      "id": "41d24f1b-620d-42b4-97b3-ea2e597abf6f",
+      "name": "Health & Wellness",
+      "slug": "health-wellness",
+      "description": null,
+      "status": true
+    }
+  ],
+  "subcategories": [
+    {
+      "id": "772c7997-7f7e-479f-8c18-8268982d8503",
+      "categoryId": "6e3f20cb-880c-4689-a682-536c52d83230",
+      "name": "Restaurants",
+      "slug": "restaurants",
+      "status": true
+    },
+    {
+      "id": "48e0d33c-916f-42ca-a0d1-5c80ea9b2a5b",
+      "categoryId": "6e3f20cb-880c-4689-a682-536c52d83230",
+      "name": "Coffee Shops",
+      "slug": "coffee-shops",
+      "status": true
+    },
+    {
+      "id": "852aa02d-63bb-4b7d-be39-170b2dc2a30f",
+      "categoryId": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+      "name": "Clinics",
+      "slug": "clinics",
+      "status": true
+    },
+    {
+      "id": "b645785b-b697-4bd6-8653-fed58868fdf4",
+      "categoryId": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+      "name": "Hospitals",
+      "slug": "hospitals",
+      "status": true
+    },
+    {
+      "id": "de90d465-ca27-41b1-9457-219aa0681e00",
+      "categoryId": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+      "name": "Dental Clinics",
+      "slug": "dental-clinics",
+      "status": true
+    },
+    {
+      "id": "84cfa6c8-07b5-4378-b667-f96a2979096c",
+      "categoryId": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+      "name": "Aesthetic Clinics",
+      "slug": "aesthetic-clinics",
+      "status": true
+    },
+    {
+      "id": "f33132a6-d199-4137-b367-dba4fe98524e",
+      "categoryId": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+      "name": "Pharmacies",
+      "slug": "pharmacies",
+      "status": true
+    },
+    {
+      "id": "8343a182-0f61-484e-a60a-7f726cd5f970",
+      "categoryId": "fb174d0d-433c-4167-96ea-0f93153b5af0",
+      "name": "Medical Suppliers",
+      "slug": "medical-suppliers",
+      "status": true
+    },
+    {
+      "id": "8521f84e-3baf-4349-81c4-2d680ad36b1c",
+      "categoryId": "466c165e-a0d6-41c0-b428-b2beda353996",
+      "name": "Hotels",
+      "slug": "hotels",
+      "status": true
+    },
+    {
+      "id": "ad98237d-24ef-4bed-8fbc-2eab3a0adec0",
+      "categoryId": "466c165e-a0d6-41c0-b428-b2beda353996",
+      "name": "Resorts",
+      "slug": "resorts",
+      "status": true
+    },
+    {
+      "id": "c0e31c2b-aa45-41c1-8409-e325800cc2fb",
+      "categoryId": "466c165e-a0d6-41c0-b428-b2beda353996",
+      "name": "Travel Agencies",
+      "slug": "travel-agencies",
+      "status": true
+    },
+    {
+      "id": "b02a563f-40f5-4489-9389-15761a0fc4fd",
+      "categoryId": "fad2e01a-0925-4cce-9280-5a7d3154c1ea",
+      "name": "Salons",
+      "slug": "salons",
+      "status": true
+    },
+    {
+      "id": "cf50d6bf-9963-4a82-add8-0313e5503c69",
+      "categoryId": "fad2e01a-0925-4cce-9280-5a7d3154c1ea",
+      "name": "Spas",
+      "slug": "spas",
+      "status": true
+    },
+    {
+      "id": "3b72d017-f135-4fff-975a-164a9691c736",
+      "categoryId": "fad2e01a-0925-4cce-9280-5a7d3154c1ea",
+      "name": "Gyms",
+      "slug": "gyms",
+      "status": true
+    },
+    {
+      "id": "15823da9-0543-45f8-b26a-62a8d55144a5",
+      "categoryId": "8e5b902a-f6b1-4622-bb91-b5b7f0c610eb",
+      "name": "Hardware Stores",
+      "slug": "hardware-stores",
+      "status": true
+    },
+    {
+      "id": "4754e25d-06c9-42cf-91a4-90a2f46c3f9d",
+      "categoryId": "8e5b902a-f6b1-4622-bb91-b5b7f0c610eb",
+      "name": "Construction Services",
+      "slug": "construction-services",
+      "status": true
+    },
+    {
+      "id": "1581c610-a535-4e08-a24e-0da373a46d85",
+      "categoryId": "8e5b902a-f6b1-4622-bb91-b5b7f0c610eb",
+      "name": "Real Estate",
+      "slug": "real-estate",
+      "status": true
+    },
+    {
+      "id": "9ed74b2a-dc4c-4099-b83b-d46348e87575",
+      "categoryId": "87ee5c86-92c1-4f2f-87d6-63b1ff6df4d1",
+      "name": "Schools",
+      "slug": "schools",
+      "status": true
+    },
+    {
+      "id": "26a59233-f9c0-4fab-96c1-a3325a0ea423",
+      "categoryId": "87ee5c86-92c1-4f2f-87d6-63b1ff6df4d1",
+      "name": "Universities",
+      "slug": "universities",
+      "status": true
+    },
+    {
+      "id": "38e99c1a-f51c-4f81-89bd-da0b0e5412f7",
+      "categoryId": "34f0d74e-8813-43d7-8d5d-59cebf96fcc6",
+      "name": "IT Services",
+      "slug": "it-services",
+      "status": true
+    },
+    {
+      "id": "7b624b68-991c-4cf0-8823-b8a2f424babb",
+      "categoryId": "34f0d74e-8813-43d7-8d5d-59cebf96fcc6",
+      "name": "Web Developers",
+      "slug": "web-developers",
+      "status": true
+    },
+    {
+      "id": "3fd5744d-3899-46b4-a4db-bc3664f1bfb6",
+      "categoryId": "34f0d74e-8813-43d7-8d5d-59cebf96fcc6",
+      "name": "Marketing Agencies",
+      "slug": "marketing-agencies",
+      "status": true
+    },
+    {
+      "id": "ea6d6523-4763-49d7-97dd-19f5ea94aad4",
+      "categoryId": "34f0d74e-8813-43d7-8d5d-59cebf96fcc6",
+      "name": "Printing Services",
+      "slug": "printing-services",
+      "status": true
+    },
+    {
+      "id": "3fdfc76c-ecb5-4cf2-8cb5-74268cc65e70",
+      "categoryId": "b6757868-cbcf-4564-822a-72dd98e12d40",
+      "name": "Auto Repair",
+      "slug": "auto-repair",
+      "status": true
+    },
+    {
+      "id": "bba5fb1a-01ce-4955-8269-0549ae6c55cc",
+      "categoryId": "b6757868-cbcf-4564-822a-72dd98e12d40",
+      "name": "Car Dealers",
+      "slug": "car-dealers",
+      "status": true
+    },
+    {
+      "id": "9bd974c2-968e-4800-a613-912e58b35173",
+      "categoryId": "fc32d32a-6bbb-458f-8167-fd06ddc7e74d",
+      "name": "Accounting Services",
+      "slug": "accounting-services",
+      "status": true
+    },
+    {
+      "id": "292d520f-367d-4d05-be18-8db67ac90572",
+      "categoryId": "fc32d32a-6bbb-458f-8167-fd06ddc7e74d",
+      "name": "Law Firms",
+      "slug": "law-firms",
+      "status": true
+    },
+    {
+      "id": "9022bd4a-44ae-4b86-ae5b-6dac3b6c877b",
+      "categoryId": "9a381494-51d7-4a82-ae9f-c331d2b48b4b",
+      "name": "Veterinary Clinics",
+      "slug": "veterinary-clinics",
+      "status": true
+    },
+    {
+      "id": "5cad4bad-eef5-47c4-b290-f3aee7c05b6c",
+      "categoryId": "9a381494-51d7-4a82-ae9f-c331d2b48b4b",
+      "name": "Pet Shops",
+      "slug": "pet-shops",
+      "status": true
+    }
+  ],
+  "regions": [
+    {
+      "id": "2d499f1d-114e-4bef-87db-63703c3664fa",
+      "name": "NCR",
+      "slug": "ncr",
+      "status": true
+    },
+    {
+      "id": "327bac5b-8f68-484f-a3ac-dd04b957e1c2",
+      "name": "CALABARZON",
+      "slug": "calabarzon",
+      "status": true
+    },
+    {
+      "id": "776944d7-9d39-4393-8c22-b32438d6a555",
+      "name": "Central Luzon",
+      "slug": "central-luzon",
+      "status": true
+    },
+    {
+      "id": "fc96ae81-b57d-4e4b-aace-b0cf031fd727",
+      "name": "Cebu",
+      "slug": "cebu-region",
+      "status": true
+    },
+    {
+      "id": "3ac4340c-c728-4df1-98ba-c485fb19faff",
+      "name": "Davao",
+      "slug": "davao-region",
+      "status": true
+    },
+    {
+      "id": "63f8f381-1381-4e88-a8be-67e849c967a7",
+      "name": "Bicol Region",
+      "slug": "bicol-region",
+      "status": true
+    }
+  ],
+  "provinces": [
+    {
+      "id": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "regionId": "2d499f1d-114e-4bef-87db-63703c3664fa",
+      "name": "Metro Manila",
+      "slug": "metro-manila",
+      "status": true
+    },
+    {
+      "id": "e3d24bb5-9d31-4ba9-ad85-5c47fc2319d6",
+      "regionId": "327bac5b-8f68-484f-a3ac-dd04b957e1c2",
+      "name": "Cavite",
+      "slug": "cavite",
+      "status": true
+    },
+    {
+      "id": "9215fa72-db14-4c0f-90cc-095a5bcae15e",
+      "regionId": "327bac5b-8f68-484f-a3ac-dd04b957e1c2",
+      "name": "Laguna",
+      "slug": "laguna",
+      "status": true
+    },
+    {
+      "id": "3e55b5b9-981d-4664-ae6e-e412a275baa1",
+      "regionId": "327bac5b-8f68-484f-a3ac-dd04b957e1c2",
+      "name": "Batangas",
+      "slug": "batangas",
+      "status": true
+    },
+    {
+      "id": "96322222-d886-4074-93d9-1958dc54da7f",
+      "regionId": "327bac5b-8f68-484f-a3ac-dd04b957e1c2",
+      "name": "Rizal",
+      "slug": "rizal",
+      "status": true
+    },
+    {
+      "id": "c4535c09-e522-4c7d-b831-881ff66643f1",
+      "regionId": "327bac5b-8f68-484f-a3ac-dd04b957e1c2",
+      "name": "Quezon",
+      "slug": "quezon",
+      "status": true
+    },
+    {
+      "id": "a8e1e59a-54ad-421c-80d2-e08d5cd47db0",
+      "regionId": "776944d7-9d39-4393-8c22-b32438d6a555",
+      "name": "Pampanga",
+      "slug": "pampanga",
+      "status": true
+    },
+    {
+      "id": "2aac4c8e-8933-4332-a40a-42fb2a0c9e4d",
+      "regionId": "776944d7-9d39-4393-8c22-b32438d6a555",
+      "name": "Bulacan",
+      "slug": "bulacan",
+      "status": true
+    },
+    {
+      "id": "2f6061b2-6eb4-4729-8b79-8f6130703e28",
+      "regionId": "776944d7-9d39-4393-8c22-b32438d6a555",
+      "name": "Tarlac",
+      "slug": "tarlac",
+      "status": true
+    },
+    {
+      "id": "49d8a645-0a8c-4cdf-b8d0-d78722de0857",
+      "regionId": "fc96ae81-b57d-4e4b-aace-b0cf031fd727",
+      "name": "Cebu",
+      "slug": "cebu",
+      "status": true
+    },
+    {
+      "id": "1ad7bba4-e1f3-4cfa-aa19-9402fa5b5c49",
+      "regionId": "3ac4340c-c728-4df1-98ba-c485fb19faff",
+      "name": "Davao del Sur",
+      "slug": "davao-del-sur",
+      "status": true
+    },
+    {
+      "id": "5ceb5811-013d-4126-9f1e-bf09502c55b8",
+      "regionId": "63f8f381-1381-4e88-a8be-67e849c967a7",
+      "name": "Albay",
+      "slug": "albay",
+      "status": true
+    },
+    {
+      "id": "e63a1f10-7ef8-49d7-8dbe-1ccd6647838e",
+      "regionId": "63f8f381-1381-4e88-a8be-67e849c967a7",
+      "name": "Camarines Sur",
+      "slug": "camarines-sur",
+      "status": true
+    }
+  ],
+  "cities": [
+    {
+      "id": "aeace4fb-dbc8-4778-919f-7b1f8ef5e51b",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Manila",
+      "slug": "manila",
+      "status": true
+    },
+    {
+      "id": "89423b59-ebec-47a5-80a2-f2ebe8493d5c",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Quezon City",
+      "slug": "quezon-city",
+      "status": true
+    },
+    {
+      "id": "30fa7e17-ecb9-47e0-bbcf-4f1d97ecfc0b",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Makati",
+      "slug": "makati",
+      "status": true
+    },
+    {
+      "id": "86c6e524-d9cf-41be-8708-8395968cc577",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Taguig",
+      "slug": "taguig",
+      "status": true
+    },
+    {
+      "id": "c324a792-44c1-4475-90c0-22804a57fbd2",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Pasig",
+      "slug": "pasig",
+      "status": true
+    },
+    {
+      "id": "da49d6af-cf34-4e79-88aa-f147cd508eb3",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Mandaluyong",
+      "slug": "mandaluyong",
+      "status": true
+    },
+    {
+      "id": "18192059-405f-4f31-b674-5ea8d3a4ce08",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "San Juan",
+      "slug": "san-juan",
+      "status": true
+    },
+    {
+      "id": "d7a3d38a-b920-4efa-adc5-0cf659da5f3a",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Parañaque",
+      "slug": "paranaque",
+      "status": true
+    },
+    {
+      "id": "a737720a-d0b9-4f54-9677-3488a085fd6e",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Las Piñas",
+      "slug": "las-pinas",
+      "status": true
+    },
+    {
+      "id": "d0d6cb21-fba2-4761-a013-c0359057610e",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Muntinlupa",
+      "slug": "muntinlupa",
+      "status": true
+    },
+    {
+      "id": "d9b7b1a8-662c-4440-8a8c-4222c440e25d",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Pasay",
+      "slug": "pasay",
+      "status": true
+    },
+    {
+      "id": "9ae74ae3-b9f1-4ee9-b853-d6670c8d8329",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Marikina",
+      "slug": "marikina",
+      "status": true
+    },
+    {
+      "id": "ee6ccab8-fdb4-4f37-87c1-6a4a35ec95af",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Valenzuela",
+      "slug": "valenzuela",
+      "status": true
+    },
+    {
+      "id": "1773c298-82e6-4690-b471-5c9cfe93c342",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Malabon",
+      "slug": "malabon",
+      "status": true
+    },
+    {
+      "id": "8b323f61-c58b-43ec-9c90-8b18445ab1f0",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Navotas",
+      "slug": "navotas",
+      "status": true
+    },
+    {
+      "id": "79742a32-5351-4037-a27d-40c98db3b448",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Caloocan",
+      "slug": "caloocan",
+      "status": true
+    },
+    {
+      "id": "fa6760bd-22ad-4ede-9552-aa8528c30e85",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "name": "Pateros",
+      "slug": "pateros",
+      "status": true
+    },
+    {
+      "id": "52ef2abc-b70a-421f-ad90-5ff38da355aa",
+      "provinceId": "e3d24bb5-9d31-4ba9-ad85-5c47fc2319d6",
+      "name": "Dasmarinas",
+      "slug": "dasmarinas",
+      "status": true
+    },
+    {
+      "id": "81ca3b14-ab95-48fd-a374-da42f2e177c6",
+      "provinceId": "e3d24bb5-9d31-4ba9-ad85-5c47fc2319d6",
+      "name": "Bacoor",
+      "slug": "bacoor",
+      "status": true
+    },
+    {
+      "id": "badf66c2-e96f-4099-8b99-a43a912ee85b",
+      "provinceId": "e3d24bb5-9d31-4ba9-ad85-5c47fc2319d6",
+      "name": "Imus",
+      "slug": "imus",
+      "status": true
+    },
+    {
+      "id": "09e7bc0c-dff7-4edd-91ab-457de7faa999",
+      "provinceId": "e3d24bb5-9d31-4ba9-ad85-5c47fc2319d6",
+      "name": "Tagaytay",
+      "slug": "tagaytay",
+      "status": true
+    },
+    {
+      "id": "f2da7191-a730-444a-9663-92b40222171d",
+      "provinceId": "9215fa72-db14-4c0f-90cc-095a5bcae15e",
+      "name": "Santa Rosa",
+      "slug": "santa-rosa",
+      "status": true
+    },
+    {
+      "id": "56188609-39a2-470e-ba62-8ae833d9c4bc",
+      "provinceId": "9215fa72-db14-4c0f-90cc-095a5bcae15e",
+      "name": "Calamba",
+      "slug": "calamba",
+      "status": true
+    },
+    {
+      "id": "cdd58aad-3555-4744-be46-674bcf5bbdf0",
+      "provinceId": "9215fa72-db14-4c0f-90cc-095a5bcae15e",
+      "name": "Biñan",
+      "slug": "binan",
+      "status": true
+    },
+    {
+      "id": "a57e5b88-8e39-452f-9e68-34591d4f3460",
+      "provinceId": "a8e1e59a-54ad-421c-80d2-e08d5cd47db0",
+      "name": "San Fernando",
+      "slug": "san-fernando-pampanga",
+      "status": true
+    },
+    {
+      "id": "f409168c-694c-4d23-a114-3dd7903fd4ce",
+      "provinceId": "a8e1e59a-54ad-421c-80d2-e08d5cd47db0",
+      "name": "Angeles",
+      "slug": "angeles",
+      "status": true
+    },
+    {
+      "id": "321db674-804a-4032-9496-178f573f7f23",
+      "provinceId": "49d8a645-0a8c-4cdf-b8d0-d78722de0857",
+      "name": "Cebu City",
+      "slug": "cebu-city",
+      "status": true
+    },
+    {
+      "id": "51d9a0d5-bae6-46e6-af45-13e5769c096e",
+      "provinceId": "49d8a645-0a8c-4cdf-b8d0-d78722de0857",
+      "name": "Mandaue",
+      "slug": "mandaue",
+      "status": true
+    },
+    {
+      "id": "ebbd82ab-a65c-4004-ba29-c854c0b246a8",
+      "provinceId": "49d8a645-0a8c-4cdf-b8d0-d78722de0857",
+      "name": "Lapu-Lapu",
+      "slug": "lapu-lapu",
+      "status": true
+    },
+    {
+      "id": "283e032c-8fbb-45e3-8a14-9a857559eeb7",
+      "provinceId": "1ad7bba4-e1f3-4cfa-aa19-9402fa5b5c49",
+      "name": "Davao City",
+      "slug": "davao-city",
+      "status": true
+    },
+    {
+      "id": "42bb6ff7-d227-4226-a703-7028e0134bb2",
+      "provinceId": "5ceb5811-013d-4126-9f1e-bf09502c55b8",
+      "name": "Legazpi",
+      "slug": "legazpi",
+      "status": true
+    },
+    {
+      "id": "83687c70-1cad-4fa8-8f2a-65a172988240",
+      "provinceId": "e63a1f10-7ef8-49d7-8dbe-1ccd6647838e",
+      "name": "Naga",
+      "slug": "naga",
+      "status": true
+    },
+    {
+      "id": "96e88910-4320-4ba5-8e90-1d0f34b14a3f",
+      "provinceId": "96322222-d886-4074-93d9-1958dc54da7f",
+      "name": "Antipolo",
+      "slug": "antipolo",
+      "status": true
+    }
+  ],
+  "barangays": [],
+  "businesses": [
+    {
+      "id": "f054b9a7-1831-4bf8-a3b6-1b7a8589f652",
+      "ownerId": "sjXYcFCSFrV93F7PXJuoayZIITp2",
+      "name": "Test Business",
+      "slug": "test-business",
+      "description": null,
+      "categoryId": "6e3f20cb-880c-4689-a682-536c52d83230",
+      "subcategoryId": null,
+      "keywords": null,
+      "status": "DRAFT",
+      "isVerified": false,
+      "isFeatured": false,
+      "contactPhone": null,
+      "contactMobile": null,
+      "contactEmail": null,
+      "websiteUrl": null,
+      "facebookUrl": null,
+      "instagramUrl": null,
+      "tiktokUrl": null,
+      "linkedinUrl": null,
+      "shopeeUrl": null,
+      "lazadaUrl": null,
+      "regionId": "2d499f1d-114e-4bef-87db-63703c3664fa",
+      "provinceId": "8cbf47a5-087d-4d0b-983d-6ae6073822fc",
+      "cityId": "89423b59-ebec-47a5-80a2-f2ebe8493d5c",
+      "barangayId": null,
+      "addressLine1": "Test Address",
+      "zipCode": null,
+      "latitude": null,
+      "longitude": null,
+      "googleMapsUrl": null,
+      "businessHours": null,
+      "products": null,
+      "services": null,
+      "paymentMethods": null,
+      "parkingAvailability": null,
+      "deliveryAvailability": null,
+      "accessibilityOptions": null,
+      "moderatorNotes": null,
+      "logoUrl": null,
+      "coverUrl": null,
+      "documents": null,
+      "gallery": null,
+      "createdAt": "2026-07-06T09:43:40.985Z",
+      "updatedAt": "2026-07-06T09:43:40.985Z"
+    }
+  ],
+  "businessPhotos": [],
+  "siteSettings": []
+}

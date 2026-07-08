@@ -10,7 +10,8 @@
     "build": "next build && mkdir -p .next/standalone/public && cp -r public/. .next/standalone/public/ 2>/dev/null || true && mkdir -p .next/standalone/.next/static && cp -r .next/static/. .next/standalone/.next/static/ 2>/dev/null || true",
     "start": "node .next/standalone/server.js",
     "lint": "eslint",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "db:import": "tsx src/db/import.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

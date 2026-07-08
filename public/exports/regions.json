@@ -1,0 +1,38 @@
+[
+  {
+    "id": "2d499f1d-114e-4bef-87db-63703c3664fa",
+    "name": "NCR",
+    "slug": "ncr",
+    "status": true
+  },
+  {
+    "id": "327bac5b-8f68-484f-a3ac-dd04b957e1c2",
+    "name": "CALABARZON",
+    "slug": "calabarzon",
+    "status": true
+  },
+  {
+    "id": "776944d7-9d39-4393-8c22-b32438d6a555",
+    "name": "Central Luzon",
+    "slug": "central-luzon",
+    "status": true
+  },
+  {
+    "id": "fc96ae81-b57d-4e4b-aace-b0cf031fd727",
+    "name": "Cebu",
+    "slug": "cebu-region",
+    "status": true
+  },
+  {
+    "id": "3ac4340c-c728-4df1-98ba-c485fb19faff",
+    "name": "Davao",
+    "slug": "davao-region",
+    "status": true
+  },
+  {
+    "id": "63f8f381-1381-4e88-a8be-67e849c967a7",
+    "name": "Bicol Region",
+    "slug": "bicol-region",
+    "status": true
+  }
+]
