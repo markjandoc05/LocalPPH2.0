@@ -15,19 +15,12 @@ export const createPool = () => {
     });
   }
 
-  if (process.env.DATABASE_URL) {
-    return new Pool({
-      connectionString: process.env.DATABASE_URL,
-      connectionTimeoutMillis: 30000,
-    });
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is required');
   }
 
   return new Pool({
-    host: process.env.SQL_HOST,
-    port: Number(process.env.SQL_PORT || 5432),
-    user: process.env.SQL_USER,
-    password: process.env.SQL_PASSWORD,
-    database: process.env.SQL_DB_NAME || 'localpages_db',
+    connectionString: process.env.DATABASE_URL,
     connectionTimeoutMillis: 30000,
   });
 };
