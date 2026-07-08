@@ -2,26 +2,32 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
 
+const isBuildTime =
+  process.env.NEXT_PHASE === 'phase-production-build' ||
+  process.env.NODE_ENV === 'production' && process.env.SKIP_DB_DURING_BUILD === 'true';
+
 export const createPool = () => {
+  if (isBuildTime) {
+    console.warn('Skipping real database connection during Next.js build.');
+    return new Pool({
+      connectionString: 'postgresql://dummy:dummy@localhost:5432/dummy',
+      connectionTimeoutMillis: 1000,
+    });
+  }
+
   if (process.env.DATABASE_URL) {
-    console.log('Creating database pool from DATABASE_URL');
     return new Pool({
       connectionString: process.env.DATABASE_URL,
       connectionTimeoutMillis: 30000,
     });
   }
 
-  const sqlHost = process.env.SQL_HOST;
-  const sqlDbName = process.env.SQL_DB_NAME || 'cloud_sql_production_database';
-  const sqlUser = process.env.SQL_USER;
-  const sqlPassword = process.env.SQL_PASSWORD;
-
   return new Pool({
-    host: sqlHost,
+    host: process.env.SQL_HOST,
     port: Number(process.env.SQL_PORT || 5432),
-    user: sqlUser,
-    password: sqlPassword,
-    database: sqlDbName,
+    user: process.env.SQL_USER,
+    password: process.env.SQL_PASSWORD,
+    database: process.env.SQL_DB_NAME || 'cloud_sql_production_database',
     connectionTimeoutMillis: 30000,
   });
 };
