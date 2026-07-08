@@ -31,7 +31,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     return [...routes, ...businessRoutes];
   } catch (error) {
-    console.error('Failed to generate sitemap', error);
+    console.warn('Skipping dynamic business routes in sitemap because database is not connected/reachable during build.');
     return routes;
   }
 }
