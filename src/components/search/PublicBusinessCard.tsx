@@ -36,12 +36,12 @@ export default function PublicBusinessCard({ business }: PublicBusinessCardProps
         )}
 
         {/* Logo Overlay */}
-        <div className="absolute -bottom-6 left-6 w-16 h-16 bg-white rounded-xl border-2 border-white shadow-md flex items-center justify-center z-20">
+        <div className="absolute -bottom-6 left-6 w-16 h-16 bg-white rounded-xl border-2 border-white shadow-md flex items-center justify-center z-20 aspect-square">
           {business.logoUrl ? (
             <img 
               src={business.logoUrl} 
               alt={`${business.name} Logo`}
-              className="w-full h-full object-contain p-1"
+              className="w-full h-full object-contain p-2"
               referrerPolicy="no-referrer"
             />
           ) : (
