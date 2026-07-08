@@ -122,12 +122,12 @@ export default function PublicBusinessList({ businesses, loading }: PublicBusine
               />
 
               {/* Business Logo / Initials */}
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl border border-slate-200 bg-slate-50 flex-shrink-0 flex items-center justify-center overflow-hidden relative z-20 shadow-sm group-hover:scale-102 transition-transform duration-300">
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl border border-slate-200 bg-slate-50 flex-shrink-0 flex items-center justify-center relative z-20 shadow-sm group-hover:scale-102 transition-transform duration-300">
                 {business.logoUrl ? (
                   <img 
                     src={business.logoUrl} 
                     alt={`${business.name} Logo`} 
-                    className="w-full h-full object-contain p-2"
+                    className="w-full h-full object-contain p-1"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
