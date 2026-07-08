@@ -21,7 +21,10 @@ async function main() {
   console.log("=========================================\n");
 
   const exportsDir = path.join(process.cwd(), "public", "exports");
-  const allTablesPath = path.join(exportsDir, "all_tables.json");
+  const cliArg = process.argv[2];
+  const allTablesPath = cliArg
+    ? path.resolve(process.cwd(), cliArg)
+    : path.join(exportsDir, "production_all_tables.json");
 
   let importData: Record<string, any[]> = {};
 
@@ -92,10 +95,13 @@ async function main() {
     },
   ];
 
-  // Try loading table data from individual files if not present in all_tables.json
+  // Try loading table data from individual files if not present in the consolidated file
   for (const item of tableOrder) {
     if (!importData[item.key] || !Array.isArray(importData[item.key])) {
-      const individualPath = path.join(exportsDir, `${item.key}.json`);
+      let individualPath = path.join(exportsDir, `production_${item.key}.json`);
+      if (!fs.existsSync(individualPath)) {
+        individualPath = path.join(exportsDir, `${item.key}.json`);
+      }
       if (fs.existsSync(individualPath)) {
         try {
           console.log(`Loading individual table file: ${individualPath}`);
