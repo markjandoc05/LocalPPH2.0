@@ -16,6 +16,8 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Tag, Info } from "lucide-react";
 import PageTracker from "@/components/analytics/PageTracker";
 
+export const dynamic = "force-dynamic";
+
 interface PageParams {
   regionSlug: string;
   provinceSlug: string;

@@ -12,6 +12,8 @@ import {
   RecentlyAddedSkeleton 
 } from '@/components/home/HomeSkeletons';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = generatePageMetadata(
   'Find Trusted Local Businesses in the Philippines',
   'Discover verified businesses, services, restaurants, clinics, shops, and more across the Philippines.',

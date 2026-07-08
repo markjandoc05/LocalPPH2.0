@@ -27,7 +27,7 @@ export const createPool = () => {
     port: Number(process.env.SQL_PORT || 5432),
     user: process.env.SQL_USER,
     password: process.env.SQL_PASSWORD,
-    database: process.env.SQL_DB_NAME || 'cloud_sql_production_database',
+    database: process.env.SQL_DB_NAME || 'localpages_db',
     connectionTimeoutMillis: 30000,
   });
 };

@@ -8,6 +8,8 @@ import { generateLocalBusinessJsonLd } from '@/lib/seo/jsonld';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import PageTracker from '@/components/analytics/PageTracker';
 
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
   const business = await getApprovedBusinessBySlug(resolvedParams.slug);

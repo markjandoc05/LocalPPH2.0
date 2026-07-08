@@ -6,6 +6,8 @@ import LocationBreadcrumbs from "@/components/directory/LocationBreadcrumbs";
 import { generatePageMetadata } from "@/lib/seo/metadata";
 import { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   return generatePageMetadata(
     "Business Categories Directory",

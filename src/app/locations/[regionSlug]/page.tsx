@@ -12,6 +12,8 @@ import Link from "next/link";
 import { Map, ArrowRight } from "lucide-react";
 import PageTracker from "@/components/analytics/PageTracker";
 
+export const dynamic = "force-dynamic";
+
 interface PageParams {
   regionSlug: string;
 }
