@@ -82,13 +82,11 @@ export default function BusinessListingTable({ listings }: { listings: BusinessL
                     <LucideEdit className="w-4 h-4" />
                   </Button>
                 </Link>
-                {listing.status === 'APPROVED' && (
-                  <Link href={`/biz/${listing.slug}`} target="_blank" title="View Public Profile">
-                    <Button variant="ghost" size="icon">
-                      <LucideEye className="w-4 h-4 text-slate-500 hover:text-blue-600" />
-                    </Button>
-                  </Link>
-                )}
+                <Link href={`/business/${listing.slug}`} target="_blank" title="View Public Profile">
+                  <Button variant="ghost" size="icon">
+                    <LucideEye className="w-4 h-4 text-slate-500 hover:text-blue-600" />
+                  </Button>
+                </Link>
                 <Button variant="ghost" size="icon" onClick={() => handleDelete(listing.id)} title="Delete" className="text-red-500 hover:text-red-700">
                   <LucideTrash2 className="w-4 h-4" />
                 </Button>
