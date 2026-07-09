@@ -423,23 +423,6 @@ export const databaseProvider: DataProvider = {
     return { data: { suggestions } };
   },
 
-  async getBusinessBySlug(variables) {
-    const res = await db.query.businesses.findFirst({
-      where: eq(businesses.slug, variables.slug),
-      with: {
-        owner: true,
-        category: true,
-        subcategory: true,
-        city: true,
-        province: true,
-        region: true,
-      }
-    });
-    
-    if (!res) return { data: { business: null } };
-    return { data: { business: formatBusinessRow(res) } };
-  },
-
   async getApprovedBusinessBySlug(variables) {
     const res = await db.query.businesses.findFirst({
       where: and(

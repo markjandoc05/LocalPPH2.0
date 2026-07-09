@@ -39,13 +39,6 @@ export const getSearchSuggestions = async (q: string): Promise<any[]> => {
   return result.data.suggestions;
 };
 
-export const getBusinessBySlug = async (
-  slug: string,
-): Promise<BusinessListing | null> => {
-  const result = await provider.getBusinessBySlug({ slug });
-  return result.data.business as BusinessListing | null;
-};
-
 export const getApprovedBusinessBySlug = async (
   slug: string,
 ): Promise<BusinessListing | null> => {
