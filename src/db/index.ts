@@ -17,20 +17,25 @@ export const createPool = () => {
   }
 
   const isProduction = process.env.NODE_ENV === 'production';
+  const prodUrl = process.env.DATABASE_URL;
+  const devUrl = process.env.DEVELOPMENT_DATABASE_URL;
 
-  // Safety check: Block production database URL in development
-  if (!isProduction && process.env.DATABASE_URL) {
-    throw new Error('Blocked: development environment attempted to use production database.');
-  }
+  let connectionString: string | undefined;
 
-  const connectionString = isProduction ? process.env.DATABASE_URL : process.env.DEVELOPMENT_DATABASE_URL;
-
-  if (!connectionString) {
-    throw new Error(
-      isProduction
-        ? 'DATABASE_URL environment variable is required in production'
-        : 'DEVELOPMENT_DATABASE_URL environment variable is required in development'
-    );
+  if (isProduction) {
+    connectionString = prodUrl;
+  } else {
+    // Development
+    if (!devUrl) {
+      if (prodUrl) {
+        throw new Error('Blocked: development environment attempted to use production database (DATABASE_URL found, but DEVELOPMENT_DATABASE_URL is missing).');
+      }
+      throw new Error('DEVELOPMENT_DATABASE_URL environment variable is required in development');
+    }
+    if (prodUrl && devUrl === prodUrl) {
+      throw new Error('Blocked: DEVELOPMENT_DATABASE_URL is set to the production database URL.');
+    }
+    connectionString = devUrl;
   }
 
   return new Pool({
