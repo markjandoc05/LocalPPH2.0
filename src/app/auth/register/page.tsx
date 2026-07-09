@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { registerUser, loginWithGoogle } from '@/lib/auth/auth-utils';
-import { ROLES } from '@/lib/auth/roles';
+import { ROLES, getRedirectPath } from '@/lib/auth/roles';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { LucideStore, LucideUser, LucideBriefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trackEvent } from '@/lib/analytics';
+import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -18,6 +19,7 @@ export default function RegisterPage() {
   const [accountType, setAccountType] = useState<string>(ROLES.SUBSCRIBER);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +29,7 @@ export default function RegisterPage() {
     try {
       await registerUser(email, password, name, accountType);
       trackEvent('signup', { method: 'email', role: accountType, page_type: 'Register' });
-      // AuthContext will handle redirect
+      router.push(getRedirectPath(accountType));
     } catch (err: any) {
       setError(err.message || 'Failed to register');
     } finally {
@@ -39,9 +41,9 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      await loginWithGoogle(accountType);
+      const { role } = await loginWithGoogle(accountType);
       trackEvent('signup', { method: 'google', role: accountType, page_type: 'Register' });
-      // AuthContext will handle redirect
+      router.push(getRedirectPath(role));
     } catch (err: any) {
       console.error("Google register error:", err);
       let userFriendlyMessage = err.message || 'Failed to register with Google';

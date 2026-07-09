@@ -8,12 +8,15 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { LucideStore } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
+import { useRouter } from 'next/navigation';
+import { getRedirectPath } from '@/lib/auth/roles';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,9 +24,9 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await loginUser(email, password);
+      const { role } = await loginUser(email, password);
       trackEvent('login', { method: 'email', page_type: 'Login' });
-      // AuthContext will handle the redirect
+      router.push(getRedirectPath(role));
     } catch (err: any) {
       setError('Incorrect email or password. Please try again.');
     } finally {
@@ -35,9 +38,9 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await loginWithGoogle();
+      const { role } = await loginWithGoogle();
       trackEvent('login', { method: 'google', page_type: 'Login' });
-      // AuthContext will handle the redirect
+      router.push(getRedirectPath(role));
     } catch (err: any) {
       console.error("Google login error:", err);
       let userFriendlyMessage = err.message || 'Failed to log in with Google';

@@ -4,8 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { getUserById } from '../data-connect';
-import { useRouter, usePathname } from 'next/navigation';
-import { canAccessAdmin, canManageBusiness, isBusiness, isSubscriber, normalizeRole, ROLES } from './roles';
+import { normalizeRole, ROLES } from './roles';
 
 interface AuthContextType {
   user: User | null;
@@ -25,8 +24,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -58,43 +55,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => unsubscribe();
   }, []);
-
-  // Route Protection Logic
-  useEffect(() => {
-    if (loading) return;
-
-    const isAuthRoute = pathname.startsWith('/auth/');
-    
-    if (!user && !isAuthRoute && pathname !== '/') {
-      // Not logged in, trying to access protected route -> go to login
-      // router.push('/auth/login');
-      // For now, let's just protect specific paths
-      if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard') || pathname.startsWith('/business/listings') || pathname === '/business' || pathname.startsWith('/profile')) {
-        router.push('/auth/login');
-      }
-    } else if (user && isAuthRoute) {
-      // Logged in, trying to access auth pages -> redirect to correct dashboard
-      if (canAccessAdmin(role)) {
-        router.push('/admin');
-      } else if (isBusiness(role)) {
-        router.push('/business');
-      } else {
-        router.push('/dashboard');
-      }
-    } else if (user) {
-      // Check role-based access
-      if (pathname.startsWith('/admin') && !canAccessAdmin(role)) {
-        if (isBusiness(role)) router.push('/business');
-        else router.push('/dashboard');
-      } else if ((pathname.startsWith('/business/listings') || pathname === '/business') && !canManageBusiness(role)) {
-        router.push('/dashboard');
-      } else if (pathname.startsWith('/dashboard') && !isSubscriber(role)) {
-        // Business and Admin have their own dashboards
-        if (isBusiness(role)) router.push('/business');
-        if (canAccessAdmin(role)) router.push('/admin');
-      }
-    }
-  }, [user, role, loading, pathname, router]);
 
   return (
     <AuthContext.Provider value={{ user, role, loading }}>

@@ -35,3 +35,10 @@ export const canAccessAdmin = (role?: string | null): boolean => isAdminOrModera
 export const canManageBusiness = (role?: string | null): boolean => isBusiness(role) || isAdmin(role);
 export const canApproveBusiness = (role?: string | null): boolean => isAdminOrModerator(role);
 export const canEditOwnBusiness = (role?: string | null): boolean => isBusiness(role);
+
+export const getRedirectPath = (role?: string | null): string => {
+  const r = normalizeRole(role);
+  if (canAccessAdmin(r)) return '/admin';
+  if (isBusiness(r)) return '/business';
+  return '/dashboard';
+};
