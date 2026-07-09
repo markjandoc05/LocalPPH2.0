@@ -4,9 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { canAccessAdmin, isBusiness, isSubscriber } from '@/lib/auth/roles';
-import { isProfileComplete } from '@/lib/utils';
-import { getUserById } from '@/lib/data-connect';
+import { canAccessAdmin, isBusiness } from '@/lib/auth/roles';
 import { 
   LucideSearch, 
   LucideGrid, 
@@ -15,14 +13,12 @@ import {
   LucideHeart, 
   LucideCompass,
   LucideArrowRight,
-  LucideSparkles,
-  LucideAlertCircle
+  LucideSparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getFeaturedApprovedBusinesses } from '@/lib/data-connect/public-business-service';
 import { BusinessListing } from '@/types/business';
-import { Card } from '@/components/ui/Card';
 
 interface SavedBusiness {
   id: string;
@@ -53,7 +49,6 @@ export default function DashboardPage() {
   const [recommended, setRecommended] = useState<BusinessListing[]>([]);
   const [recLoading, setRecLoading] = useState(true);
   const [recError, setRecError] = useState('');
-  const [fullUserData, setFullUserData] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && user) {
@@ -68,30 +63,22 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
 
-    async function fetchData() {
+    async function fetchRecommended() {
       try {
-        const [bizRes, userRes] = await Promise.all([
-          getFeaturedApprovedBusinesses(),
-          getUserById({ id: user!.uid })
-        ]);
-        
-        if (Array.isArray(bizRes)) {
-          setRecommended(bizRes.slice(0, 3));
+        const res = await getFeaturedApprovedBusinesses();
+        if (Array.isArray(res)) {
+          setRecommended(res.slice(0, 3));
         } else {
           setRecommended([]);
         }
-
-        if (userRes?.data?.user) {
-          setFullUserData(userRes.data.user);
-        }
       } catch (err: any) {
-        console.error('Failed to load data:', err);
+        console.error('Failed to load recommended businesses:', err);
         setRecError('Could not load recommended businesses at this time.');
       } finally {
         setRecLoading(false);
       }
     }
-    fetchData();
+    fetchRecommended();
   }, [user]);
 
   if (loading) {
@@ -106,8 +93,6 @@ export default function DashboardPage() {
   }
 
   if (!user) return null;
-
-  const showProfileReminder = isSubscriber(role) && fullUserData && !isProfileComplete(fullUserData);
 
   const quickActions = [
     {
@@ -153,29 +138,9 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Profile Completion Reminder */}
-        {showProfileReminder && (
-          <Card className="mb-8 p-6 bg-white border-blue-100 shadow-sm border-l-4 border-l-blue-600">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex gap-4">
-                <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
-                  <LucideAlertCircle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-lg">Complete your profile</h3>
-                  <p className="text-slate-600 text-sm">Add your basic information so you can fully use LocalPages.ph.</p>
-                </div>
-              </div>
-              <Link href="/profile">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-                  Complete My Profile
-                </Button>
-              </Link>
-            </div>
-          </Card>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left / Main Section: Quick Actions */}
+          <div className="lg:col-span-2 space-y-8">
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <LucideCompass className="w-5 h-5 text-blue-600" />
