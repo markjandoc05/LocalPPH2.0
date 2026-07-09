@@ -69,8 +69,11 @@ export default function ProfilePage() {
       if (user) {
         try {
           const res = await getUserById({ id: user.uid });
+          console.log('ProfilePage: userData loaded:', res);
           if (res?.data?.user) {
             setUserData(res.data.user as UserData);
+          } else {
+            console.error('ProfilePage: No user data found in response');
           }
         } catch (error) {
           console.error('Failed to load user profile:', error);
@@ -102,17 +105,26 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user || !userData) return null;
+  if (!user) return null;
+
+  const displayUserData = userData || {
+    id: user.uid,
+    email: user.email || '',
+    role: 'SUBSCRIBER',
+    accountStatus: 'ACTIVE',
+  } as UserData;
+  const userDataToUse = displayUserData;
+
 
   // Helper to get initials
   const getInitials = () => {
-    if (userData.displayName) {
-      return userData.displayName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    if (userDataToUse.displayName) {
+      return userDataToUse.displayName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
     }
-    if (userData.firstName && userData.lastName) {
-      return `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase();
+    if (userDataToUse.firstName && userDataToUse.lastName) {
+      return `${userDataToUse.firstName[0]}${userDataToUse.lastName[0]}`.toUpperCase();
     }
-    return (userData.email?.[0] || 'U').toUpperCase();
+    return (userDataToUse.email?.[0] || 'U').toUpperCase();
   };
 
   const getRoleLabel = (role: string) => {
@@ -275,20 +287,20 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-                      {userData.displayName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'User Profile'}
+                      {userDataToUse.displayName || `${userDataToUse.firstName || ''} ${userDataToUse.lastName || ''}`.trim() || 'User Profile'}
                     </h1>
                     <p className="text-slate-500 text-sm mt-1 flex items-center justify-center sm:justify-start gap-1.5">
                       <LucideMail className="w-4 h-4 text-slate-400" />
-                      {userData.email}
+                      {userDataToUse.email}
                     </p>
                     
                     {/* Badge Badges */}
                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
-                      <Badge variant={getRoleVariant(userData.role)}>
-                        {getRoleLabel(userData.role)}
+                      <Badge variant={getRoleVariant(userDataToUse.role)}>
+                        {getRoleLabel(userDataToUse.role)}
                       </Badge>
-                      <Badge variant={userData.accountStatus?.toLowerCase() === 'active' ? 'success' : 'warning'}>
-                        {userData.accountStatus || 'Active'}
+                      <Badge variant={userDataToUse.accountStatus?.toLowerCase() === 'active' ? 'success' : 'warning'}>
+                        {userDataToUse.accountStatus || 'Active'}
                       </Badge>
                       {user.emailVerified ? (
                         <Badge variant="success" className="gap-1">
@@ -329,15 +341,15 @@ export default function ProfilePage() {
                 <div className="space-y-4">
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">First Name</span>
-                    <p className="text-slate-900 font-semibold mt-0.5">{userData.firstName || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.firstName || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Last Name</span>
-                    <p className="text-slate-900 font-semibold mt-0.5">{userData.lastName || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.lastName || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Display Name</span>
-                    <p className="text-slate-900 font-semibold mt-0.5">{userData.displayName || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.displayName || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
                 </div>
               </Card>
@@ -351,15 +363,15 @@ export default function ProfilePage() {
                 <div className="space-y-4">
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Mobile Number</span>
-                    <p className="text-slate-900 font-semibold mt-0.5">{userData.mobileNumber || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.mobileNumber || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Telephone Number</span>
-                    <p className="text-slate-900 font-semibold mt-0.5">{userData.telephoneNumber || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.telephoneNumber || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Email Address</span>
-                    <p className="text-slate-900 font-semibold mt-0.5">{userData.email}</p>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.email}</p>
                   </div>
                 </div>
               </Card>
@@ -370,30 +382,30 @@ export default function ProfilePage() {
                   <LucideMapPin className="w-5 h-5 text-blue-600" />
                   Address Details
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Address Line 1</span>
-                    <p className="text-slate-900 font-semibold mt-0.5">{userData.addressLine1 || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.addressLine1 || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Address Line 2</span>
-                    <p className="text-slate-900 font-semibold mt-0.5">{userData.addressLine2 || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.addressLine2 || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Barangay</span>
-                    <p className="text-slate-900 font-semibold mt-0.5">{userData.barangay || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.barangay || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">City</span>
-                    <p className="text-slate-900 font-semibold mt-0.5">{userData.city || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.city || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Province</span>
-                    <p className="text-slate-900 font-semibold mt-0.5">{userData.province || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.province || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">ZIP Code</span>
-                    <p className="text-slate-900 font-semibold mt-0.5">{userData.zipCode || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.zipCode || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
                 </div>
               </Card>
