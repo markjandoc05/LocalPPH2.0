@@ -105,8 +105,6 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) return null;
-
   const displayUserData = userData || {
     id: user.uid,
     email: user.email || '',
