@@ -20,6 +20,7 @@ import { Card, CardContent } from '../ui/Card';
 import BusinessLogo from './BusinessLogo';
 import { trackEvent } from '@/lib/analytics';
 import { PageType } from '@/lib/analytics/types';
+import { getFullDesc } from '@/lib/utils';
 
 interface PublicBusinessProfileProps {
   business: BusinessListing;
@@ -344,7 +345,7 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
             <section>
               <h2 className="text-xl font-bold text-slate-900 mb-4 font-sans">About</h2>
               <div className="prose prose-slate max-w-none text-slate-600">
-                <p className="whitespace-pre-wrap leading-relaxed">{business.description}</p>
+                <p className="whitespace-pre-wrap leading-relaxed">{getFullDesc(business.description)}</p>
               </div>
             </section>
 

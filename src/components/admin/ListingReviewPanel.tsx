@@ -2,6 +2,7 @@ import React from 'react';
 import { BusinessListing } from '@/types/business';
 import BusinessStatusBadge from '../business/BusinessStatusBadge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
+import { getShortDesc, getFullDesc } from '@/lib/utils';
 
 interface ListingReviewPanelProps {
   business: BusinessListing;
@@ -39,8 +40,12 @@ export default function ListingReviewPanel({ business }: ListingReviewPanelProps
                   <dd className="font-medium text-slate-900">{business.subcategoryName || 'Not assigned'}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-slate-500">Description</dt>
-                  <dd className="text-sm mt-1 text-slate-900">{business.description}</dd>
+                  <dt className="text-sm text-slate-500">Short Description</dt>
+                  <dd className="text-sm mt-1 text-slate-900">{getShortDesc(business.description)}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-slate-500">Full Description</dt>
+                  <dd className="text-sm mt-1 text-slate-900 whitespace-pre-wrap">{getFullDesc(business.description)}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-slate-500">Keywords</dt>

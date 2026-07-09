@@ -4,6 +4,7 @@ import Image from 'next/image';
 import BusinessLogo from '@/components/business/BusinessLogo';
 import { LucideArrowRight } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/Button';
+import { getShortDesc } from '@/lib/utils';
 
 export default async function FeaturedBusinessesSection() {
   const featuredBusinesses = await getFeaturedApprovedBusinesses();
@@ -45,7 +46,7 @@ export default async function FeaturedBusinessesSection() {
                   />
                   <h3 className="font-bold text-lg text-slate-900 ml-3">{business.name}</h3>
                 </div>
-                <p className="text-sm text-slate-600 mb-4 line-clamp-2">{business.description}</p>
+                <p className="text-sm text-slate-600 mb-4 line-clamp-2">{getShortDesc(business.description)}</p>
              </div>
              <div className="p-6 border-t border-slate-100">
                 <Link href={`/business/${business.slug}`} className={buttonVariants({ variant: 'outline', className: "w-full" })}>

@@ -1,5 +1,6 @@
 import { BusinessListing } from '@/types/business';
 import { SITE_URL } from './metadata';
+import { getFullDesc } from '@/lib/utils';
 
 export const generateLocalBusinessJsonLd = (business: BusinessListing) => {
   const sameAs = [];
@@ -9,7 +10,7 @@ export const generateLocalBusinessJsonLd = (business: BusinessListing) => {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: business.name,
-    description: business.description,
+    description: getFullDesc(business.description),
     url: `${SITE_URL}/business/${business.slug}`,
     telephone: business.contactMobile || business.contactPhone || undefined,
     address: {

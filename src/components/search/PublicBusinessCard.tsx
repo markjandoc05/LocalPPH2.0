@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button, buttonVariants } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import BusinessLogo from '../business/BusinessLogo';
+import { getShortDesc } from '@/lib/utils';
 
 interface PublicBusinessCardProps {
   business: BusinessListing;
@@ -78,7 +79,7 @@ export default function PublicBusinessCard({ business }: PublicBusinessCardProps
         </div>
         
         <p className="text-sm text-slate-600 line-clamp-3 mb-6 flex-grow leading-relaxed">
-          {business.description || "No description provided."}
+          {getShortDesc(business.description) || "No description provided."}
         </p>
         
         <div className="mt-auto space-y-3 relative z-20">

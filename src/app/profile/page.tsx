@@ -170,7 +170,7 @@ export default function ProfilePage() {
 
   // Switch to editing state
   const handleStartEdit = () => {
-    setEditData({ ...userData });
+    setEditData({ ...userDataToUse });
     setActiveTab('personal');
     setIsEditing(true);
     setMessage(null);
@@ -206,7 +206,7 @@ export default function ProfilePage() {
       
       // Update local state and exit edit mode
       setUserData({
-        ...userData,
+        ...userDataToUse,
         ...updateData
       });
       setIsEditing(false);

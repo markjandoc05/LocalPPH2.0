@@ -1,3 +1,5 @@
+import { getShortDesc } from '@/lib/utils';
+
 export const SITE_NAME = 'LocalPages.ph';
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://localpages.ph';
 
@@ -41,7 +43,8 @@ export const generateBusinessMetadata = (business: any) => {
   }
 
   const title = `${business.name} - ${business.categoryName || business.categoryId} in ${business.cityName || business.cityId}`;
-  const description = business.description.slice(0, 150) + (business.description.length > 150 ? '...' : '');
+  const shortDesc = getShortDesc(business.description);
+  const description = shortDesc.slice(0, 150) + (shortDesc.length > 150 ? '...' : '');
   const url = `${SITE_URL}/business/${business.slug}`;
 
   return {

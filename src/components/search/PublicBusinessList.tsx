@@ -16,6 +16,7 @@ import BusinessLogo from '@/components/business/BusinessLogo';
 import PublicBusinessCard from '@/components/search/PublicBusinessCard';
 import { Badge } from '@/components/ui/Badge';
 import { buttonVariants } from '@/components/ui/Button';
+import { getShortDesc } from '@/lib/utils';
 
 interface PublicBusinessListProps {
   businesses: BusinessListing[];
@@ -163,7 +164,7 @@ export default function PublicBusinessList({ businesses, loading }: PublicBusine
                 </div>
 
                 <p className="text-sm text-slate-600 line-clamp-2 md:max-w-2xl leading-relaxed">
-                  {business.description || "No description provided."}
+                  {getShortDesc(business.description) || "No description provided."}
                 </p>
               </div>
 
