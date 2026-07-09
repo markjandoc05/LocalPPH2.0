@@ -609,6 +609,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                   isUploading={isLogoUploading}
                   progress={logoProgress}
                   className="w-32 h-32 flex-shrink-0"
+                  objectFit="contain"
                 />
               ) : (
                 <div className="w-full sm:w-64">

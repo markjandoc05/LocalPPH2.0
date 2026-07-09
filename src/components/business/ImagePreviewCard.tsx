@@ -9,6 +9,7 @@ interface ImagePreviewCardProps {
   progress?: number;
   className?: string;
   aspectRatio?: 'square' | 'video' | 'auto';
+  objectFit?: 'cover' | 'contain';
 }
 
 export default function ImagePreviewCard({ 
@@ -17,7 +18,8 @@ export default function ImagePreviewCard({
   isUploading, 
   progress = 0,
   className = '',
-  aspectRatio = 'square'
+  aspectRatio = 'square',
+  objectFit = 'cover'
 }: ImagePreviewCardProps) {
   const aspectClass = 
     aspectRatio === 'square' ? 'aspect-square' :
@@ -45,7 +47,7 @@ export default function ImagePreviewCard({
               src={url} 
               alt="Preview" 
               fill 
-              className="object-cover"
+              className={objectFit === 'contain' ? 'object-contain p-2' : 'object-cover'}
               referrerPolicy="no-referrer"
             />
           </div>

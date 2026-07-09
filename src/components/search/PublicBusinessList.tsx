@@ -12,6 +12,7 @@ import {
   LucideExternalLink 
 } from 'lucide-react';
 import Link from 'next/link';
+import BusinessLogo from '@/components/business/BusinessLogo';
 import PublicBusinessCard from '@/components/search/PublicBusinessCard';
 import { Badge } from '@/components/ui/Badge';
 import { buttonVariants } from '@/components/ui/Button';
@@ -122,20 +123,12 @@ export default function PublicBusinessList({ businesses, loading }: PublicBusine
               />
 
               {/* Business Logo / Initials */}
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl border border-slate-200 bg-slate-50 flex-shrink-0 flex items-center justify-center relative z-20 shadow-sm group-hover:scale-102 transition-transform duration-300 aspect-square">
-                {business.logoUrl ? (
-                  <img 
-                    src={business.logoUrl} 
-                    alt={`${business.name} Logo`} 
-                    className="w-full h-full object-contain p-2"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-500 text-xl font-bold uppercase">
-                    {business.name.charAt(0)}
-                  </div>
-                )}
-              </div>
+              <BusinessLogo 
+                url={business.logoUrl} 
+                name={business.name} 
+                className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0 relative z-20 shadow-sm group-hover:scale-102 transition-transform duration-300"
+                size="md"
+              />
 
               {/* Details & Info */}
               <div className="flex-grow space-y-2 min-w-0">

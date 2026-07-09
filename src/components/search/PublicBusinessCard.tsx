@@ -5,6 +5,7 @@ import { LucideCheckCircle, LucideStar, LucideMapPin, LucideGlobe, LucideExterna
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button, buttonVariants } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import BusinessLogo from '../business/BusinessLogo';
 
 interface PublicBusinessCardProps {
   business: BusinessListing;
@@ -36,20 +37,12 @@ export default function PublicBusinessCard({ business }: PublicBusinessCardProps
         )}
 
         {/* Logo Overlay */}
-        <div className="absolute -bottom-6 left-6 w-16 h-16 bg-white rounded-xl border-2 border-white shadow-md flex items-center justify-center z-20 aspect-square">
-          {business.logoUrl ? (
-            <img 
-              src={business.logoUrl} 
-              alt={`${business.name} Logo`}
-              className="w-full h-full object-contain p-2"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-500 text-lg font-bold uppercase">
-              {business.name.charAt(0)}
-            </div>
-          )}
-        </div>
+        <BusinessLogo 
+            url={business.logoUrl} 
+            name={business.name} 
+            className="absolute -bottom-6 left-6 shadow-md z-20 border-2 border-white" 
+            size="md"
+        />
       </div>
       
       <CardContent className="p-6 pt-10 flex-grow flex flex-col">

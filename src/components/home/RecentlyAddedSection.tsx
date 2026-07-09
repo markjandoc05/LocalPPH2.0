@@ -1,6 +1,6 @@
 import { getRecentlyApprovedBusinesses } from '@/lib/data-connect/public-business-service';
 import Link from 'next/link';
-import Image from 'next/image';
+import BusinessLogo from '@/components/business/BusinessLogo';
 import { LucideArrowRight } from 'lucide-react';
 
 export default async function RecentlyAddedSection() {
@@ -22,18 +22,11 @@ export default async function RecentlyAddedSection() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {recentBusinesses.slice(0, 4).map((business) => (
           <div key={business.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-            {business.logoUrl && (
-              <div className="w-12 h-12 rounded-full relative overflow-hidden flex-shrink-0">
-                <Image
-                  src={business.logoUrl}
-                  alt={business.name}
-                  fill
-                  sizes="48px"
-                  className="object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            )}
+            <BusinessLogo 
+                url={business.logoUrl} 
+                name={business.name} 
+                size="sm" 
+            />
             <div>
               <h3 className="font-semibold text-slate-900">{business.name}</h3>
               <p className="text-sm text-slate-500">View Business</p>

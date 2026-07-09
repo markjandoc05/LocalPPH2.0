@@ -1,6 +1,7 @@
 import { getFeaturedApprovedBusinesses } from '@/lib/data-connect/public-business-service';
 import Link from 'next/link';
 import Image from 'next/image';
+import BusinessLogo from '@/components/business/BusinessLogo';
 import { LucideArrowRight } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/Button';
 
@@ -37,18 +38,11 @@ export default async function FeaturedBusinessesSection() {
              </div>
              <div className="p-6 flex-grow">
                 <div className="flex items-center gap-3 mb-4">
-                  {business.logoUrl && (
-                    <div className="w-10 h-10 rounded-full relative overflow-hidden flex-shrink-0">
-                      <Image
-                        src={business.logoUrl}
-                        alt={business.name}
-                        fill
-                        sizes="40px"
-                        className="object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                  )}
+                  <BusinessLogo 
+                      url={business.logoUrl} 
+                      name={business.name} 
+                      size="sm" 
+                  />
                   <h3 className="font-bold text-lg text-slate-900 ml-3">{business.name}</h3>
                 </div>
                 <p className="text-sm text-slate-600 mb-4 line-clamp-2">{business.description}</p>

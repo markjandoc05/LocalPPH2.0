@@ -17,6 +17,7 @@ import {
   LucideCheck,
 } from 'lucide-react';
 import { Card, CardContent } from '../ui/Card';
+import BusinessLogo from './BusinessLogo';
 import { trackEvent } from '@/lib/analytics';
 import { PageType } from '@/lib/analytics/types';
 
@@ -198,15 +199,12 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
         )}
         
         {/* Logo */}
-        <div className="absolute -bottom-16 left-8 w-32 h-32 bg-white rounded-2xl border-4 border-white shadow-md flex items-center justify-center overflow-hidden">
-          <div className="w-full h-full bg-slate-50 flex items-center justify-center">
-            {business.logoUrl ? (
-              <img src={business.logoUrl} alt={`${business.name} Logo`} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-slate-400 text-sm font-bold">{business.name.slice(0, 2).toUpperCase()}</span>
-            )}
-          </div>
-        </div>
+        <BusinessLogo 
+            url={business.logoUrl} 
+            name={business.name} 
+            className="absolute -bottom-16 left-8 shadow-md z-20 border-4 border-white" 
+            size="lg"
+        />
       </div>
       
       <CardContent className="pt-20 px-8 pb-8">
