@@ -12,10 +12,10 @@
     "lint": "eslint",
     "db:seed": "tsx src/db/seed.ts",
     "db:import": "tsx src/db/import.ts",
-    "db:dev:migrate": "drizzle-kit migrate",
+    "db:dev:migrate": "drizzle-kit migrate --config=src/db/drizzle.config.ts",
     "db:dev:seed": "tsx src/db/seed.ts",
     "db:dev:import": "tsx src/db/import.ts",
-    "db:prod:migrate": "echo 'WARNING: Are you sure you want to run migrations against PRODUCTION? (y/n)' && read -r ans && [ \"$ans\" = 'y' ] && NODE_ENV=production drizzle-kit migrate || echo 'Aborted.'"
+    "db:prod:migrate": "echo 'WARNING: Are you sure you want to run migrations against PRODUCTION? (y/n)' && read -r ans && [ \"$ans\" = 'y' ] && NODE_ENV=production drizzle-kit migrate --config=src/db/drizzle.config.ts || echo 'Aborted.'"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

@@ -79,8 +79,9 @@ export default function Header() {
                   My Profile
                 </Link>
                 <Button 
-                  variant="outline"
+                  variant="default"
                   onClick={handleLogout}
+                  className="ml-2"
                 >
                   Logout
                 </Button>
@@ -139,9 +140,9 @@ export default function Header() {
                   My Profile
                 </Link>
                 <Button 
-                  variant="outline"
+                  variant="default"
                   onClick={handleLogout}
-                  className="w-full"
+                  className="w-full mt-2"
                 >
                   Logout
                 </Button>

@@ -8,6 +8,7 @@ This project uses Drizzle ORM to interface with a PostgreSQL database. To preven
 | :--- | :--- |
 | `DATABASE_URL` | Used in **production** environment. Points to the live production database. |
 | `DEVELOPMENT_DATABASE_URL` | Used in **development** environment. Points to a local or staging database. |
+| `ALLOW_SAME_DATABASE` | If `true`, allows development and production to use the same database. **DANGEROUS**. |
 
 ## How It Works
 

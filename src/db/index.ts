@@ -33,7 +33,11 @@ export const createPool = () => {
       throw new Error('DEVELOPMENT_DATABASE_URL environment variable is required in development');
     }
     if (prodUrl && devUrl === prodUrl) {
-      throw new Error('Blocked: DEVELOPMENT_DATABASE_URL is set to the production database URL.');
+      if (process.env.ALLOW_SAME_DATABASE === 'true') {
+        console.warn('Warning: development and production are using the same database.');
+      } else {
+        throw new Error('Blocked: DEVELOPMENT_DATABASE_URL is set to the production database URL.');
+      }
     }
     connectionString = devUrl;
   }
