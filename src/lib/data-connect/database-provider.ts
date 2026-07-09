@@ -403,12 +403,15 @@ export const databaseProvider: DataProvider = {
     .leftJoin(categories, eq(businesses.categoryId, categories.id))
     .leftJoin(cities, eq(businesses.cityId, cities.id))
     .leftJoin(provinces, eq(businesses.provinceId, provinces.id))
-    .where(or(
-      ilike(businesses.name, searchPattern),
-      ilike(categories.name, searchPattern),
-      ilike(cities.name, searchPattern),
-      ilike(provinces.name, searchPattern),
-      ilike(businesses.keywords, searchPattern)
+    .where(and(
+      eq(businesses.status, 'APPROVED'),
+      or(
+        ilike(businesses.name, searchPattern),
+        ilike(categories.name, searchPattern),
+        ilike(cities.name, searchPattern),
+        ilike(provinces.name, searchPattern),
+        ilike(businesses.keywords, searchPattern)
+      )
     ))
     .limit(10);
 
@@ -424,9 +427,11 @@ export const databaseProvider: DataProvider = {
   },
 
   async getApprovedBusinessBySlug(variables) {
+    if (!variables.slug) return { data: { business: null } };
+    
     const res = await db.query.businesses.findFirst({
       where: and(
-        eq(businesses.slug, variables.slug),
+        ilike(businesses.slug, variables.slug),
         eq(businesses.status, 'APPROVED')
       ),
       with: {

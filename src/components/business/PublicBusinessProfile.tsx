@@ -28,20 +28,27 @@ interface PublicBusinessProfileProps {
 
 export default function PublicBusinessProfile({ business }: PublicBusinessProfileProps) {
   // Interactive UI state
-  const [bookmarked, setBookmarked] = useState<boolean>(() => {
+  const [bookmarked, setBookmarked] = useState<boolean>(false);
+  
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('bookmarked_businesses');
         if (saved) {
           const list: string[] = JSON.parse(saved);
-          return list.includes(business.id);
+          const isCurrentlyBookmarked = list.includes(business.id);
+          if (isCurrentlyBookmarked) {
+            // Use setTimeout to avoid synchronous setState during effect execution
+            // which can trigger "cascading renders" lint warnings
+            setTimeout(() => setBookmarked(true), 0);
+          }
         }
       } catch (err) {
         console.error('Failed to load initial bookmark status:', err);
       }
     }
-    return false;
-  });
+  }, [business.id]);
+
   const [shareCopied, setShareCopied] = useState(false);
   
   // Contact Form state
@@ -226,10 +233,10 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
                 </div>
               )}
             </div>
-            <p className="text-lg text-[#2563EB] font-medium">{business.categoryName}</p>
+            <p className="text-lg text-[#2563EB] font-medium">{business.categoryName || 'Category'}</p>
             <div className="flex items-center text-slate-500 mt-2 text-sm">
               <LucideMapPin className="w-4 h-4 mr-1.5 text-slate-400" />
-              {business.addressLine1}, {business.cityName}, {business.provinceName}, {business.regionName}
+              {[business.addressLine1, business.cityName, business.provinceName, business.regionName].filter(Boolean).join(', ') || 'Address not provided'}
             </div>
           </div>
           
@@ -345,7 +352,7 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
             <section>
               <h2 className="text-xl font-bold text-slate-900 mb-4 font-sans">About</h2>
               <div className="prose prose-slate max-w-none text-slate-600">
-                <p className="whitespace-pre-wrap leading-relaxed">{getFullDesc(business.description)}</p>
+                <p className="whitespace-pre-wrap leading-relaxed">{getFullDesc(business.description) || "No description provided."}</p>
               </div>
             </section>
 

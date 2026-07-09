@@ -27,7 +27,7 @@ export default function BusinessLogo({ url, name, className, size = 'md' }: Busi
         />
       ) : (
         <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold uppercase">
-          {name.slice(0, 2)}
+          {name ? name.slice(0, 2) : '??'}
         </div>
       )}
     </div>

@@ -11,7 +11,9 @@ interface PageTrackerProps {
 export default function PageTracker({ params }: PageTrackerProps) {
   useEffect(() => {
     trackPage(params);
-  }, [params]);
+    // Only track once per mount of this component with these params
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return null;
 }

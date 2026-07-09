@@ -38,32 +38,23 @@ class AnalyticsService {
       return;
     }
 
-    // Initialize GA4
-    const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-    if (gaMeasurementId) {
-      const gaProvider = this.providers.find(p => p.name === "GoogleAnalytics");
-      if (gaProvider) {
-        gaProvider.initialize(gaMeasurementId);
+    // Forward to active providers
+    this.providers.forEach(provider => {
+      try {
+        if (provider.name === "GoogleAnalytics") {
+          const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+          if (gaMeasurementId) provider.initialize(gaMeasurementId);
+        } else if (provider.name === "MicrosoftClarity") {
+          const clarityProjectId = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
+          if (clarityProjectId) provider.initialize(clarityProjectId);
+        } else if (provider.name === "MetaPixel") {
+          const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+          if (metaPixelId) provider.initialize(metaPixelId);
+        }
+      } catch (err) {
+        console.error(`Error initializing ${provider.name}:`, err);
       }
-    }
-
-    // Initialize Microsoft Clarity
-    const clarityProjectId = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
-    if (clarityProjectId) {
-      const clarityProvider = this.providers.find(p => p.name === "MicrosoftClarity");
-      if (clarityProvider) {
-        clarityProvider.initialize(clarityProjectId);
-      }
-    }
-
-    // Initialize Meta Pixel
-    const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
-    if (metaPixelId) {
-      const metaProvider = this.providers.find(p => p.name === "MetaPixel");
-      if (metaProvider) {
-        metaProvider.initialize(metaPixelId);
-      }
-    }
+    });
 
     this.isInitialized = true;
     console.log("📊 [Analytics] Initialized GA4 and other production providers successfully.");
