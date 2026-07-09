@@ -29,8 +29,7 @@ interface SavedBusiness {
 }
 
 export default function DashboardPage() {
-  const { user, role, loading } = useAuth();
-  const router = useRouter();
+  const { user, loading } = useAuth();
   
   const [savedBusinesses] = useState<SavedBusiness[]>(() => {
     if (typeof window !== 'undefined') {
@@ -50,16 +49,7 @@ export default function DashboardPage() {
   const [recLoading, setRecLoading] = useState(true);
   const [recError, setRecError] = useState('');
 
-  useEffect(() => {
-    if (!loading && user) {
-      if (canAccessAdmin(role)) {
-        router.push('/admin');
-      } else if (isBusiness(role)) {
-        router.push('/business');
-      }
-    }
-  }, [user, role, loading, router]);
-
+  // Fetch recommended businesses
   useEffect(() => {
     if (!user) return;
 

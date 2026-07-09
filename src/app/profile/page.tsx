@@ -45,7 +45,6 @@ interface UserData {
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
 
   // Profile data states
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -60,11 +59,6 @@ export default function ProfilePage() {
 
   // Initial data loading
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/auth/login');
-      return;
-    }
-
     async function loadUserData() {
       if (user) {
         try {
@@ -84,7 +78,7 @@ export default function ProfilePage() {
     }
 
     loadUserData();
-  }, [user, authLoading, router]);
+  }, [user]);
 
   // Clean messaging after timer
   useEffect(() => {
