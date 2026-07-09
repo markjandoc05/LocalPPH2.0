@@ -425,7 +425,10 @@ export const databaseProvider: DataProvider = {
 
   async getApprovedBusinessBySlug(variables) {
     const res = await db.query.businesses.findFirst({
-      where: eq(businesses.slug, variables.slug),
+      where: and(
+        eq(businesses.slug, variables.slug),
+        eq(businesses.status, 'APPROVED')
+      ),
       with: {
         owner: true,
         category: true,
@@ -442,7 +445,10 @@ export const databaseProvider: DataProvider = {
 
   async getFeaturedApprovedBusinesses() {
     const res = await db.query.businesses.findMany({
-      where: eq(businesses.isFeatured, true),
+      where: and(
+        eq(businesses.isFeatured, true),
+        eq(businesses.status, 'APPROVED')
+      ),
       limit: 6,
       with: {
         owner: true,
@@ -460,6 +466,7 @@ export const databaseProvider: DataProvider = {
 
   async getRecentlyApprovedBusinesses() {
     const res = await db.query.businesses.findMany({
+      where: eq(businesses.status, 'APPROVED'),
       limit: 6,
       orderBy: [desc(businesses.createdAt)],
       with: {
