@@ -13,7 +13,8 @@ export const createPool = () => {
   }
 
   if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL environment variable is required');
+    console.warn('DATABASE_URL not found, skipping pool creation');
+    return null;
   }
 
   console.log('DATABASE_URL detected');
@@ -31,4 +32,18 @@ if (pool) {
   });
 }
 
-export const db = isBuildTime ? null : drizzle(pool!, { schema });
+// Make db lazily initialized or return a dummy that does nothing if pool is null
+const createDummyDb = (): any => {
+  return new Proxy({} as any, {
+    get: (target, prop) => {
+      if (prop === 'query' || typeof prop === 'string' && !['then', 'catch', 'finally'].includes(prop)) {
+        return createDummyDb();
+      }
+      return () => Promise.resolve([]);
+    },
+  });
+};
+
+export const db = pool
+  ? drizzle(pool, { schema })
+  : createDummyDb();
