@@ -7,11 +7,15 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build && mkdir -p .next/standalone/public && cp -r public/. .next/standalone/public/ 2>/dev/null || true && mkdir -p .next/standalone/.next/static && cp -r .next/static/. .next/standalone/.next/static/ 2>/dev/null || true",
+    "build": "SKIP_DB_DURING_BUILD=true next build && mkdir -p .next/standalone/public && cp -r public/. .next/standalone/public/ 2>/dev/null || true && mkdir -p .next/standalone/.next/static && cp -r .next/static/. .next/standalone/.next/static/ 2>/dev/null || true",
     "start": "node .next/standalone/server.js",
     "lint": "eslint",
     "db:seed": "tsx src/db/seed.ts",
-    "db:import": "tsx src/db/import.ts"
+    "db:import": "tsx src/db/import.ts",
+    "db:dev:migrate": "drizzle-kit migrate",
+    "db:dev:seed": "tsx src/db/seed.ts",
+    "db:dev:import": "tsx src/db/import.ts",
+    "db:prod:migrate": "echo 'WARNING: Are you sure you want to run migrations against PRODUCTION? (y/n)' && read -r ans && [ \"$ans\" = 'y' ] && NODE_ENV=production drizzle-kit migrate || echo 'Aborted.'"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
