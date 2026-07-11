@@ -53,7 +53,7 @@ export default async function BusinessProfilePage({ params }: { params: Promise<
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-[96rem] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex flex-col gap-4">
           <Link href="/search" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors w-fit">
             <LucideArrowLeft className="w-4 h-4" />

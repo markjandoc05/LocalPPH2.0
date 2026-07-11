@@ -62,6 +62,23 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
+  const galleryImages = Array.isArray(business.gallery)
+    ? business.gallery
+    : typeof business.gallery === 'string'
+      ? (() => {
+          try {
+            const parsed = JSON.parse(business.gallery);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })()
+      : [];
+
+  const fullAddress = [business.addressLine1, business.cityName, business.provinceName, business.regionName]
+    .filter(Boolean)
+    .join(', ');
+
   // Construct standard parameters (Requirement 5)
   const getEventParams = (extra = {}) => {
     return {
@@ -194,235 +211,254 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
     setReviewComment('');
   };
 
+  const actionClass =
+    "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2";
+
   return (
-    <Card className="border-slate-200 shadow-sm overflow-hidden">
+    <Card className="overflow-hidden rounded-3xl border-0 bg-white shadow-sm ring-1 ring-slate-200/70">
       {/* Cover Image */}
-      <div className="h-64 bg-slate-100 flex items-center justify-center relative overflow-hidden">
+      <div className="relative flex h-56 items-center justify-center overflow-hidden bg-slate-100 sm:h-72 lg:h-[320px]">
         {business.coverUrl ? (
-          <img src={business.coverUrl} alt={`${business.name} Cover`} className="w-full h-full object-cover" />
+          <img
+            src={business.coverUrl}
+            alt={`${business.name} Cover`}
+            className="w-full h-full object-cover"
+            decoding="async"
+            referrerPolicy="no-referrer"
+          />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-r from-slate-100 to-slate-200 flex items-center justify-center">
-            <span className="text-slate-400 font-medium text-sm">Cover Image Placeholder</span>
+            <span className="text-sm font-medium text-slate-400">Cover Image Placeholder</span>
           </div>
         )}
-        
-        {/* Logo */}
-        <BusinessLogo 
-            url={business.logoUrl} 
-            name={business.name} 
-            className="absolute -bottom-16 left-8 shadow-md z-20 border-4 border-white" 
-            size="lg"
-        />
       </div>
       
-      <CardContent className="pt-20 px-8 pb-8">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6 mb-8 border-b border-slate-100 pb-6">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <h1 className="text-3xl font-sans font-bold text-slate-900">{business.name}</h1>
-              {business.isVerified && (
-                <div title="Verified Listing" className="flex items-center gap-0.5 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold border border-blue-100">
-                  <LucideCheckCircle className="w-3.5 h-3.5" />
-                  <span>Verified</span>
+      <CardContent className="px-5 pb-10 pt-0 sm:px-8 lg:px-10">
+        <section className="relative z-10 -mt-12 border-b border-slate-100 pb-8 sm:-mt-14">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-end">
+              <BusinessLogo
+                url={business.logoUrl}
+                name={business.name}
+                className="h-32 w-32 rounded-3xl border-4 border-white shadow-lg ring-1 ring-slate-200 sm:h-36 sm:w-36"
+                size="lg"
+              />
+              <div className="min-w-0 pb-1">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  {business.isVerified && (
+                    <div title="Verified Listing" className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600 ring-1 ring-blue-100">
+                      <LucideCheckCircle className="h-3.5 w-3.5" />
+                      <span>Verified</span>
+                    </div>
+                  )}
+                  {business.isFeatured && (
+                    <div title="Featured Listing" className="inline-flex items-center gap-1.5 rounded-full bg-yellow-50 px-2.5 py-1 text-xs font-semibold text-yellow-600 ring-1 ring-yellow-100">
+                      <LucideStar className="h-3.5 w-3.5 fill-current" />
+                      <span>Featured</span>
+                    </div>
+                  )}
                 </div>
-              )}
-              {business.isFeatured && (
-                <div title="Featured Listing" className="flex items-center gap-0.5 px-2 py-0.5 bg-yellow-50 text-yellow-600 rounded-full text-xs font-semibold border border-yellow-100">
-                  <LucideStar className="w-3.5 h-3.5 fill-current" />
-                  <span>Featured</span>
+                <h1 className="font-sans text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">{business.name}</h1>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-slate-500">
+                  <span className="text-base font-medium text-[#2563EB]">{business.categoryName || 'Category'}</span>
+                  <span className="hidden h-1 w-1 rounded-full bg-slate-300 sm:inline-block" />
+                  <span className="inline-flex items-center gap-1.5">
+                    <LucideMapPin className="h-4 w-4 text-slate-400" />
+                    <span>{fullAddress || 'Address not provided'}</span>
+                  </span>
                 </div>
-              )}
-            </div>
-            <p className="text-lg text-[#2563EB] font-medium">{business.categoryName || 'Category'}</p>
-            <div className="flex items-center text-slate-500 mt-2 text-sm">
-              <LucideMapPin className="w-4 h-4 mr-1.5 text-slate-400" />
-              {[business.addressLine1, business.cityName, business.provinceName, business.regionName].filter(Boolean).join(', ') || 'Address not provided'}
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap gap-3">
-            {/* Website Link */}
-            {business.websiteUrl && (
-              <a
-                href={business.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleWebsiteClick}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 transition-colors"
-              >
-                <LucideGlobe className="w-4 h-4 text-slate-400" />
-                <span>Website</span>
-              </a>
-            )}
-
-            {/* Facebook Link */}
-            {business.facebookUrl && (
-              <a
-                href={business.facebookUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleFacebookClick}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#1877F2]/10 hover:bg-[#1877F2]/20 text-[#1877F2] rounded-xl text-sm font-semibold transition-colors"
-              >
-                <LucideExternalLink className="w-4 h-4" />
-                <span>Facebook</span>
-              </a>
-            )}
-
-            {/* Instagram Link */}
-            {business.instagramUrl && (
-              <a
-                href={business.instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleInstagramClick}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-600 border border-pink-100 rounded-xl text-sm font-semibold transition-colors"
-              >
-                <LucideExternalLink className="w-4 h-4" />
-                <span>Instagram</span>
-              </a>
-            )}
-
-            {/* TikTok Link */}
-            {business.tiktokUrl && (
-              <a
-                href={business.tiktokUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-black hover:bg-slate-800 text-white rounded-xl text-sm font-semibold transition-colors"
-              >
-                <LucideExternalLink className="w-4 h-4" />
-                <span>TikTok</span>
-              </a>
-            )}
-
-            {/* Shopee Link */}
-            {business.shopeeUrl && (
-              <a
-                href={business.shopeeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#EE4D2D]/10 hover:bg-[#EE4D2D]/20 text-[#EE4D2D] border border-[#EE4D2D]/20 rounded-xl text-sm font-semibold transition-colors"
-              >
-                <LucideExternalLink className="w-4 h-4" />
-                <span>Shopee</span>
-              </a>
-            )}
-
-            {/* Lazada Link */}
-            {business.lazadaUrl && (
-              <a
-                href={business.lazadaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-[#F57224]/10 hover:bg-[#F57224]/20 text-[#F57224] border border-[#F57224]/20 rounded-xl text-sm font-semibold transition-colors"
-              >
-                <LucideExternalLink className="w-4 h-4" />
-                <span>Lazada</span>
-              </a>
-            )}
-
-            {/* Share Business Profile */}
-            <button
-              onClick={handleShareClick}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 transition-colors"
-            >
-              <LucideShare2 className="w-4 h-4 text-slate-400" />
-              <span>{shareCopied ? 'Copied!' : 'Share'}</span>
-            </button>
-
-            {/* Bookmark Business */}
-            <button
-              onClick={handleBookmarkClick}
-              className={`inline-flex items-center gap-2 px-4 py-2 border rounded-xl text-sm font-semibold transition-colors ${
-                bookmarked
-                  ? 'bg-yellow-50 border-yellow-200 text-yellow-600'
-                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              <LucideBookmark className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} />
-              <span>{bookmarked ? 'Bookmarked' : 'Save'}</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content (About, Products, Reviews) */}
-          <div className="lg:col-span-2 space-y-8">
-            <section>
-              <h2 className="text-xl font-bold text-slate-900 mb-4 font-sans">About</h2>
-              <div className="prose prose-slate max-w-none text-slate-600">
-                <p className="whitespace-pre-wrap leading-relaxed">{getFullDesc(business.description) || "No description provided."}</p>
               </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 lg:max-w-[44rem] lg:justify-end">
+              {business.websiteUrl && (
+                <a
+                  href={business.websiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={handleWebsiteClick}
+                  className={`${actionClass} border border-slate-200 bg-white text-slate-700 hover:bg-slate-50`}
+                >
+                  <LucideGlobe className="h-4 w-4 text-slate-400" />
+                  <span>Website</span>
+                </a>
+              )}
+
+              {business.facebookUrl && (
+                <a
+                  href={business.facebookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={handleFacebookClick}
+                  className={`${actionClass} bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20`}
+                >
+                  <LucideExternalLink className="h-4 w-4" />
+                  <span>Facebook</span>
+                </a>
+              )}
+
+              {business.instagramUrl && (
+                <a
+                  href={business.instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={handleInstagramClick}
+                  className={`${actionClass} border border-pink-100 bg-pink-50 text-pink-600 hover:bg-pink-100`}
+                >
+                  <LucideExternalLink className="h-4 w-4" />
+                  <span>Instagram</span>
+                </a>
+              )}
+
+              {business.tiktokUrl && (
+                <a
+                  href={business.tiktokUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${actionClass} bg-black text-white hover:bg-slate-800`}
+                >
+                  <LucideExternalLink className="h-4 w-4" />
+                  <span>TikTok</span>
+                </a>
+              )}
+
+              {business.shopeeUrl && (
+                <a
+                  href={business.shopeeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${actionClass} border border-[#EE4D2D]/20 bg-[#EE4D2D]/10 text-[#EE4D2D] hover:bg-[#EE4D2D]/20`}
+                >
+                  <LucideExternalLink className="h-4 w-4" />
+                  <span>Shopee</span>
+                </a>
+              )}
+
+              {business.lazadaUrl && (
+                <a
+                  href={business.lazadaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${actionClass} border border-[#F57224]/20 bg-[#F57224]/10 text-[#F57224] hover:bg-[#F57224]/20`}
+                >
+                  <LucideExternalLink className="h-4 w-4" />
+                  <span>Lazada</span>
+                </a>
+              )}
+
+              <button
+                onClick={handleShareClick}
+                className={`${actionClass} border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100`}
+                aria-label={shareCopied ? 'Profile link copied' : 'Share this business'}
+              >
+                <LucideShare2 className="h-4 w-4 text-slate-400" />
+                <span>{shareCopied ? 'Copied!' : 'Share'}</span>
+              </button>
+
+              <button
+                onClick={handleBookmarkClick}
+                className={`${actionClass} border ${
+                  bookmarked
+                    ? 'border-yellow-200 bg-yellow-50 text-yellow-600'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+                aria-label={bookmarked ? 'Remove saved business' : 'Save this business'}
+              >
+                <LucideBookmark className={`h-4 w-4 ${bookmarked ? 'fill-current' : ''}`} />
+                <span>{bookmarked ? 'Saved' : 'Save'}</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 gap-10 pt-8 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+          {/* Main Content */}
+          <main className="min-w-0 space-y-10">
+            <section className="max-w-5xl">
+              <h2 className="mb-4 font-sans text-2xl font-bold text-slate-950">About</h2>
+              <p className="whitespace-pre-wrap text-base leading-8 text-slate-600 sm:text-lg">{getFullDesc(business.description) || "No description provided."}</p>
             </section>
 
-            {/* Gallery Section */}
-            {business.gallery && Array.isArray(business.gallery) && business.gallery.length > 0 && (
+            <section>
+              {(business.products || business.services) && (
+                <div className="grid gap-6 border-t border-slate-100 pt-8 md:grid-cols-2">
+                  {business.products && (
+                    <div>
+                      <h2 className="mb-3 font-sans text-lg font-bold text-slate-950">Products</h2>
+                      <p className="whitespace-pre-wrap text-sm leading-7 text-slate-600">{business.products}</p>
+                    </div>
+                  )}
+
+                  {business.services && (
+                    <div>
+                      <h2 className="mb-3 font-sans text-lg font-bold text-slate-950">Services</h2>
+                      <p className="whitespace-pre-wrap text-sm leading-7 text-slate-600">{business.services}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {galleryImages.length > 0 && (
               <section className="border-t border-slate-100 pt-8">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 font-sans">Gallery</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {business.gallery.map((imgUrl, idx) => (
-                    <div key={idx} className="aspect-video relative rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:opacity-95 transition-opacity">
-                      <img src={imgUrl} alt={`${business.name} Gallery Image ${idx + 1}`} className="w-full h-full object-cover" />
+                <h2 className="mb-4 font-sans text-2xl font-bold text-slate-950">Gallery</h2>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                  {galleryImages.map((imgUrl, idx) => (
+                    <div key={idx} className="relative aspect-video overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-slate-200/70 transition-opacity hover:opacity-95">
+                      <img
+                        src={imgUrl}
+                        alt={`${business.name} Gallery Image ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                        referrerPolicy="no-referrer"
+                      />
                     </div>
                   ))}
                 </div>
               </section>
             )}
-            
-            {business.products && (
-              <section className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
-                <h2 className="text-lg font-bold text-slate-900 mb-3 font-sans">Products</h2>
-                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{business.products}</p>
-              </section>
-            )}
-            
-            {business.services && (
-              <section className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
-                <h2 className="text-lg font-bold text-slate-900 mb-3 font-sans">Services</h2>
-                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{business.services}</p>
-              </section>
-            )}
 
             {/* Interactive Write a Review Section (Satisfies review_submission Tracking) */}
             <section className="border-t border-slate-100 pt-8">
-              <h2 className="text-xl font-sans font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <LucideMessageSquare className="w-5 h-5 text-[#2563EB]" />
+              <h2 className="mb-5 flex items-center gap-2 font-sans text-2xl font-bold text-slate-950">
+                <LucideMessageSquare className="h-5 w-5 text-[#2563EB]" />
                 <span>Customer Reviews</span>
               </h2>
 
               {reviewSubmitted ? (
-                <div className="bg-green-50 border border-green-200 text-green-700 p-6 rounded-2xl flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-full text-green-600">
-                    <LucideCheck className="w-5 h-5" />
+                <div className="flex items-center gap-3 rounded-2xl bg-green-50 p-6 text-green-700 ring-1 ring-green-200">
+                  <div className="rounded-full bg-green-100 p-2 text-green-600">
+                    <LucideCheck className="h-5 w-5" />
                   </div>
                   <div>
                     <h4 className="font-bold">Thank you for your feedback!</h4>
-                    <p className="text-xs text-green-600 mt-1">Your review has been captured and submitted for validation.</p>
+                    <p className="mt-1 text-xs text-green-600">Your review has been captured and submitted for validation.</p>
                   </div>
                 </div>
               ) : (
-                <form onSubmit={handleReviewSubmit} className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
-                  <h3 className="font-bold text-sm text-slate-800">Leave a Review</h3>
+                <form onSubmit={handleReviewSubmit} className="space-y-4 rounded-3xl bg-slate-50/70 p-5 ring-1 ring-slate-200/70 sm:p-6">
+                  <h3 className="text-sm font-bold text-slate-800">Leave a Review</h3>
                   
                   {/* Stars Rating Selector */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-medium text-slate-500 mr-2">Your Rating:</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="mr-2 text-xs font-medium text-slate-500">Your Rating:</span>
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
                         type="button"
                         onClick={() => setReviewRating(star)}
-                        className="text-yellow-400 focus:outline-none transition-transform hover:scale-110"
+                        className="rounded text-yellow-400 transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2"
+                        aria-label={`Set rating to ${star} star${star === 1 ? '' : 's'}`}
                       >
-                        <LucideStar className={`w-6 h-6 ${star <= reviewRating ? 'fill-current' : 'text-slate-300'}`} />
+                        <LucideStar className={`h-6 w-6 ${star <= reviewRating ? 'fill-current' : 'text-slate-300'}`} />
                       </button>
                     ))}
                   </div>
 
                   {/* Comment Input */}
                   <div>
-                    <label htmlFor="review_comment" className="block text-xs font-medium text-slate-500 mb-1.5">
+                    <label htmlFor="review_comment" className="mb-1.5 block text-xs font-medium text-slate-500">
                       Review Comment
                     </label>
                     <textarea
@@ -432,94 +468,123 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
                       onChange={(e) => setReviewComment(e.target.value)}
                       placeholder="Share your experience with this business..."
                       required
-                      className="block w-full rounded-xl border border-slate-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB] placeholder-slate-400"
+                      className="block w-full rounded-2xl border border-slate-200 bg-white p-3 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0C0C1C] hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-colors shadow-sm"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0C0C1C] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2"
                   >
                     <span>Submit Review</span>
                   </button>
                 </form>
               )}
             </section>
-          </div>
+          </main>
           
-          {/* Sidebar (Contacts, Actions, and Dynamic Message Box) */}
-          <div className="space-y-6">
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 shadow-sm">
-              <h3 className="font-bold text-slate-900 mb-4 font-sans text-base">Contact Information</h3>
+          <aside className="h-fit rounded-3xl bg-slate-50/80 p-5 shadow-sm ring-1 ring-slate-200/70 sm:p-6 lg:sticky lg:top-24">
+            <div>
+              <h3 className="mb-4 font-sans text-base font-bold text-slate-950">Contact Information</h3>
               <ul className="space-y-4">
                 {business.contactMobile && (
                   <li className="flex items-start">
-                    <LucidePhone className="w-5 h-5 text-slate-400 mr-3 mt-0.5" />
+                    <LucidePhone className="mr-3 mt-0.5 h-5 w-5 text-slate-400" />
                     <div>
                       <a
                         href={`tel:${business.contactMobile}`}
                         onClick={() => handleCallClick(business.contactMobile || '')}
-                        className="text-slate-900 hover:text-[#2563EB] font-mono text-sm hover:underline"
+                        className="font-mono text-sm text-slate-900 hover:text-[#2563EB] hover:underline"
                       >
                         {business.contactMobile}
                       </a>
-                      <span className="block text-[10px] text-slate-400 font-sans uppercase">Mobile</span>
+                      <span className="block font-sans text-[10px] uppercase text-slate-400">Mobile</span>
                     </div>
                   </li>
                 )}
                 {business.contactPhone && (
                   <li className="flex items-start">
-                    <LucidePhone className="w-5 h-5 text-slate-400 mr-3 mt-0.5" />
+                    <LucidePhone className="mr-3 mt-0.5 h-5 w-5 text-slate-400" />
                     <div>
                       <a
                         href={`tel:${business.contactPhone}`}
                         onClick={() => handleCallClick(business.contactPhone || '')}
-                        className="text-slate-900 hover:text-[#2563EB] font-mono text-sm hover:underline"
+                        className="font-mono text-sm text-slate-900 hover:text-[#2563EB] hover:underline"
                       >
                         {business.contactPhone}
                       </a>
-                      <span className="block text-[10px] text-slate-400 font-sans uppercase">Landline</span>
+                      <span className="block font-sans text-[10px] uppercase text-slate-400">Landline</span>
                     </div>
                   </li>
                 )}
                 {business.contactEmail && (
                   <li className="flex items-start">
-                    <LucideMail className="w-5 h-5 text-slate-400 mr-3 mt-0.5" />
+                    <LucideMail className="mr-3 mt-0.5 h-5 w-5 text-slate-400" />
                     <div>
                       <a
                         href={`mailto:${business.contactEmail}`}
                         onClick={handleEmailClick}
-                        className="text-[#2563EB] hover:underline text-sm font-medium"
+                        className="break-all text-sm font-medium text-[#2563EB] hover:underline"
                       >
                         {business.contactEmail}
                       </a>
-                      <span className="block text-[10px] text-slate-400 font-sans uppercase">Email Address</span>
+                      <span className="block font-sans text-[10px] uppercase text-slate-400">Email Address</span>
+                    </div>
+                  </li>
+                )}
+                {fullAddress && (
+                  <li className="flex items-start">
+                    <LucideMapPin className="mr-3 mt-0.5 h-5 w-5 text-slate-400" />
+                    <div>
+                      <p className="text-sm leading-relaxed text-slate-700">{fullAddress}</p>
+                      <span className="block font-sans text-[10px] uppercase text-slate-400">Address</span>
                     </div>
                   </li>
                 )}
               </ul>
-              
-              <div className="mt-6 pt-6 border-t border-slate-200">
-                <p className="text-xs text-slate-400 text-center leading-relaxed">
-                  Note: Contact details are visible to public during Phase 2. Future phases may restrict full details to registered subscribers.
-                </p>
-              </div>
+
+              <p className="mt-5 border-t border-slate-200 pt-5 text-xs leading-relaxed text-slate-400">
+                Note: Contact details are visible to public during Phase 2. Future phases may restrict full details to registered subscribers.
+              </p>
             </div>
-            
+
             {business.businessHours && (
-              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 shadow-sm">
-                <h3 className="font-bold text-slate-900 mb-3 font-sans text-base">Business Hours</h3>
-                <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{business.businessHours}</p>
+              <div className="mt-6 border-t border-slate-200 pt-6">
+                <h3 className="mb-3 font-sans text-base font-bold text-slate-950">Business Hours</h3>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600">{business.businessHours}</p>
               </div>
             )}
 
-            {/* Interactive Contact Business Form (Satisfies contact_business Tracking) */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm space-y-4">
-              <h3 className="font-bold text-slate-900 font-sans text-base">Inquire or Send Message</h3>
+            {/* Directions Map with Click Trigger (Satisfies business_directions_click Tracking) */}
+            <div className="mt-6 border-t border-slate-200 pt-6">
+              <div
+                onClick={handleDirectionsClick}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleDirectionsClick();
+                  }
+                }}
+                className="group relative flex h-48 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl bg-slate-200 transition-all duration-300 hover:bg-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2"
+              >
+                <div className="absolute inset-0 bg-[#0C0C1C]/10 transition-colors group-hover:bg-[#0C0C1C]/20" />
+                <div className="relative z-10 flex flex-col items-center justify-center p-4 text-center">
+                  <LucideMapPin className="mb-2 h-9 w-9 text-[#2563EB] transition-transform group-hover:scale-110" />
+                  <span className="text-xs font-bold text-slate-800">Get Location Directions</span>
+                  <span className="mt-1 font-mono text-[10px] uppercase text-slate-500">Click to open map</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-slate-200 pt-6">
+              <h3 className="mb-4 font-sans text-base font-bold text-slate-950">Inquire or Send Message</h3>
               
               {contactSent ? (
-                <div className="bg-blue-50 text-[#2563EB] text-xs p-4 rounded-xl font-medium border border-blue-100 leading-relaxed">
-                  ✅ Message sent! The business owner has been notified.
+                <div className="flex items-start gap-3 rounded-2xl bg-blue-50 p-4 text-xs font-medium leading-relaxed text-[#2563EB] ring-1 ring-blue-100">
+                  <LucideCheck className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <span>Message sent! The business owner has been notified.</span>
                 </div>
               ) : (
                 <form onSubmit={handleContactSubmit} className="space-y-3">
@@ -530,7 +595,7 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
                       value={contactName}
                       onChange={(e) => setContactName(e.target.value)}
                       required
-                      className="block w-full rounded-xl border border-slate-200 p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                      className="block w-full rounded-2xl border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
                     />
                   </div>
                   <div>
@@ -540,7 +605,7 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
                       value={contactEmail}
                       onChange={(e) => setContactEmail(e.target.value)}
                       required
-                      className="block w-full rounded-xl border border-slate-200 p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                      className="block w-full rounded-2xl border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
                     />
                   </div>
                   <div>
@@ -550,36 +615,22 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
                       value={contactMsg}
                       onChange={(e) => setContactMsg(e.target.value)}
                       required
-                      className="block w-full rounded-xl border border-slate-200 p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                      className="block w-full rounded-2xl border border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
                     />
                   </div>
                   <button
                     type="submit"
-                    className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-[#2563EB] hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-2xl bg-[#2563EB] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2"
                   >
-                    <LucideSend className="w-3.5 h-3.5" />
+                    <LucideSend className="h-3.5 w-3.5" />
                     <span>Send Message</span>
                   </button>
                 </form>
               )}
             </div>
-            
-            {/* Directions Map with Click Trigger (Satisfies business_directions_click Tracking) */}
-            <div
-              onClick={handleDirectionsClick}
-              className="bg-slate-100 hover:bg-slate-200 rounded-2xl h-48 border border-slate-200 flex flex-col items-center justify-center cursor-pointer group transition-all duration-300 relative overflow-hidden shadow-sm"
-            >
-              <div className="absolute inset-0 bg-[#0C0C1C]/10 group-hover:bg-[#0C0C1C]/20 transition-colors" />
-              <div className="relative z-10 flex flex-col items-center justify-center text-center p-4">
-                <LucideMapPin className="w-8 h-8 text-[#2563EB] mb-2 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-bold text-slate-800">Get Location Directions</span>
-                <span className="text-[10px] text-slate-500 mt-1 uppercase font-mono">Click to open map</span>
-              </div>
-            </div>
-          </div>
+          </aside>
         </div>
       </CardContent>
     </Card>
   );
 }
-
