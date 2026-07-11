@@ -7,18 +7,44 @@ import { generateBusinessMetadata } from '@/lib/seo/metadata';
 import { generateLocalBusinessJsonLd } from '@/lib/seo/jsonld';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import PageTracker from '@/components/analytics/PageTracker';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
-  const business = await getApprovedBusinessBySlug(resolvedParams.slug);
-  return generateBusinessMetadata(business);
+  try {
+    const business = await getApprovedBusinessBySlug(resolvedParams.slug);
+    return generateBusinessMetadata(business);
+  } catch (error) {
+    console.error("Failed to load business metadata:", error);
+    return generateBusinessMetadata(null);
+  }
 }
 
 export default async function BusinessProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
-  const business = await getApprovedBusinessBySlug(resolvedParams.slug);
+  let business = null;
+
+  try {
+    business = await getApprovedBusinessBySlug(resolvedParams.slug);
+  } catch (error) {
+    console.error("Failed to load business profile:", error);
+    return (
+      <div className="flex-1 bg-slate-50 flex flex-col min-h-screen">
+        <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Link href="/search" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors w-fit mb-6">
+            <LucideArrowLeft className="w-4 h-4" />
+            Back to Search
+          </Link>
+          <ErrorState
+            title="Business profile could not load"
+            message="Please try again in a moment."
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (!business) {
     notFound();

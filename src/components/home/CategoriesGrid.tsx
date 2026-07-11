@@ -23,7 +23,14 @@ const iconMap: { [key: string]: React.ElementType } = {
 };
 
 export default async function CategoriesGrid() {
-  const categories = await getAllCategories();
+  let categories = [];
+
+  try {
+    categories = await getAllCategories();
+  } catch (error) {
+    console.error("Failed to load home categories:", error);
+    return null;
+  }
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

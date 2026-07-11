@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 interface IntegrationService {
   enabled: boolean;
@@ -32,6 +33,7 @@ const injectSearchConsole = (metaHtml: string) => {
     container.innerHTML = metaHtml.trim();
     const metaNode = container.firstElementChild;
     if (metaNode) {
+      metaNode.id = 'google-search-console-meta';
       document.head.appendChild(metaNode);
     }
   } catch (err) {
@@ -41,13 +43,14 @@ const injectSearchConsole = (metaHtml: string) => {
 
 const injectFavicon = (url: string) => {
   try {
-    const links = document.querySelectorAll("link[rel*='icon']");
-    links.forEach(l => l.remove());
-
-    const link = document.createElement('link');
+    let link = document.getElementById('localpages-favicon') as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement('link');
+      link.id = 'localpages-favicon';
+      document.head.appendChild(link);
+    }
     link.rel = 'icon';
     link.href = url;
-    document.head.appendChild(link);
   } catch (err) {
     console.error("Failed to inject favicon:", err);
   }
@@ -123,6 +126,8 @@ const loadMetaPixel = (id: string) => {
 };
 
 export default function SiteIntegrations() {
+  const pathname = usePathname();
+  const isAdminRoute = pathname?.startsWith('/admin') ?? false;
   const [settings, setSettings] = useState<IntegrationSettings | null>(null);
   
   // Lazy-initialize consentGiven synchronously to prevent unnecessary useEffect re-renders
@@ -139,6 +144,8 @@ export default function SiteIntegrations() {
   });
 
   useEffect(() => {
+    if (isAdminRoute) return;
+
     // 1. Fetch public settings
     fetch('/api/settings')
       .then(res => res.ok ? res.json() : null)
@@ -158,14 +165,14 @@ export default function SiteIntegrations() {
         }
       })
       .catch(err => console.error("Error loading public settings:", err));
-  }, []);
+  }, [isAdminRoute]);
 
   useEffect(() => {
-    if (!settings) return;
+    if (!settings || isAdminRoute) return;
 
     // Only load tracking scripts if consent is accepted (or if consent banner is disabled!)
     const isConsentApproved = !settings.cookieConsent?.enabled || consentGiven === true;
-    const isProd = true;
+    const isProd = process.env.NODE_ENV === 'production';
 
     // Analytics and Pixels should load ONLY in production environment (per instruction)
     if (isConsentApproved && isProd) {
@@ -189,7 +196,7 @@ export default function SiteIntegrations() {
         loadMetaPixel(settings.metaPixel.pixelId);
       }
     }
-  }, [settings, consentGiven]);
+  }, [settings, consentGiven, isAdminRoute]);
 
   const handleAccept = () => {
     try {
@@ -210,7 +217,7 @@ export default function SiteIntegrations() {
   };
 
   // Derive banner visibility dynamically during render instead of putting it in state!
-  const showBanner = settings?.cookieConsent?.enabled && consentGiven === null;
+  const showBanner = !isAdminRoute && settings?.cookieConsent?.enabled && consentGiven === null;
 
   if (!showBanner || !settings?.cookieConsent?.enabled) return null;
 

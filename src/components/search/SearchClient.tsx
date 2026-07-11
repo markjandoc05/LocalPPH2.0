@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import SearchFilters from '@/components/search/SearchFilters';
 import PublicBusinessList from '@/components/search/PublicBusinessList';
@@ -13,7 +13,7 @@ import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import { trackPage, trackEvent } from '@/lib/analytics';
 import { publicClientProvider } from '@/lib/data-connect/client-provider';
 
-export default function SearchClient() {
+function SearchClientContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -22,7 +22,6 @@ export default function SearchClient() {
   const [loading, setLoading] = useState(true);
   
   const currentQ = searchParams.get('q') || '';
-  const [prevQ, setPrevQ] = useState(currentQ);
   const [heroQuery, setHeroQuery] = useState(currentQ);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -63,11 +62,6 @@ export default function SearchClient() {
     return () => clearTimeout(timeoutId);
   }, [heroQuery]);
 
-  if (currentQ !== prevQ) {
-    setPrevQ(currentQ);
-    setHeroQuery(currentQ);
-  }
-
   const itemsPerPage = 12;
 
   useEffect(() => {
@@ -93,7 +87,7 @@ export default function SearchClient() {
 
         // Map filters to a formatted string for tracking dimensions
         const activeFilters = Object.entries(filters)
-          .filter(([_, val]) => val !== undefined && val !== false)
+          .filter(([, val]) => val !== undefined && val !== false)
           .map(([key, val]) => `${key}:${val}`)
           .join(',');
 
@@ -241,4 +235,10 @@ export default function SearchClient() {
       </div>
     </>
   );
+}
+
+export default function SearchClient() {
+  const searchParams = useSearchParams();
+
+  return <SearchClientContent key={searchParams.toString()} />;
 }

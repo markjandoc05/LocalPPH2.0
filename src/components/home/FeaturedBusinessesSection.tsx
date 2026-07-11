@@ -7,7 +7,14 @@ import { buttonVariants } from '@/components/ui/Button';
 import { getShortDesc } from '@/lib/utils';
 
 export default async function FeaturedBusinessesSection() {
-  const featuredBusinesses = await getFeaturedApprovedBusinesses();
+  let featuredBusinesses = [];
+
+  try {
+    featuredBusinesses = await getFeaturedApprovedBusinesses();
+  } catch (error) {
+    console.error("Failed to load featured businesses:", error);
+    return null;
+  }
 
   if (featuredBusinesses.length === 0) return null;
 

@@ -4,7 +4,14 @@ import BusinessLogo from '@/components/business/BusinessLogo';
 import { LucideArrowRight } from 'lucide-react';
 
 export default async function RecentlyAddedSection() {
-  const recentBusinesses = await getRecentlyApprovedBusinesses();
+  let recentBusinesses = [];
+
+  try {
+    recentBusinesses = await getRecentlyApprovedBusinesses();
+  } catch (error) {
+    console.error("Failed to load recent businesses:", error);
+    return null;
+  }
 
   if (recentBusinesses.length === 0) return null;
 

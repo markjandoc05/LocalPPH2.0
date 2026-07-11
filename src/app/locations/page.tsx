@@ -1,10 +1,11 @@
 import React from "react";
-import { getAllRegions } from "@/lib/data-connect/directory-service";
+import { DirectoryRegion, getAllRegions } from "@/lib/data-connect/directory-service";
 import DirectoryPageHeader from "@/components/directory/DirectoryPageHeader";
 import LocationGrid from "@/components/directory/LocationGrid";
 import LocationBreadcrumbs from "@/components/directory/LocationBreadcrumbs";
 import { generatePageMetadata } from "@/lib/seo/metadata";
 import { Metadata } from "next";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function LocationsPage() {
-  const regions = await getAllRegions();
+  let regions: DirectoryRegion[] = [];
+  let loadError = false;
+
+  try {
+    regions = await getAllRegions();
+  } catch (error) {
+    console.error("Failed to load locations page:", error);
+    loadError = true;
+  }
 
   const breadcrumbs = [
     { label: "Locations" }
@@ -36,7 +45,14 @@ export default async function LocationsPage() {
           <h2 className="text-2xl font-sans font-bold text-[#0C0C1C] mb-6 border-b border-slate-50 pb-4">
             Browse by Region
           </h2>
-          <LocationGrid regions={regions} />
+          {loadError ? (
+            <ErrorState
+              title="Locations could not load"
+              message="Please try again in a moment."
+            />
+          ) : (
+            <LocationGrid regions={regions} />
+          )}
         </div>
       </main>
     </div>

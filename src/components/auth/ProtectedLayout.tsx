@@ -14,17 +14,21 @@ export const ProtectedLayout = ({
 }) => {
   const { user, role, loading } = useAuth();
   const router = useRouter();
+  const normalizedAllowedRoles = allowedRoles.map(normalizeRole);
+  const allowedRolesKey = normalizedAllowedRoles.join('|');
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth/login');
-    } else if (!loading && user && role && !allowedRoles.includes(normalizeRole(role))) {
-      // If user is authenticated but doesn't have the required role, redirect to a reasonable place
-      router.push('/dashboard'); 
-    }
-  }, [user, role, loading, router, allowedRoles]);
+    const canAccessRole = role ? allowedRolesKey.split('|').includes(normalizeRole(role)) : false;
 
-  if (loading) {
+    if (!loading && !user) {
+      router.replace('/auth/login');
+    } else if (!loading && user && role && !canAccessRole) {
+      // If user is authenticated but doesn't have the required role, redirect to a reasonable place
+      router.replace('/dashboard');
+    }
+  }, [user, role, loading, router, allowedRolesKey]);
+
+  if (loading || (user && !role)) {
     return (
       <div className="flex h-screen items-center justify-center">
         <p>Loading...</p>
@@ -32,7 +36,7 @@ export const ProtectedLayout = ({
     );
   }
 
-  if (!user || (role && !allowedRoles.includes(normalizeRole(role)))) {
+  if (!user || (role && !normalizedAllowedRoles.includes(normalizeRole(role)))) {
     return null;
   }
 
