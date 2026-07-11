@@ -3,9 +3,8 @@ import Link from 'next/link';
 import { BusinessListing } from '@/types/business';
 import { LucideCheckCircle, LucideStar, LucideMapPin, LucideGlobe, LucideExternalLink } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Button, buttonVariants } from '@/components/ui/Button';
+import { buttonVariants } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import BusinessLogo from '../business/BusinessLogo';
 import { getShortDesc } from '@/lib/utils';
 
 interface PublicBusinessCardProps {
@@ -13,6 +12,8 @@ interface PublicBusinessCardProps {
 }
 
 export default function PublicBusinessCard({ business }: PublicBusinessCardProps) {
+  const cardLogoUrl = business.logoUrl || business.coverUrl;
+
   return (
     <Card className="hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col h-full group relative bg-white border border-slate-200">
       {/* Absolute link covering the entire card area for natural click behavior */}
@@ -22,31 +23,25 @@ export default function PublicBusinessCard({ business }: PublicBusinessCardProps
         aria-label={`View profile for ${business.name}`}
       />
 
-      {/* Cover Image Area */}
-      <div className="h-32 bg-slate-50 flex items-center justify-center relative border-b border-slate-100 overflow-hidden">
-        {business.coverUrl ? (
+      {/* Logo Area */}
+      <div className="h-32 bg-white flex items-center justify-center relative border-b border-slate-100 overflow-hidden p-5">
+        {cardLogoUrl ? (
           <img 
-            src={business.coverUrl} 
-            alt={`${business.name} Cover`}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            src={cardLogoUrl}
+            alt={`${business.name} logo`}
+            className="max-h-full max-w-full object-contain"
+            loading="lazy"
+            decoding="async"
             referrerPolicy="no-referrer"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-r from-blue-50 to-indigo-100 flex items-center justify-center">
-            <span className="text-slate-400 text-[10px] font-semibold tracking-wider uppercase opacity-40">LocalPages.ph</span>
+          <div className="h-20 w-20 rounded-xl border border-slate-200 bg-slate-100 flex items-center justify-center text-slate-500 font-bold uppercase">
+            {business.name ? business.name.slice(0, 2) : '??'}
           </div>
         )}
-
-        {/* Logo Overlay */}
-        <BusinessLogo 
-            url={business.logoUrl} 
-            name={business.name} 
-            className="absolute -bottom-6 left-6 shadow-md z-20 border-2 border-white" 
-            size="md"
-        />
       </div>
       
-      <CardContent className="p-6 pt-10 flex-grow flex flex-col">
+      <CardContent className="p-6 flex-grow flex flex-col">
         <div className="flex justify-between items-start gap-2 mb-2">
           <h3 className="text-lg font-bold text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors duration-200">
             {business.name}
