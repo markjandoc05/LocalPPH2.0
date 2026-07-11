@@ -512,6 +512,21 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
             </div>
           </div>
 
+          {/* Interactive Map/Directions Preview */}
+          <div 
+            onClick={handleDirectionsClick}
+            className="group relative h-56 rounded-3xl overflow-hidden border border-slate-200 cursor-pointer shadow-sm active:scale-95 transition-transform"
+          >
+            <div className="absolute inset-0 bg-slate-200 bg-[url('https://picsum.photos/seed/map/800/600')] bg-cover bg-center transition-transform duration-700 group-hover:scale-110" />
+            <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex flex-col items-center justify-center text-white text-center p-6">
+              <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 mb-3 group-hover:scale-110 transition-transform">
+                <LucideMapPin className="w-8 h-8 text-blue-400" />
+              </div>
+              <span className="font-bold text-lg">Get Directions</span>
+              <p className="text-white/70 text-xs mt-1 font-medium">Open in Google Maps</p>
+            </div>
+          </div>
+
           {/* Interactive Inquiry Form */}
           <div className="bg-[#0C0C1C] rounded-3xl p-8 text-white shadow-xl">
             <h3 className="text-xl font-bold mb-2">Send an Inquiry</h3>
@@ -559,21 +574,6 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
                 </button>
               </form>
             )}
-          </div>
-
-          {/* Interactive Map/Directions Preview */}
-          <div 
-            onClick={handleDirectionsClick}
-            className="group relative h-56 rounded-3xl overflow-hidden border border-slate-200 cursor-pointer shadow-sm active:scale-95 transition-transform"
-          >
-            <div className="absolute inset-0 bg-slate-200 bg-[url('https://picsum.photos/seed/map/800/600')] bg-cover bg-center transition-transform duration-700 group-hover:scale-110" />
-            <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex flex-col items-center justify-center text-white text-center p-6">
-              <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 mb-3 group-hover:scale-110 transition-transform">
-                <LucideMapPin className="w-8 h-8 text-blue-400" />
-              </div>
-              <span className="font-bold text-lg">Get Directions</span>
-              <p className="text-white/70 text-xs mt-1 font-medium">Open in Google Maps</p>
-            </div>
           </div>
         </div>
       </div>
