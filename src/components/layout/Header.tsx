@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { logoutUser } from '@/lib/auth/auth-utils';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { canAccessAdmin, isBusiness } from '@/lib/auth/roles';
 import { Button, buttonVariants } from '@/components/ui/Button';
 import { Menu, X } from 'lucide-react';
@@ -44,7 +44,7 @@ export default function Header() {
             <Link href="/search" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C] transition-colors">
               Listing
             </Link>
-            <Link href="/business/listings/new" prefetch={false} className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C] transition-colors">
+            <Link href="/business/listings/new" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C] transition-colors">
               List Your Business
             </Link>
           </nav>
@@ -66,14 +66,12 @@ export default function Header() {
               <>
                 <Link 
                   href={getDashboardLink()} 
-                  prefetch={false}
                   className={buttonVariants({ variant: 'ghost' })}
                 >
                   Dashboard
                 </Link>
                 <Link 
                   href="/profile" 
-                  prefetch={false}
                   className={buttonVariants({ variant: 'ghost' })}
                 >
                   My Profile
@@ -90,14 +88,12 @@ export default function Header() {
               <>
                 <Link 
                   href="/auth/login" 
-                  prefetch={false}
                   className={buttonVariants({ variant: 'ghost' })}
                 >
                   Log In
                 </Link>
                 <Link 
                   href="/auth/register" 
-                  prefetch={false}
                   className={buttonVariants({ variant: 'default' })}
                 >
                   Register
@@ -114,7 +110,7 @@ export default function Header() {
             <Link href="/search" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C]" onClick={() => setIsMenuOpen(false)}>
               Listing
             </Link>
-            <Link href="/business/listings/new" prefetch={false} className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C]" onClick={() => setIsMenuOpen(false)}>
+            <Link href="/business/listings/new" className="text-sm font-medium text-slate-600 hover:text-[#0C0C1C]" onClick={() => setIsMenuOpen(false)}>
               List Your Business
             </Link>
             {loading ? (
@@ -125,7 +121,6 @@ export default function Header() {
               <>
                 <Link 
                   href={getDashboardLink()} 
-                  prefetch={false}
                   className="text-sm font-medium text-slate-600"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -133,7 +128,6 @@ export default function Header() {
                 </Link>
                 <Link 
                   href="/profile" 
-                  prefetch={false}
                   className="text-sm font-medium text-slate-600"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -151,7 +145,6 @@ export default function Header() {
               <>
                 <Link 
                   href="/auth/login" 
-                  prefetch={false}
                   className="text-sm font-medium text-slate-600"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -159,7 +152,6 @@ export default function Header() {
                 </Link>
                 <Link 
                   href="/auth/register" 
-                  prefetch={false}
                   className={buttonVariants({ variant: 'default' })}
                   onClick={() => setIsMenuOpen(false)}
                 >
