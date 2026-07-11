@@ -31,16 +31,14 @@ export default function Footer() {
             <ul className="space-y-3">
               <li><Link href="/auth/register" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors">List Your Business</Link></li>
               <li><Link href="/auth/login" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors">Business Login</Link></li>
-              <li><Link href="/pricing" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors">Premium Listings</Link></li>
             </ul>
           </div>
           
           <div>
             <h3 className="text-sm font-semibold text-slate-900 tracking-wider uppercase mb-4">Support</h3>
             <ul className="space-y-3">
-              <li><a href="#" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors">Help Center</a></li>
-              <li><a href="#" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors">Terms of Service</a></li>
+              <li><Link href="/privacy" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors">Terms and Conditions</Link></li>
               <li>
                 <a href="mailto:support@localpages.ph" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors flex items-center gap-2">
                   <Mail className="h-4 w-4" /> support@localpages.ph
