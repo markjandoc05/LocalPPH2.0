@@ -28,6 +28,7 @@ export default function SearchClient() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const containerRef = useRef<HTMLFormElement>(null);
+  const skipNextSearchRef = useRef(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -128,6 +129,11 @@ export default function SearchClient() {
       return;
     }
 
+    if (skipNextSearchRef.current) {
+      skipNextSearchRef.current = false;
+      return;
+    }
+
     const handler = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
       if (heroQuery.trim()) {
@@ -178,6 +184,7 @@ export default function SearchClient() {
                         key={s.id}
                         type="button"
                         onClick={() => {
+                          skipNextSearchRef.current = true;
                           setHeroQuery(s.text);
                           setShowSuggestions(false);
                           if (s.type === 'business') {
