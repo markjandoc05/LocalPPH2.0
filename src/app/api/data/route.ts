@@ -23,9 +23,22 @@ export async function POST(req: NextRequest) {
     const user = userRes.data.user;
     const role = user?.role;
 
+    if (user?.accountStatus && user.accountStatus !== 'ACTIVE' && method !== 'getUserById') {
+      return NextResponse.json({ error: "Account is not allowed to use the platform." }, { status: 403 });
+    }
+
     // Define method permissions
     const isBusinessMethod = ['createBusinessDraft', 'updateBusiness', 'submitBusiness'].includes(method);
-    const isAdminMethod = ['getAllUsers', 'updateBusinessStatus', 'getAllSupportTickets', 'updateSupportTicket'].includes(method);
+    const backupMethods = [
+      'createBackupSnapshot',
+      'getBackupSnapshots',
+      'restoreBackupSnapshot',
+      'deleteBackupSnapshot',
+      'getBackupSchedule',
+      'updateBackupSchedule',
+      'runDueBackupSchedule',
+    ];
+    const isAdminMethod = ['getAllUsers', 'updateUserAccountStatus', 'updateBusinessStatus', 'getAllSupportTickets', 'updateSupportTicket', ...backupMethods].includes(method);
 
     if (method === 'getUserById') {
       if (variables?.id !== userId && !isAdmin(role)) {
@@ -48,7 +61,7 @@ export async function POST(req: NextRequest) {
         }
       }
     } else if (isAdminMethod) {
-      if (method === 'getAllUsers' ? !isAdmin(role) : !canApproveBusiness(role)) {
+      if (['getAllUsers', 'updateUserAccountStatus', ...backupMethods].includes(method) ? !isAdmin(role) : !canApproveBusiness(role)) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
     }
@@ -61,6 +74,27 @@ export async function POST(req: NextRequest) {
       operationVariables = {
         ...(variables || {}),
         respondedById: userId,
+      };
+    }
+
+    if (method === 'createBackupSnapshot' || method === 'runDueBackupSchedule') {
+      operationVariables = {
+        ...(variables || {}),
+        createdById: userId,
+      };
+    }
+
+    if (method === 'restoreBackupSnapshot') {
+      operationVariables = {
+        ...(variables || {}),
+        restoredById: userId,
+      };
+    }
+
+    if (method === 'updateBackupSchedule') {
+      operationVariables = {
+        ...(variables || {}),
+        updatedById: userId,
       };
     }
 

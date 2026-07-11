@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { AnalyticsDocumentation } from '@/components/admin/AnalyticsDocumentation';
+import { formatAppDateTime } from '@/lib/time';
 import { 
   LucideTrendingUp, 
   LucideGlobe, 
@@ -287,7 +288,7 @@ export default function IntegrationsSettingsPage() {
     }));
 
     // Update settings state with verified checked status
-    const currentChecked = new Date().toLocaleString();
+    const currentChecked = formatAppDateTime(new Date());
     setSettings(prev => ({
       ...prev,
       [service]: {

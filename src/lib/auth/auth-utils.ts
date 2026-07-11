@@ -12,6 +12,9 @@ import { auth } from '../firebase/config';
 import { createUser, getUserById } from '../data-connect';
 import { ROLES } from './roles';
 
+export const BANNED_ACCOUNT_MESSAGE = 'Your account is banned. Please contact support for assistance.';
+export const BLOCKED_ACCOUNT_MESSAGE = 'Your account is not allowed to use the platform. Please contact support for assistance.';
+
 export const registerUser = async (email: string, password: string, displayName: string, role: string) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -42,6 +45,12 @@ export const loginUser = async (email: string, password: string) => {
     
     // Fetch role from Data Connect
     const userData = await getUserById({ id: user.uid });
+    const accountStatus = userData?.data?.user?.accountStatus || 'ACTIVE';
+
+    if (accountStatus !== 'ACTIVE') {
+      await firebaseSignOut(auth);
+      throw new Error(accountStatus === 'BANNED' ? BANNED_ACCOUNT_MESSAGE : BLOCKED_ACCOUNT_MESSAGE);
+    }
     
     // Mocking response for now if null
     const role = userData?.data?.user?.role || ROLES.SUBSCRIBER;
@@ -78,9 +87,17 @@ export const loginWithGoogle = async (role: string = ROLES.SUBSCRIBER) => {
           role: userRole
         });
       } else {
+        const accountStatus = userData.data.user.accountStatus || 'ACTIVE';
+        if (accountStatus !== 'ACTIVE') {
+          await firebaseSignOut(auth);
+          throw new Error(accountStatus === 'BANNED' ? BANNED_ACCOUNT_MESSAGE : BLOCKED_ACCOUNT_MESSAGE);
+        }
         userRole = user.email === 'markjandoc@gmail.com' ? ROLES.ADMIN : userData.data.user.role;
       }
-    } catch (dbError) {
+    } catch (dbError: any) {
+      if (dbError?.message?.includes('contact support')) {
+        throw dbError;
+      }
       console.warn("Failed to sync/fetch user from database, falling back to client role routing:", dbError);
     }
     

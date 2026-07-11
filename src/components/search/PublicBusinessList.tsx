@@ -21,44 +21,51 @@ import { getShortDesc } from '@/lib/utils';
 interface PublicBusinessListProps {
   businesses: BusinessListing[];
   loading?: boolean;
+  total?: number;
 }
 
-export default function PublicBusinessList({ businesses, loading }: PublicBusinessListProps) {
+export default function PublicBusinessList({ businesses, loading, total }: PublicBusinessListProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const showSkeleton = loading;
   const showEmpty = !loading && (!businesses || businesses.length === 0);
+  const resultCount = total ?? businesses.length;
 
   return (
     <div className="space-y-6">
       {/* View Switcher Controls */}
-      <div className="flex justify-end items-center gap-2">
-        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">View style:</span>
-        <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-1.5 rounded-md transition-all ${
-              viewMode === 'grid'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-            title="Grid View"
-            aria-label="Grid View"
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`p-1.5 rounded-md transition-all ${
-              viewMode === 'list'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-            title="List View"
-            aria-label="List View"
-          >
-            <List className="w-4 h-4" />
-          </button>
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white/95 px-3 py-3 shadow-sm shadow-slate-200/70 backdrop-blur sm:px-4">
+        <h2 className="min-w-0 text-lg font-bold leading-tight text-[#0C0C1C] sm:text-xl">
+          {loading ? 'Searching...' : `${resultCount} ${resultCount === 1 ? 'Business' : 'Businesses'} Found`}
+        </h2>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="hidden text-xs font-semibold uppercase tracking-wider text-slate-600 sm:inline">View style:</span>
+          <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-1 shadow-inner">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`rounded-md p-1.5 transition-all ${
+                viewMode === 'grid'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title="Grid View"
+              aria-label="Grid View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`rounded-md p-1.5 transition-all ${
+                viewMode === 'list'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title="List View"
+              aria-label="List View"
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -208,4 +215,3 @@ export default function PublicBusinessList({ businesses, loading }: PublicBusine
     </div>
   );
 }
-

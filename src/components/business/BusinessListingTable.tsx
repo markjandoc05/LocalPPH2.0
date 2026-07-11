@@ -8,6 +8,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { Button } from '../ui/Button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/Table';
 import { auth } from '@/lib/firebase/config';
+import { formatAppDate } from '@/lib/time';
 
 export default function BusinessListingTable({ listings }: { listings: BusinessListing[] }) {
   const router = useRouter();
@@ -64,7 +65,7 @@ export default function BusinessListingTable({ listings }: { listings: BusinessL
           <TableRow key={listing.id}>
             <TableCell>
               <div className="font-medium text-slate-900">{listing.name}</div>
-              <div className="text-sm text-slate-500">Updated: {new Date(listing.updatedAt).toLocaleDateString()}</div>
+              <div className="text-sm text-slate-500">Updated: {formatAppDate(listing.updatedAt)}</div>
             </TableCell>
             <TableCell className="text-slate-500">
               {listing.categoryName}

@@ -16,6 +16,10 @@ export interface DataProvider {
     id: string;
     data: any;
   }): Promise<{ data: { user_update: string } }>;
+  updateUserAccountStatus(variables: {
+    id: string;
+    accountStatus: string;
+  }): Promise<{ data: { user_update: string } }>;
   getAllUsers(): Promise<{ data: { users: any[] } }>;
 
   // Support operations
@@ -35,6 +39,34 @@ export interface DataProvider {
     adminResponse?: string;
     respondedById?: string;
   }): Promise<{ data: { support_ticket_update: string } }>;
+
+  // Backup and recovery operations
+  createBackupSnapshot(variables: {
+    label?: string;
+    scope: string[];
+    backupType?: 'MANUAL' | 'SCHEDULED';
+    createdById?: string;
+  }): Promise<{ data: { backup_snapshot_insert: string } }>;
+  getBackupSnapshots(): Promise<{ data: { backupSnapshots: any[] } }>;
+  restoreBackupSnapshot(variables: {
+    id: string;
+    scope?: string[];
+    restoredById?: string;
+  }): Promise<{ data: { backup_snapshot_restore: string; restoredCount: number } }>;
+  deleteBackupSnapshot(variables: {
+    id: string;
+  }): Promise<{ data: { backup_snapshot_delete: string } }>;
+  getBackupSchedule(): Promise<{ data: { backupSchedule: any } }>;
+  updateBackupSchedule(variables: {
+    enabled: boolean;
+    frequency: string;
+    scope: string[];
+    timeOfDay: string;
+    updatedById?: string;
+  }): Promise<{ data: { backupSchedule: any } }>;
+  runDueBackupSchedule(variables?: {
+    createdById?: string;
+  }): Promise<{ data: { ran: boolean; backupId?: string } }>;
 
   // Business operations
   getMyBusinesses(variables: {

@@ -12,7 +12,7 @@ export function SectionHeader({ title, description, actions, className, ...props
     <div className={cn("flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4", className)} {...props}>
       <div>
         <h2 className="text-lg font-semibold tracking-tight text-[#0C0C1C]">{title}</h2>
-        {description && <p className="text-sm text-slate-500 mt-1">{description}</p>}
+        {description && <p className="text-sm text-slate-600 mt-1">{description}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>

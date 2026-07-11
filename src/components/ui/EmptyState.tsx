@@ -31,7 +31,7 @@ export function EmptyState({
         </div>
       )}
       <h3 className="text-lg font-semibold text-slate-900 mb-1">{title}</h3>
-      {description && <p className="text-sm text-slate-500 max-w-sm mx-auto mb-6">{description}</p>}
+      {description && <p className="text-sm text-slate-600 max-w-sm mx-auto mb-6">{description}</p>}
       {actionLabel && onAction && (
         <Button onClick={onAction}>{actionLabel}</Button>
       )}

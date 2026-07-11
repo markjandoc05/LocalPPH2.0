@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, doublePrecision, pgEnum, uuid, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, doublePrecision, pgEnum, uuid, index, uniqueIndex, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const businessStatusEnum = pgEnum('business_status', [
@@ -253,5 +253,36 @@ export const subcategoriesRelations = relations(subcategories, ({ one }) => ({
 export const siteSettings = pgTable('site_settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const backupSnapshots = pgTable('backup_snapshots', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  label: text('label'),
+  backupType: text('backup_type').default('MANUAL').notNull(),
+  scope: text('scope').notNull(),
+  status: text('status').default('COMPLETED').notNull(),
+  recordCount: integer('record_count').default(0).notNull(),
+  payload: text('payload').notNull(),
+  errorMessage: text('error_message'),
+  createdById: text('created_by_id').references(() => users.id),
+  restoredById: text('restored_by_id').references(() => users.id),
+  restoredAt: timestamp('restored_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  createdAtIdx: index('backup_snapshots_created_at_idx').on(table.createdAt),
+  statusIdx: index('backup_snapshots_status_idx').on(table.status),
+}));
+
+export const backupSchedules = pgTable('backup_schedules', {
+  id: text('id').primaryKey(),
+  enabled: boolean('enabled').default(false).notNull(),
+  frequency: text('frequency').default('WEEKLY').notNull(),
+  scope: text('scope').notNull(),
+  timeOfDay: text('time_of_day').default('02:00').notNull(),
+  lastRunAt: timestamp('last_run_at'),
+  nextRunAt: timestamp('next_run_at'),
+  updatedById: text('updated_by_id').references(() => users.id),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

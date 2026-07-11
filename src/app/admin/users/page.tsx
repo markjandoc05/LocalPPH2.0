@@ -52,7 +52,18 @@ export default function AdminUsersPage() {
       ) : dataLoading ? (
         <div className="p-8 text-center text-slate-500 bg-white border border-slate-200 rounded-lg shadow-sm">Loading users...</div>
       ) : (
-        <AdminUserTable users={users} />
+        <AdminUserTable
+          users={users}
+          onUserStatusChange={(id, accountStatus) => {
+            setUsers((currentUsers) =>
+              currentUsers.map((currentUser) =>
+                currentUser.id === id
+                  ? { ...currentUser, accountStatus }
+                  : currentUser
+              )
+            );
+          }}
+        />
       )}
     </AdminLayout>
   );

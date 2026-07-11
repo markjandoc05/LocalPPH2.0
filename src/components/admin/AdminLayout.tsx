@@ -17,7 +17,8 @@ import {
   LucideX,
   LucideSettings,
   LucideUpload,
-  LucideMessageSquare
+  LucideMessageSquare,
+  LucideArchiveRestore
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { canAccessAdmin } from "@/lib/auth/roles";
@@ -110,6 +111,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       name: "Data Import",
       href: "/admin/system/data-import",
       icon: LucideUpload,
+      exact: false,
+    },
+    {
+      name: "Backup & Restore",
+      href: "/admin/system/backups",
+      icon: LucideArchiveRestore,
       exact: false,
     },
   ];

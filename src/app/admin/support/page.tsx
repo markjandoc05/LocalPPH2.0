@@ -6,6 +6,7 @@ import { getAllSupportTickets, updateSupportTicket } from '@/lib/data-connect';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { formatAppDateTime } from '@/lib/time';
 import { LucideMail, LucideUser } from 'lucide-react';
 
 const statuses = ['OPEN', 'IN_REVIEW', 'RESOLVED', 'CLOSED'];
@@ -16,14 +17,6 @@ const categoryLabels: Record<string, string> = {
   FEATURE_REQUEST: 'Feature Request',
   ACCOUNT_HELP: 'Account Help',
   OTHER: 'Other',
-};
-
-const formatDate = (value?: string | Date) => {
-  if (!value) return '';
-  return new Date(value).toLocaleString('en-PH', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
 };
 
 export default function AdminSupportPage() {
@@ -95,7 +88,7 @@ export default function AdminSupportPage() {
                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
                         {ticket.status}
                       </span>
-                      <span className="text-xs text-slate-400">{formatDate(ticket.createdAt)}</span>
+                      <span className="text-xs text-slate-400">{formatAppDateTime(ticket.createdAt, '')}</span>
                     </div>
                     <h2 className="text-lg font-bold text-slate-900">{ticket.subject}</h2>
                     <div className="mt-3 grid gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm text-slate-600 sm:grid-cols-2">

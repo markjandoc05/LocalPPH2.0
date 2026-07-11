@@ -1,66 +1,21 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import SearchFilters from '@/components/search/SearchFilters';
 import PublicBusinessList from '@/components/search/PublicBusinessList';
 import Pagination from '@/components/search/Pagination';
 import { searchApprovedBusinesses } from '@/lib/data-connect/public-business-service';
 import { BusinessListing } from '@/types/business';
-import { LucideSearch, Building2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import { trackPage, trackEvent } from '@/lib/analytics';
-import { publicClientProvider } from '@/lib/data-connect/client-provider';
 
 function SearchClientContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  
+
   const [businesses, setBusinesses] = useState<BusinessListing[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  
-  const currentQ = searchParams.get('q') || '';
-  const [heroQuery, setHeroQuery] = useState(currentQ);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isSuggesting, setIsSuggesting] = useState(false);
-  const containerRef = useRef<HTMLFormElement>(null);
-  const skipNextSearchRef = useRef(false);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      if (heroQuery.trim().length < 2) {
-        setSuggestions([]);
-        return;
-      }
-
-      setIsSuggesting(true);
-      try {
-        const res = await publicClientProvider.getSearchSuggestions({ q: heroQuery.trim() });
-        setSuggestions(res.data.suggestions || []);
-        setShowSuggestions(true);
-      } catch (error) {
-        console.error("Error fetching suggestions:", error);
-      } finally {
-        setIsSuggesting(false);
-      }
-    };
-
-    const timeoutId = setTimeout(fetchSuggestions, 300);
-    return () => clearTimeout(timeoutId);
-  }, [heroQuery]);
 
   const itemsPerPage = 12;
 
@@ -117,94 +72,12 @@ function SearchClientContent() {
     fetchResults();
   }, [searchParams, itemsPerPage]);
 
-  useEffect(() => {
-    const urlQ = searchParams.get('q') || '';
-    if (heroQuery.trim() === urlQ.trim()) {
-      return;
-    }
-
-    if (skipNextSearchRef.current) {
-      skipNextSearchRef.current = false;
-      return;
-    }
-
-    const handler = setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (heroQuery.trim()) {
-        params.set('q', heroQuery.trim());
-      } else {
-        params.delete('q');
-      }
-      params.delete('page');
-      router.push(`/search?${params.toString()}`);
-    }, 500);
-
-    return () => clearTimeout(handler);
-  }, [heroQuery, searchParams, router]);
-
-  const handleHeroSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handled by useEffect
-  };
-
   return (
     <>
       {/* Mini Search Hero */}
-      <div className="bg-[#0C0C1C] py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-white whitespace-nowrap">Directory Search</h1>
-          <form onSubmit={handleHeroSearch} className="w-full md:max-w-md relative" ref={containerRef}>
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <LucideSearch className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              value={heroQuery}
-              disabled={loading}
-              onChange={(e) => setHeroQuery(e.target.value)}
-              onFocus={() => heroQuery.trim().length >= 2 && setShowSuggestions(true)}
-              placeholder="Search by name, category, or location"
-              className="block w-full pl-10 pr-4 py-2.5 border-0 rounded-xl text-gray-900 bg-white placeholder-gray-500 focus:ring-2 focus:ring-[#2563EB] sm:text-sm outline-none shadow-sm disabled:opacity-50"
-            />
-
-            {showSuggestions && (
-              <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden text-left animate-in fade-in zoom-in duration-200">
-                {isSuggesting ? (
-                  <div className="p-3 text-center text-xs text-slate-500">Searching...</div>
-                ) : suggestions.length > 0 ? (
-                  <div className="py-1 max-h-60 overflow-y-auto">
-                    {suggestions.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => {
-                          skipNextSearchRef.current = true;
-                          setHeroQuery(s.text);
-                          setShowSuggestions(false);
-                          if (s.type === 'business') {
-                            router.push(`/business/${s.slug}`);
-                          } else {
-                            router.push(`/search?q=${encodeURIComponent(s.text)}`);
-                          }
-                        }}
-                        className="w-full px-4 py-2.5 hover:bg-slate-50 flex items-start gap-3 transition-colors group"
-                      >
-                        <div className="mt-0.5">
-                          <Building2 className="h-4 w-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold text-slate-900">{s.text}</div>
-                          <div className="text-[10px] text-slate-500 leading-tight">{s.subtext}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-3 text-center text-xs text-slate-500">No matching businesses found.</div>
-                )}
-              </div>
-            )}
-          </form>
+      <div className="bg-[#0C0C1C] px-4 py-8 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight text-white whitespace-nowrap">Directory Search</h1>
         </div>
       </div>
 
@@ -213,21 +86,11 @@ function SearchClientContent() {
           <Breadcrumbs items={[{ label: 'Search Directory' }]} />
         </div>
         
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6">
-            <div className="flex flex-wrap items-center gap-4">
-                <div className="flex-grow">
-                  <SearchFilters isLoading={loading} />
-                </div>
-            </div>
+        <div className="mb-6">
+          <SearchFilters isLoading={loading} />
         </div>
 
-        <div className="mb-6 flex justify-between items-end">
-            <h2 className="text-xl font-bold text-[#0C0C1C]">
-            {loading ? 'Searching...' : `${total} ${total === 1 ? 'Business' : 'Businesses'} Found`}
-            </h2>
-        </div>
-        
-        <PublicBusinessList businesses={businesses} loading={loading} />
+        <PublicBusinessList businesses={businesses} loading={loading} total={total} />
         
         {!loading && total > 0 && (
             <Pagination totalItems={total} itemsPerPage={itemsPerPage} isLoading={loading} />

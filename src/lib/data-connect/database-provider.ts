@@ -8,10 +8,17 @@ import {
   regions, 
   provinces, 
   cities, 
+  barangays,
   supportTickets,
+  businessPhotos,
+  businessProfileViews,
+  siteSettings,
+  backupSnapshots,
+  backupSchedules,
 } from "../../db/schema";
 import { eq, and, or, ilike, sql, desc, asc, inArray } from "drizzle-orm";
 import { BusinessListing } from "@/types/business";
+import { formatAppDateTime } from "@/lib/time";
 
 const formatBusinessRow = (b: any): BusinessListing => {
   if (!b) return b;
@@ -96,6 +103,159 @@ const isMissingSupportTicketsTableError = (error: any) => {
   );
 };
 
+const BACKUP_SCOPE_OPTIONS = ['ALL', 'USERS', 'BUSINESSES', 'DIRECTORY', 'SUPPORT', 'SETTINGS'] as const;
+type BackupScope = typeof BACKUP_SCOPE_OPTIONS[number];
+
+const backupGroups: Record<Exclude<BackupScope, 'ALL'>, { key: string; table: any; conflictTarget: any; dateFields: string[] }[]> = {
+  USERS: [
+    { key: 'users', table: users, conflictTarget: users.id, dateFields: ['lastLoginAt', 'createdAt', 'updatedAt'] },
+  ],
+  BUSINESSES: [
+    { key: 'businesses', table: businesses, conflictTarget: businesses.id, dateFields: ['createdAt', 'updatedAt'] },
+    { key: 'businessPhotos', table: businessPhotos, conflictTarget: businessPhotos.id, dateFields: ['uploadedAt'] },
+    { key: 'businessProfileViews', table: businessProfileViews, conflictTarget: businessProfileViews.id, dateFields: ['firstViewedAt', 'lastViewedAt'] },
+  ],
+  DIRECTORY: [
+    { key: 'categories', table: categories, conflictTarget: categories.id, dateFields: [] },
+    { key: 'subcategories', table: subcategories, conflictTarget: subcategories.id, dateFields: [] },
+    { key: 'regions', table: regions, conflictTarget: regions.id, dateFields: [] },
+    { key: 'provinces', table: provinces, conflictTarget: provinces.id, dateFields: [] },
+    { key: 'cities', table: cities, conflictTarget: cities.id, dateFields: [] },
+    { key: 'barangays', table: barangays, conflictTarget: barangays.id, dateFields: [] },
+  ],
+  SUPPORT: [
+    { key: 'supportTickets', table: supportTickets, conflictTarget: supportTickets.id, dateFields: ['respondedAt', 'createdAt', 'updatedAt'] },
+  ],
+  SETTINGS: [
+    { key: 'siteSettings', table: siteSettings, conflictTarget: siteSettings.key, dateFields: ['updatedAt'] },
+  ],
+};
+
+const normalizeBackupScope = (scope?: string[]) => {
+  const selected = (scope && scope.length > 0 ? scope : ['ALL'])
+    .map((item) => String(item).toUpperCase())
+    .filter((item): item is BackupScope => BACKUP_SCOPE_OPTIONS.includes(item as BackupScope));
+
+  if (selected.length === 0 || selected.includes('ALL')) {
+    return ['USERS', 'DIRECTORY', 'BUSINESSES', 'SUPPORT', 'SETTINGS'] as Exclude<BackupScope, 'ALL'>[];
+  }
+
+  return Array.from(new Set(selected)) as Exclude<BackupScope, 'ALL'>[];
+};
+
+const parseJsonArray = (value: string | null | undefined) => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const isMissingBackupTablesError = (error: any) => {
+  const raw = `${error?.message || ''} ${error?.cause?.message || ''} ${error?.query || ''} ${error || ''}`;
+  const message = raw.toLowerCase();
+  return (message.includes('backup_snapshots') || message.includes('backupsnapshots') || message.includes('backup_schedules') || message.includes('backupschedules') || message.includes('backup snapshots') || message.includes('backup schedules')) && (
+    message.includes('does not exist') ||
+    message.includes('relation') ||
+    message.includes('failed query')
+  );
+};
+
+const backupSetupErrorMessage = "Backup setup is not complete yet. Please apply the backup recovery database migration.";
+
+const collectBackupPayload = async (scope: Exclude<BackupScope, 'ALL'>[]) => {
+  const payload: Record<string, any[]> = {};
+  let recordCount = 0;
+
+  for (const scopeItem of scope) {
+    for (const item of backupGroups[scopeItem]) {
+      const rows = await db.select().from(item.table);
+      payload[item.key] = rows;
+      recordCount += rows.length;
+    }
+  }
+
+  return { payload, recordCount };
+};
+
+const reviveDateFields = (row: any, fields: string[]) => {
+  const next = { ...row };
+  for (const field of fields) {
+    if (next[field]) {
+      next[field] = new Date(next[field]);
+    }
+  }
+  return next;
+};
+
+const restoreRows = async (tx: any, item: { table: any; conflictTarget: any; dateFields: string[] }, rows: any[]) => {
+  if (!Array.isArray(rows) || rows.length === 0) return 0;
+
+  let restored = 0;
+  for (const row of rows) {
+    const values = reviveDateFields(row, item.dateFields);
+    const setValues = { ...values };
+    delete setValues.id;
+    delete setValues.key;
+
+    await tx.insert(item.table)
+      .values(values)
+      .onConflictDoUpdate({
+        target: item.conflictTarget,
+        set: setValues,
+      });
+    restored += 1;
+  }
+
+  return restored;
+};
+
+const calculateNextBackupRun = (frequency: string, timeOfDay: string, fromDate = new Date()) => {
+  const [hourRaw, minuteRaw] = String(timeOfDay || '02:00').split(':');
+  const hour = Number(hourRaw) || 2;
+  const minute = Number(minuteRaw) || 0;
+  const next = new Date(fromDate);
+  next.setHours(hour, minute, 0, 0);
+
+  if (next <= fromDate) {
+    if (frequency === 'DAILY') {
+      next.setDate(next.getDate() + 1);
+    } else if (frequency === 'MONTHLY') {
+      next.setMonth(next.getMonth() + 1);
+    } else {
+      next.setDate(next.getDate() + 7);
+    }
+  }
+
+  return next;
+};
+
+const mapBackupSnapshot = (snapshot: any) => ({
+  ...snapshot,
+  scope: parseJsonArray(snapshot.scope),
+  createdAt: snapshot.createdAt instanceof Date ? snapshot.createdAt.toISOString() : snapshot.createdAt,
+  updatedAt: snapshot.updatedAt instanceof Date ? snapshot.updatedAt.toISOString() : snapshot.updatedAt,
+  restoredAt: snapshot.restoredAt instanceof Date ? snapshot.restoredAt.toISOString() : snapshot.restoredAt,
+});
+
+const mapBackupSchedule = (schedule: any) => schedule ? {
+  ...schedule,
+  scope: parseJsonArray(schedule.scope),
+  lastRunAt: schedule.lastRunAt instanceof Date ? schedule.lastRunAt.toISOString() : schedule.lastRunAt,
+  nextRunAt: schedule.nextRunAt instanceof Date ? schedule.nextRunAt.toISOString() : schedule.nextRunAt,
+  updatedAt: schedule.updatedAt instanceof Date ? schedule.updatedAt.toISOString() : schedule.updatedAt,
+} : {
+  id: 'default',
+  enabled: false,
+  frequency: 'WEEKLY',
+  scope: ['ALL'],
+  timeOfDay: '02:00',
+  lastRunAt: null,
+  nextRunAt: null,
+};
+
 export const databaseProvider: DataProvider = {
   async createUser(variables) {
     const res = await db.insert(users)
@@ -160,6 +320,27 @@ export const databaseProvider: DataProvider = {
       console.error("Database update error:", error);
       throw error;
     }
+  },
+
+  async updateUserAccountStatus(variables) {
+    const allowedStatuses = ['ACTIVE', 'BANNED', 'DELETED'];
+    const nextStatus = String(variables.accountStatus || '').toUpperCase();
+
+    if (!allowedStatuses.includes(nextStatus)) {
+      throw new Error("Invalid account status.");
+    }
+
+    const res = await db.update(users)
+      .set({
+        accountStatus: nextStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, variables.id))
+      .returning({ id: users.id });
+
+    return {
+      data: { user_update: res[0]?.id || variables.id },
+    };
   },
 
   async getAllUsers() {
@@ -258,6 +439,218 @@ export const databaseProvider: DataProvider = {
       .returning({ id: supportTickets.id });
 
     return { data: { support_ticket_update: res[0]?.id || variables.id } };
+  },
+
+  async createBackupSnapshot(variables) {
+    const scope = normalizeBackupScope(variables?.scope);
+    const label = variables?.label?.trim() || null;
+    const backupType = variables?.backupType === 'SCHEDULED' ? 'SCHEDULED' : 'MANUAL';
+
+    try {
+      const { payload, recordCount } = await collectBackupPayload(scope);
+      const res = await db.insert(backupSnapshots)
+        .values({
+          label,
+          backupType,
+          scope: JSON.stringify(scope),
+          status: 'COMPLETED',
+          recordCount,
+          payload: JSON.stringify(payload),
+          createdById: variables?.createdById || null,
+        })
+        .returning({ id: backupSnapshots.id });
+
+      return { data: { backup_snapshot_insert: res[0].id } };
+    } catch (error) {
+      if (isMissingBackupTablesError(error)) {
+        throw new Error(backupSetupErrorMessage);
+      }
+      throw error;
+    }
+  },
+
+  async getBackupSnapshots() {
+    try {
+      const res = await db.select({
+        id: backupSnapshots.id,
+        label: backupSnapshots.label,
+        backupType: backupSnapshots.backupType,
+        scope: backupSnapshots.scope,
+        status: backupSnapshots.status,
+        recordCount: backupSnapshots.recordCount,
+        errorMessage: backupSnapshots.errorMessage,
+        createdById: backupSnapshots.createdById,
+        restoredById: backupSnapshots.restoredById,
+        restoredAt: backupSnapshots.restoredAt,
+        createdAt: backupSnapshots.createdAt,
+        updatedAt: backupSnapshots.updatedAt,
+      })
+        .from(backupSnapshots)
+        .orderBy(desc(backupSnapshots.createdAt));
+
+      return { data: { backupSnapshots: res.map(mapBackupSnapshot) } };
+    } catch (error) {
+      if (isMissingBackupTablesError(error)) {
+        return { data: { backupSnapshots: [] } };
+      }
+      throw error;
+    }
+  },
+
+  async restoreBackupSnapshot(variables) {
+    try {
+      const scopeOverride = variables?.scope?.length ? normalizeBackupScope(variables.scope) : null;
+      const snapshot = await db.query.backupSnapshots.findFirst({
+        where: eq(backupSnapshots.id, variables.id),
+      });
+
+      if (!snapshot) {
+        throw new Error("Backup snapshot not found.");
+      }
+
+      const payload = JSON.parse(snapshot.payload || '{}');
+      const scope = scopeOverride || normalizeBackupScope(parseJsonArray(snapshot.scope));
+      let restoredCount = 0;
+
+      await db.transaction(async (tx) => {
+        for (const scopeItem of scope) {
+          for (const item of backupGroups[scopeItem]) {
+            restoredCount += await restoreRows(tx, item, payload[item.key] || []);
+          }
+        }
+
+        await tx.update(backupSnapshots)
+          .set({
+            status: 'RESTORED',
+            restoredById: variables?.restoredById || null,
+            restoredAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(backupSnapshots.id, variables.id));
+      });
+
+      return { data: { backup_snapshot_restore: variables.id, restoredCount } };
+    } catch (error) {
+      if (isMissingBackupTablesError(error)) {
+        throw new Error(backupSetupErrorMessage);
+      }
+      throw error;
+    }
+  },
+
+  async deleteBackupSnapshot(variables) {
+    try {
+      const res = await db.delete(backupSnapshots)
+        .where(eq(backupSnapshots.id, variables.id))
+        .returning({ id: backupSnapshots.id });
+
+      return { data: { backup_snapshot_delete: res[0]?.id || variables.id } };
+    } catch (error) {
+      if (isMissingBackupTablesError(error)) {
+        throw new Error(backupSetupErrorMessage);
+      }
+      throw error;
+    }
+  },
+
+  async getBackupSchedule() {
+    try {
+      const schedule = await db.query.backupSchedules.findFirst({
+        where: eq(backupSchedules.id, 'default'),
+      });
+
+      return { data: { backupSchedule: mapBackupSchedule(schedule) } };
+    } catch (error) {
+      if (isMissingBackupTablesError(error)) {
+        return { data: { backupSchedule: mapBackupSchedule(null) } };
+      }
+      throw error;
+    }
+  },
+
+  async updateBackupSchedule(variables) {
+    try {
+      const frequency = ['DAILY', 'WEEKLY', 'MONTHLY'].includes(variables.frequency) ? variables.frequency : 'WEEKLY';
+      const scope = normalizeBackupScope(variables.scope);
+      const timeOfDay = /^\d{2}:\d{2}$/.test(variables.timeOfDay || '') ? variables.timeOfDay : '02:00';
+      const enabled = Boolean(variables.enabled);
+      const nextRunAt = enabled ? calculateNextBackupRun(frequency, timeOfDay) : null;
+
+      const res = await db.insert(backupSchedules)
+        .values({
+          id: 'default',
+          enabled,
+          frequency,
+          scope: JSON.stringify(scope),
+          timeOfDay,
+          nextRunAt,
+          updatedById: variables?.updatedById || null,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: backupSchedules.id,
+          set: {
+            enabled,
+            frequency,
+            scope: JSON.stringify(scope),
+            timeOfDay,
+            nextRunAt,
+            updatedById: variables?.updatedById || null,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+
+      return { data: { backupSchedule: mapBackupSchedule(res[0]) } };
+    } catch (error) {
+      if (isMissingBackupTablesError(error)) {
+        throw new Error(backupSetupErrorMessage);
+      }
+      throw error;
+    }
+  },
+
+  async runDueBackupSchedule(variables) {
+    try {
+      const schedule = await db.query.backupSchedules.findFirst({
+        where: eq(backupSchedules.id, 'default'),
+      });
+
+      if (!schedule?.enabled || !schedule.nextRunAt || schedule.nextRunAt > new Date()) {
+        return { data: { ran: false } };
+      }
+
+      const scope = normalizeBackupScope(parseJsonArray(schedule.scope));
+      const { payload, recordCount } = await collectBackupPayload(scope);
+
+      const snapshot = await db.insert(backupSnapshots)
+        .values({
+          label: `Scheduled backup ${formatAppDateTime(new Date())}`,
+          backupType: 'SCHEDULED',
+          scope: JSON.stringify(scope),
+          status: 'COMPLETED',
+          recordCount,
+          payload: JSON.stringify(payload),
+          createdById: variables?.createdById || null,
+        })
+        .returning({ id: backupSnapshots.id });
+
+      const nextRunAt = calculateNextBackupRun(schedule.frequency, schedule.timeOfDay);
+      await db.update(backupSchedules)
+        .set({
+          lastRunAt: new Date(),
+          nextRunAt,
+          updatedAt: new Date(),
+        })
+        .where(eq(backupSchedules.id, 'default'));
+
+      return { data: { ran: true, backupId: snapshot[0].id } };
+    } catch (error) {
+      if (isMissingBackupTablesError(error)) {
+        return { data: { ran: false } };
+      }
+      throw error;
+    }
   },
 
   async getMyBusinesses(variables) {

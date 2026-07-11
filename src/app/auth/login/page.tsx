@@ -11,10 +11,20 @@ import { trackEvent } from '@/lib/analytics';
 import { useRouter } from 'next/navigation';
 import { getRedirectPath } from '@/lib/auth/roles';
 
+const getInitialAuthMessage = () => {
+  if (typeof window === 'undefined') return '';
+
+  const authMessage = window.sessionStorage.getItem('localpages.authMessage') || '';
+  if (authMessage) {
+    window.sessionStorage.removeItem('localpages.authMessage');
+  }
+  return authMessage;
+};
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(getInitialAuthMessage);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -28,7 +38,7 @@ export default function LoginPage() {
       trackEvent('login', { method: 'email', page_type: 'Login' });
       router.push(getRedirectPath(role));
     } catch (err: any) {
-      setError('Incorrect email or password. Please try again.');
+      setError(err?.message?.includes('contact support') ? err.message : 'Incorrect email or password. Please try again.');
     } finally {
       setLoading(false);
     }

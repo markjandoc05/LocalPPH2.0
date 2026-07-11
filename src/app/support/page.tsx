@@ -5,6 +5,7 @@ import { createSupportTicket, getMySupportTickets } from '@/lib/data-connect';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { formatAppDateTime } from '@/lib/time';
 import { LucideLifeBuoy, LucideMessageSquare } from 'lucide-react';
 
 const supportCategories = [
@@ -17,14 +18,6 @@ const supportCategories = [
 
 const getCategoryLabel = (value: string) =>
   supportCategories.find((category) => category.value === value)?.label || value;
-
-const formatDate = (value?: string | Date) => {
-  if (!value) return '';
-  return new Date(value).toLocaleString('en-PH', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
-};
 
 export default function SupportPage() {
   const [category, setCategory] = useState('CONTACT_REQUEST');
@@ -187,7 +180,7 @@ export default function SupportPage() {
                     </span>
                   </div>
                   <h3 className="text-sm font-bold text-slate-900">{ticket.subject}</h3>
-                  <p className="mt-1 text-xs text-slate-500">{formatDate(ticket.createdAt)}</p>
+                  <p className="mt-1 text-xs text-slate-500">{formatAppDateTime(ticket.createdAt, '')}</p>
                   {ticket.adminResponse && (
                     <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
                       <p className="mb-1 text-xs font-bold uppercase text-slate-400">Admin Response</p>

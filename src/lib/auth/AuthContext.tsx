@@ -1,11 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
+import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { createUser, getUserById } from '../data-connect';
 import { normalizeRole, ROLES } from './roles';
 import { isProfileComplete } from './profile-completion';
+import { BANNED_ACCOUNT_MESSAGE, BLOCKED_ACCOUNT_MESSAGE } from './auth-utils';
 
 interface AuthContextType {
   user: User | null;
@@ -52,6 +53,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         const refreshedResponse = await getUserById({ id: firebaseUser.uid });
         dbUser = refreshedResponse?.data?.user || null;
+      }
+
+      if (dbUser?.accountStatus && dbUser.accountStatus !== 'ACTIVE') {
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem(
+            'localpages.authMessage',
+            dbUser.accountStatus === 'BANNED' ? BANNED_ACCOUNT_MESSAGE : BLOCKED_ACCOUNT_MESSAGE,
+          );
+        }
+        await signOut(auth);
+        setUser(null);
+        setUserData(null);
+        setRole(null);
+        setProfileComplete(false);
+        return;
       }
 
       const nextRole = firebaseUser.email === 'markjandoc@gmail.com'

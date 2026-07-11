@@ -101,3 +101,64 @@ export const getAllUsers = async (): Promise<UserAccount[]> => {
   const result = await provider.getAllUsers();
   return result.data.users as UserAccount[];
 };
+
+export const updateUserAccountStatus = async (
+  id: string,
+  accountStatus: 'ACTIVE' | 'BANNED' | 'DELETED',
+) => {
+  const result = await provider.updateUserAccountStatus({
+    id,
+    accountStatus,
+  });
+  return result.data.user_update;
+};
+
+export const createBackupSnapshot = async (variables: {
+  label?: string;
+  scope: string[];
+  backupType?: 'MANUAL' | 'SCHEDULED';
+  createdById?: string;
+}) => {
+  const result = await provider.createBackupSnapshot(variables);
+  return result.data.backup_snapshot_insert;
+};
+
+export const getBackupSnapshots = async () => {
+  const result = await provider.getBackupSnapshots();
+  return result.data.backupSnapshots;
+};
+
+export const restoreBackupSnapshot = async (variables: {
+  id: string;
+  scope?: string[];
+  restoredById?: string;
+}) => {
+  const result = await provider.restoreBackupSnapshot(variables);
+  return result.data;
+};
+
+export const deleteBackupSnapshot = async (id: string) => {
+  const result = await provider.deleteBackupSnapshot({ id });
+  return result.data.backup_snapshot_delete;
+};
+
+export const getBackupSchedule = async () => {
+  const result = await provider.getBackupSchedule();
+  return result.data.backupSchedule;
+};
+
+export const updateBackupSchedule = async (variables: {
+  enabled: boolean;
+  frequency: string;
+  scope: string[];
+  timeOfDay: string;
+  updatedById?: string;
+}) => {
+  const result = await provider.updateBackupSchedule(variables);
+  return result.data.backupSchedule;
+};
+
+export const runDueBackupSchedule = async (createdById?: string) => {
+  const result = await provider.runDueBackupSchedule({ createdById });
+  return result.data;
+};

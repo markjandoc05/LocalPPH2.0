@@ -24,7 +24,7 @@ export function Modal({ isOpen, onClose, title, description, children, footer, c
         <div className="flex items-start justify-between px-6 py-4 border-b border-slate-100">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-            {description && <p className="text-sm text-slate-500 mt-1">{description}</p>}
+            {description && <p className="text-sm text-slate-600 mt-1">{description}</p>}
           </div>
           <button
             onClick={onClose}
