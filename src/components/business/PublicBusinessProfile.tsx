@@ -14,17 +14,45 @@ import {
   LucideBookmark,
   LucideMessageSquare,
   LucideCheck,
+  LucideX,
 } from 'lucide-react';
 import BusinessLogo from './BusinessLogo';
 import { trackEvent } from '@/lib/analytics';
 import { PageType } from '@/lib/analytics/types';
-import { getFullDesc } from '@/lib/utils';
+import { getFullDesc, getShortDesc } from '@/lib/utils';
+import { getGoogleMapsEmbedSrc } from '@/lib/google-maps';
 
 interface PublicBusinessProfileProps {
   business: BusinessListing;
 }
 
+const parseGallery = (gallery: BusinessListing['gallery']): string[] => {
+  if (!gallery) return [];
+  if (Array.isArray(gallery)) return gallery;
+  try {
+    const parsed = JSON.parse(gallery);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('Error parsing business gallery:', error);
+    return [];
+  }
+};
+
 export default function PublicBusinessProfile({ business }: PublicBusinessProfileProps) {
+  const galleryImages = parseGallery(business.gallery);
+  const googleMapsEmbedSrc = getGoogleMapsEmbedSrc(business.googleMapsUrl);
+  const shortDescription = getShortDesc(business.description);
+  const fullDescription = getFullDesc(business.description);
+  const hasOnlineLinks = !!(
+    business.facebookUrl ||
+    business.instagramUrl ||
+    business.linkedinUrl ||
+    business.tiktokUrl ||
+    business.shopeeUrl ||
+    business.lazadaUrl
+  );
+  const hasProductsServices = !!(business.products || business.services);
+
   // Interactive UI state
   const [bookmarked, setBookmarked] = useState<boolean>(false);
   
@@ -59,6 +87,20 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedGalleryImage) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedGalleryImage(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedGalleryImage]);
 
   // Construct standard parameters (Requirement 5)
   const getEventParams = (extra = {}) => {
@@ -107,16 +149,16 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
     trackEvent('business_instagram_click', getEventParams({ link_url: business.instagramUrl }));
   };
 
+  const handleSocialClick = (platform: string, linkUrl?: string) => {
+    trackEvent('business_social_click', getEventParams({ social_platform: platform, link_url: linkUrl || '' }));
+  };
+
   const handleCallClick = (num: string) => {
     trackEvent('business_call_click', getEventParams({ interaction_type: 'call', contact_number: num }));
   };
 
   const handleEmailClick = () => {
     trackEvent('business_email_click', getEventParams({ interaction_type: 'email', link_url: `mailto:${business.contactEmail}` }));
-  };
-
-  const handleDirectionsClick = () => {
-    trackEvent('business_directions_click', getEventParams({ link_url: business.googleMapsUrl || 'placeholder_directions' }));
   };
 
   const handleBookmarkClick = () => {
@@ -249,6 +291,9 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
 
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-500">
               <p className="font-semibold text-blue-600">{business.categoryName || 'General Business'}</p>
+              {business.subcategoryName && business.subcategoryName !== 'Not assigned' && (
+                <p className="font-semibold text-slate-600">{business.subcategoryName}</p>
+              )}
               <div className="flex items-center gap-1.5">
                 <LucideMapPin className="w-4 h-4 text-slate-400" />
                 <span>{[business.cityName, business.provinceName].filter(Boolean).join(', ')}</span>
@@ -259,39 +304,82 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
                 <span className="text-slate-400 font-normal text-xs ml-1">(12 Reviews)</span>
               </div>
             </div>
+
+            {shortDescription && (
+              <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
+                {shortDescription}
+              </p>
+            )}
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <button
-              onClick={handleBookmarkClick}
-              className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-                bookmarked
-                  ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
-                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 active:scale-95'
-              }`}
-            >
-              <LucideBookmark className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} />
-              <span>{bookmarked ? 'Saved' : 'Save'}</span>
-            </button>
-            <button
-              onClick={handleShareClick}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50 active:scale-95 transition-all duration-200"
-            >
-              <LucideShare2 className="w-4 h-4 text-slate-400" />
-              <span>{shareCopied ? 'Copied' : 'Share'}</span>
-            </button>
-            {business.websiteUrl && (
-              <a
-                href={business.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleWebsiteClick}
-                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 active:scale-95 shadow-lg shadow-blue-200 transition-all duration-200"
+          <div className="flex w-full flex-col items-stretch gap-3 md:w-auto md:items-end">
+            <div className="flex flex-wrap gap-2 sm:gap-3 md:justify-end">
+              <button
+                onClick={handleBookmarkClick}
+                className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+                  bookmarked
+                    ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
+                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 active:scale-95'
+                }`}
               >
-                <LucideGlobe className="w-4 h-4" />
-                <span>Visit Website</span>
-              </a>
+                <LucideBookmark className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} />
+                <span>{bookmarked ? 'Saved' : 'Save'}</span>
+              </button>
+              <button
+                onClick={handleShareClick}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-50 active:scale-95 transition-all duration-200"
+              >
+                <LucideShare2 className="w-4 h-4 text-slate-400" />
+                <span>{shareCopied ? 'Copied' : 'Share'}</span>
+              </button>
+              {business.websiteUrl && (
+                <a
+                  href={business.websiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={handleWebsiteClick}
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 active:scale-95 shadow-lg shadow-blue-200 transition-all duration-200"
+                >
+                  <LucideGlobe className="w-4 h-4" />
+                  <span>Visit Website</span>
+                </a>
+              )}
+            </div>
+
+            {hasOnlineLinks && (
+              <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-2 md:max-w-md md:justify-end">
+                {business.facebookUrl && (
+                  <a href={business.facebookUrl} target="_blank" rel="noopener noreferrer" onClick={handleFacebookClick} className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-[#1877F2] ring-1 ring-slate-200 transition hover:bg-blue-50">
+                    <LucideExternalLink className="w-3.5 h-3.5" /> Facebook
+                  </a>
+                )}
+                {business.instagramUrl && (
+                  <a href={business.instagramUrl} target="_blank" rel="noopener noreferrer" onClick={handleInstagramClick} className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-pink-600 ring-1 ring-slate-200 transition hover:bg-pink-50">
+                    <LucideExternalLink className="w-3.5 h-3.5" /> Instagram
+                  </a>
+                )}
+                {business.linkedinUrl && (
+                  <a href={business.linkedinUrl} target="_blank" rel="noopener noreferrer" onClick={() => handleSocialClick('linkedin', business.linkedinUrl)} className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-sky-700 ring-1 ring-slate-200 transition hover:bg-sky-50">
+                    <LucideExternalLink className="w-3.5 h-3.5" /> LinkedIn
+                  </a>
+                )}
+                {business.tiktokUrl && (
+                  <a href={business.tiktokUrl} target="_blank" rel="noopener noreferrer" onClick={() => handleSocialClick('tiktok', business.tiktokUrl)} className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-950 ring-1 ring-slate-200 transition hover:bg-slate-100">
+                    <LucideExternalLink className="w-3.5 h-3.5" /> TikTok
+                  </a>
+                )}
+                {business.shopeeUrl && (
+                  <a href={business.shopeeUrl} target="_blank" rel="noopener noreferrer" onClick={() => handleSocialClick('shopee', business.shopeeUrl)} className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-[#EE4D2D] ring-1 ring-slate-200 transition hover:bg-orange-50">
+                    <LucideExternalLink className="w-3.5 h-3.5" /> Shopee
+                  </a>
+                )}
+                {business.lazadaUrl && (
+                  <a href={business.lazadaUrl} target="_blank" rel="noopener noreferrer" onClick={() => handleSocialClick('lazada', business.lazadaUrl)} className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-violet-700 ring-1 ring-slate-200 transition hover:bg-violet-50">
+                    <LucideExternalLink className="w-3.5 h-3.5" /> Lazada
+                  </a>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -306,73 +394,60 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
             <h2 className="text-2xl font-bold text-slate-900 mb-6 font-sans">About {business.name}</h2>
             <div className="prose prose-slate max-w-3xl">
               <p className="text-slate-600 leading-relaxed text-lg whitespace-pre-wrap">
-                {getFullDesc(business.description) || "This business has not provided a description yet."}
+                {fullDescription || shortDescription || "This business has not provided a description yet."}
               </p>
             </div>
-            
-            {(business.products || business.services) && (
-              <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-6 pt-8 border-t border-slate-100">
+          </section>
+
+          {/* Products & Services Section */}
+          {hasProductsServices && (
+            <section className="bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
+              <h2 className="text-2xl font-bold text-slate-900 mb-8 font-sans">Products & Services</h2>
+              <div className="grid grid-cols-1 gap-6">
                 {business.products && (
-                  <div>
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6">
                     <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Products</h3>
                     <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{business.products}</p>
                   </div>
                 )}
+
                 {business.services && (
-                  <div>
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6">
                     <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Services</h3>
                     <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{business.services}</p>
                   </div>
                 )}
               </div>
-            )}
-          </section>
+            </section>
+          )}
 
           {/* Gallery Grid */}
-          {business.gallery && Array.isArray(business.gallery) && business.gallery.length > 0 && (
-            <section className="bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-bold text-slate-900 font-sans">Photo Gallery</h2>
-                <span className="text-slate-400 text-sm font-medium">{business.gallery.length} Photos</span>
+          {galleryImages.length > 0 && (
+            <section className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-slate-900 font-sans">Gallery</h2>
+                <span className="text-slate-400 text-sm font-medium">{galleryImages.length} Photos</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
-                {business.gallery.map((imgUrl, idx) => (
-                  <div key={idx} className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {galleryImages.map((imgUrl, idx) => (
+                  <button
+                    key={imgUrl}
+                    type="button"
+                    onClick={() => setSelectedGalleryImage(imgUrl)}
+                    className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-left focus:outline-none focus:ring-4 focus:ring-blue-100"
+                    aria-label={`Open gallery image ${idx + 1}`}
+                  >
                     <img 
                       src={imgUrl} 
                       alt={`${business.name} Gallery ${idx + 1}`} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                  </div>
+                    <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
+                  </button>
                 ))}
               </div>
             </section>
           )}
-
-          {/* Social Links Section */}
-          <section className="flex flex-wrap gap-4 pt-4">
-            {business.facebookUrl && (
-              <a href={business.facebookUrl} target="_blank" rel="noopener noreferrer" onClick={handleFacebookClick} className="flex items-center gap-2.5 px-5 py-3 bg-[#1877F2]/10 text-[#1877F2] rounded-2xl text-sm font-bold hover:bg-[#1877F2]/20 transition-all">
-                <LucideExternalLink className="w-4 h-4" /> Facebook
-              </a>
-            )}
-            {business.instagramUrl && (
-              <a href={business.instagramUrl} target="_blank" rel="noopener noreferrer" onClick={handleInstagramClick} className="flex items-center gap-2.5 px-5 py-3 bg-pink-50 text-pink-600 rounded-2xl text-sm font-bold hover:bg-pink-100 transition-all">
-                <LucideExternalLink className="w-4 h-4" /> Instagram
-              </a>
-            )}
-            {business.tiktokUrl && (
-              <a href={business.tiktokUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 px-5 py-3 bg-black text-white rounded-2xl text-sm font-bold hover:bg-slate-900 transition-all">
-                <LucideExternalLink className="w-4 h-4" /> TikTok
-              </a>
-            )}
-            {business.shopeeUrl && (
-              <a href={business.shopeeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 px-5 py-3 bg-orange-50 text-[#EE4D2D] border border-orange-100 rounded-2xl text-sm font-bold hover:bg-orange-100 transition-all">
-                <LucideExternalLink className="w-4 h-4" /> Shopee
-              </a>
-            )}
-          </section>
 
           {/* Reviews Section */}
           <section className="bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
@@ -512,20 +587,19 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
             </div>
           </div>
 
-          {/* Interactive Map/Directions Preview */}
-          <div 
-            onClick={handleDirectionsClick}
-            className="group relative h-56 rounded-3xl overflow-hidden border border-slate-200 cursor-pointer shadow-sm active:scale-95 transition-transform"
-          >
-            <div className="absolute inset-0 bg-slate-200 bg-[url('https://picsum.photos/seed/map/800/600')] bg-cover bg-center transition-transform duration-700 group-hover:scale-110" />
-            <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex flex-col items-center justify-center text-white text-center p-6">
-              <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 mb-3 group-hover:scale-110 transition-transform">
-                <LucideMapPin className="w-8 h-8 text-blue-400" />
-              </div>
-              <span className="font-bold text-lg">Get Directions</span>
-              <p className="text-white/70 text-xs mt-1 font-medium">Open in Google Maps</p>
+          {/* Google Map Embed */}
+          {googleMapsEmbedSrc && (
+            <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+              <iframe
+                src={googleMapsEmbedSrc}
+                title={`${business.name} map`}
+                className="h-72 w-full border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
             </div>
-          </div>
+          )}
 
           {/* Interactive Inquiry Form */}
           <div className="bg-[#0C0C1C] rounded-3xl p-8 text-white shadow-xl">
@@ -577,7 +651,30 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
           </div>
         </div>
       </div>
+
+      {selectedGalleryImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-in fade-in duration-150"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setSelectedGalleryImage(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setSelectedGalleryImage(null)}
+            className="absolute right-4 top-4 rounded-full bg-white/95 p-2 text-slate-900 shadow-lg transition hover:bg-white focus:outline-none focus:ring-4 focus:ring-white/40"
+            aria-label="Close gallery image"
+          >
+            <LucideX className="h-5 w-5" />
+          </button>
+          <img
+            src={selectedGalleryImage}
+            alt={`${business.name} gallery image preview`}
+            className="max-h-[86vh] max-w-[94vw] rounded-2xl object-contain shadow-2xl animate-in zoom-in-95 duration-150"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
-

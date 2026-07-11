@@ -50,6 +50,42 @@ const formatBusinessRow = (b: any): BusinessListing => {
   } as unknown as BusinessListing;
 };
 
+const allowedBusinessWriteColumns = [
+  'id', 'ownerId', 'categoryId', 'subcategoryId', 'regionId', 'provinceId', 'cityId', 'barangayId',
+  'name', 'slug', 'description', 'addressLine1', 'zipCode',
+  'contactPhone', 'contactMobile', 'contactEmail',
+  'websiteUrl', 'googleMapsUrl', 'businessHours', 'products', 'services',
+  'paymentMethods', 'parkingAvailability', 'deliveryAvailability', 'accessibilityOptions',
+  'logoUrl', 'coverUrl', 'gallery', 'documents',
+  'facebookUrl', 'instagramUrl', 'linkedinUrl', 'tiktokUrl', 'shopeeUrl', 'lazadaUrl',
+  'status', 'isFeatured', 'keywords', 'moderatorNotes'
+];
+
+const nullableUuidColumns = new Set(['subcategoryId', 'barangayId']);
+
+const prepareBusinessWriteData = (data: any) => {
+  const prepared: any = {};
+
+  for (const key of allowedBusinessWriteColumns) {
+    if (!(key in data)) continue;
+
+    if (nullableUuidColumns.has(key) && data[key] === '') {
+      prepared[key] = null;
+    } else {
+      prepared[key] = data[key];
+    }
+  }
+
+  if (prepared.documents !== undefined) {
+    prepared.documents = prepared.documents ? (typeof prepared.documents === 'string' ? prepared.documents : JSON.stringify(prepared.documents)) : null;
+  }
+  if (prepared.gallery !== undefined) {
+    prepared.gallery = prepared.gallery ? (typeof prepared.gallery === 'string' ? prepared.gallery : JSON.stringify(prepared.gallery)) : null;
+  }
+
+  return prepared;
+};
+
 export const databaseProvider: DataProvider = {
   async createUser(variables) {
     const res = await db.insert(users)
@@ -157,13 +193,7 @@ export const databaseProvider: DataProvider = {
 
   async createBusinessDraft(variables) {
     const id = variables.id || crypto.randomUUID();
-    const insertData = { ...variables };
-    if (insertData.documents !== undefined) {
-      insertData.documents = insertData.documents ? (typeof insertData.documents === 'string' ? insertData.documents : JSON.stringify(insertData.documents)) : null;
-    }
-    if (insertData.gallery !== undefined) {
-      insertData.gallery = insertData.gallery ? (typeof insertData.gallery === 'string' ? insertData.gallery : JSON.stringify(insertData.gallery)) : null;
-    }
+    const insertData = prepareBusinessWriteData(variables);
     const res = await db.insert(businesses)
       .values({
         ...insertData,
@@ -176,28 +206,9 @@ export const databaseProvider: DataProvider = {
   },
 
   async updateBusiness(variables) {
-    const updateData = { ...variables.data };
-    if (updateData.documents !== undefined) {
-      updateData.documents = updateData.documents ? (typeof updateData.documents === 'string' ? updateData.documents : JSON.stringify(updateData.documents)) : null;
-    }
-    if (updateData.gallery !== undefined) {
-      updateData.gallery = updateData.gallery ? (typeof updateData.gallery === 'string' ? updateData.gallery : JSON.stringify(updateData.gallery)) : null;
-    }
-
-    const allowedColumns = [
-      'categoryId', 'subcategoryId', 'regionId', 'provinceId', 'cityId',
-      'name', 'description', 'address', 'contactNumber', 'email',
-      'websiteUrl', 'logoUrl', 'coverUrl', 'gallery', 'documents',
-      'facebookUrl', 'instagramUrl', 'tiktokUrl', 'shopeeUrl', 'lazadaUrl',
-      'status', 'slug', 'isFeatured', 'keywords', 'moderatorNotes'
-    ];
-
-    const filteredData: any = {};
-    for (const key of allowedColumns) {
-      if (key in updateData) {
-        filteredData[key] = updateData[key];
-      }
-    }
+    const filteredData = prepareBusinessWriteData(variables.data);
+    delete filteredData.id;
+    delete filteredData.ownerId;
 
     const res = await db.update(businesses)
       .set({

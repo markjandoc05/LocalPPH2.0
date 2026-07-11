@@ -7,7 +7,9 @@ import DocumentUploadCard from './DocumentUploadCard';
 import { 
   validateLogo, 
   validateCover, 
-  validateDocument 
+  validateGalleryImage,
+  validateDocument,
+  MAX_GALLERY_IMAGES,
 } from '@/lib/validation/media';
 import { 
   uploadBusinessLogo, 
@@ -32,6 +34,54 @@ interface BusinessFormProps {
   onSubmit: (data: Partial<BusinessListing>, action: 'save' | 'submit') => Promise<void>;
   isLoading: boolean;
 }
+
+const parseInitialGallery = (gallery: BusinessListing['gallery']): string[] => {
+  if (!gallery) return [];
+  if (Array.isArray(gallery)) return gallery;
+  try {
+    const parsed = JSON.parse(gallery);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('Error parsing gallery:', error);
+    return [];
+  }
+};
+
+const parseInitialDocuments = (documents: BusinessListing['documents']): { url: string; name: string; id: string; path?: string }[] => {
+  if (!documents) return [];
+  if (Array.isArray(documents)) return documents;
+  try {
+    const parsed = JSON.parse(documents);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('Error parsing documents:', error);
+    return [];
+  }
+};
+
+const urlFields: Record<string, string> = {
+  websiteUrl: 'Website URL',
+  facebookUrl: 'Facebook Page URL',
+  instagramUrl: 'Instagram URL',
+  linkedinUrl: 'LinkedIn URL',
+  tiktokUrl: 'TikTok URL',
+  shopeeUrl: 'Shopee Store URL',
+  lazadaUrl: 'Lazada Store URL',
+};
+
+const getOptionalUrlError = (value: string | undefined, label: string) => {
+  if (!value?.trim()) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? null : `${label} must start with http:// or https://`;
+  } catch {
+    return `${label} must be a valid URL.`;
+  }
+};
+
+const emptyToUndefined = (value: unknown) => {
+  return typeof value === 'string' && value.trim() === '' ? undefined : value;
+};
 
 export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: BusinessFormProps) {
   const [formData, setFormData] = useState<Partial<BusinessListing>>({
@@ -96,9 +146,9 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const [coverError, setCoverError] = useState<string | null>(null);
 
-  const [documents, setDocuments] = useState<{ url: string; name: string; id: string; path?: string }[]>((initialData as any).documents || []);
+  const [documents, setDocuments] = useState<{ url: string; name: string; id: string; path?: string }[]>(() => parseInitialDocuments(initialData.documents));
 
-  const [gallery, setGallery] = useState<string[]>((initialData as any).gallery || []);
+  const [gallery, setGallery] = useState<string[]>(() => parseInitialGallery(initialData.gallery));
   const [galleryProgress, setGalleryProgress] = useState<{ [filename: string]: number }>({});
   const [isGalleryUploading, setIsGalleryUploading] = useState(false);
   const [galleryError, setGalleryError] = useState<string | null>(null);
@@ -315,7 +365,11 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
       setGalleryError('You must be logged in to upload files');
       return;
     }
-    const error = validateCover(file);
+    if (gallery.length >= MAX_GALLERY_IMAGES) {
+      setGalleryError(`You can upload a maximum of ${MAX_GALLERY_IMAGES} gallery photos.`);
+      return;
+    }
+    const error = validateGalleryImage(file);
     if (error) { setGalleryError(error); return; }
     setGalleryError(null);
     setIsGalleryUploading(true);
@@ -324,6 +378,11 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
         setGalleryProgress(prev => ({ ...prev, [file.name]: Math.round(p) }));
       });
       setGallery(prev => [...prev, result.url]);
+      setGalleryProgress(prev => {
+        const next = { ...prev };
+        delete next[file.name];
+        return next;
+      });
     } catch (err: any) {
       setGalleryError(err.message || 'Failed to upload gallery image');
     } finally {
@@ -357,6 +416,13 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
     const formErrors = validateBusinessForm(dataToValidate);
     const customErrors: Record<string, string> = { ...formErrors };
 
+    for (const [field, label] of Object.entries(urlFields)) {
+      const error = getOptionalUrlError((formData as Record<string, any>)[field], label);
+      if (error) {
+        customErrors[field] = error;
+      }
+    }
+
     if (!shortDescription || shortDescription.trim() === '') {
       customErrors.shortDescription = 'Short description is required';
     }
@@ -368,7 +434,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
       if (!logoUrl) {
         customErrors.logoUrl = 'Business logo is required';
       }
-      if (documents.length === 0) {
+      if (!documents.some(doc => !!doc.url)) {
         customErrors.documents = 'Business permit or verification document is required';
       }
     }
@@ -381,10 +447,24 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
     
     setErrors({});
     
-    await onSubmit({ 
+    await onSubmit({
       ...formData, 
       id: businessId,
+      subcategoryId: emptyToUndefined(formData.subcategoryId) as string | undefined,
+      barangayId: emptyToUndefined(formData.barangayId) as string | undefined,
       description: serializedDescription,
+      websiteUrl: emptyToUndefined(formData.websiteUrl) as string | undefined,
+      facebookUrl: emptyToUndefined(formData.facebookUrl) as string | undefined,
+      instagramUrl: emptyToUndefined(formData.instagramUrl) as string | undefined,
+      linkedinUrl: emptyToUndefined(formData.linkedinUrl) as string | undefined,
+      tiktokUrl: emptyToUndefined(formData.tiktokUrl) as string | undefined,
+      shopeeUrl: emptyToUndefined(formData.shopeeUrl) as string | undefined,
+      lazadaUrl: emptyToUndefined(formData.lazadaUrl) as string | undefined,
+      googleMapsUrl: emptyToUndefined(formData.googleMapsUrl) as string | undefined,
+      businessHours: emptyToUndefined(formData.businessHours) as string | undefined,
+      products: emptyToUndefined(formData.products) as string | undefined,
+      services: emptyToUndefined(formData.services) as string | undefined,
+      keywords: emptyToUndefined(formData.keywords) as string | undefined,
       logoUrl: logoUrl || undefined,
       coverUrl: coverUrl || undefined,
       documents: documents,
@@ -416,7 +496,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
             <span className="bg-blue-100 text-[#2563EB] w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">1</span>
             Basic Information
           </h2>
-        
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Business Name <span className="text-red-500">*</span></label>
@@ -514,6 +594,19 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
               />
               {errors.fullDescription && <p className="mt-1 text-sm text-red-500">{errors.fullDescription}</p>}
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Search Keywords</label>
+              <textarea
+                name="keywords"
+                value={formData.keywords || ''}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
+                placeholder="e.g. coffee, cafe, breakfast, pastries, coworking, Mandaluyong"
+              />
+              <p className="mt-1 text-xs text-gray-500">Add comma-separated terms customers may use when searching for your business.</p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -525,7 +618,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
             <span className="bg-blue-100 text-[#2563EB] w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">2</span>
             Contact Information
           </h2>
-        
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number <span className="text-red-500">*</span></label>
@@ -575,6 +668,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
                 placeholder="e.g. https://www.juanscoffeeshop.com"
               />
+              {errors.websiteUrl && <p className="mt-1 text-sm text-red-500">{errors.websiteUrl}</p>}
             </div>
 
             <div>
@@ -587,17 +681,83 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
                 placeholder="e.g. https://facebook.com/juanscoffeeshop"
               />
+              {errors.facebookUrl && <p className="mt-1 text-sm text-red-500">{errors.facebookUrl}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Instagram URL</label>
+              <input
+                type="url"
+                name="instagramUrl"
+                value={formData.instagramUrl || ''}
+                onChange={handleChange}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none ${errors.instagramUrl ? 'border-red-500' : 'border-gray-300'}`}
+                placeholder="e.g. https://instagram.com/juanscoffeeshop"
+              />
+              {errors.instagramUrl && <p className="mt-1 text-sm text-red-500">{errors.instagramUrl}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn URL</label>
+              <input
+                type="url"
+                name="linkedinUrl"
+                value={formData.linkedinUrl || ''}
+                onChange={handleChange}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none ${errors.linkedinUrl ? 'border-red-500' : 'border-gray-300'}`}
+                placeholder="e.g. https://www.linkedin.com/company/juanscoffeeshop"
+              />
+              {errors.linkedinUrl && <p className="mt-1 text-sm text-red-500">{errors.linkedinUrl}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">TikTok URL</label>
+              <input
+                type="url"
+                name="tiktokUrl"
+                value={formData.tiktokUrl || ''}
+                onChange={handleChange}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none ${errors.tiktokUrl ? 'border-red-500' : 'border-gray-300'}`}
+                placeholder="e.g. https://www.tiktok.com/@juanscoffeeshop"
+              />
+              {errors.tiktokUrl && <p className="mt-1 text-sm text-red-500">{errors.tiktokUrl}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Shopee Store URL</label>
+              <input
+                type="url"
+                name="shopeeUrl"
+                value={formData.shopeeUrl || ''}
+                onChange={handleChange}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none ${errors.shopeeUrl ? 'border-red-500' : 'border-gray-300'}`}
+                placeholder="e.g. https://shopee.ph/juanscoffeeshop"
+              />
+              {errors.shopeeUrl && <p className="mt-1 text-sm text-red-500">{errors.shopeeUrl}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lazada Store URL</label>
+              <input
+                type="url"
+                name="lazadaUrl"
+                value={formData.lazadaUrl || ''}
+                onChange={handleChange}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none ${errors.lazadaUrl ? 'border-red-500' : 'border-gray-300'}`}
+                placeholder="e.g. https://www.lazada.com.ph/shop/juanscoffeeshop"
+              />
+              {errors.lazadaUrl && <p className="mt-1 text-sm text-red-500">{errors.lazadaUrl}</p>}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* 3. Location */}
+      {/* 3. Business Details */}
       <Card className="border-slate-200 shadow-sm" id="section-location">
         <CardContent className="p-6 md:p-8">
           <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
             <span className="bg-blue-100 text-[#2563EB] w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">3</span>
-            Location
+            Business Details
           </h2>
         
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -665,21 +825,73 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
               />
               {errors.addressLine1 && <p className="mt-1 text-sm text-red-500">{errors.addressLine1}</p>}
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Google Maps Embed or URL</label>
+              <textarea
+                name="googleMapsUrl"
+                value={formData.googleMapsUrl || ''}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
+                placeholder='Paste a Google Maps share link or iframe embed code, e.g. <iframe src="https://www.google.com/maps/embed?..."></iframe>'
+              />
+              <p className="mt-1 text-xs text-gray-500">On Google Maps, choose Share, then either copy the map link or Embed a map code.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business Hours</label>
+              <textarea
+                name="businessHours"
+                value={formData.businessHours || ''}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
+                placeholder="e.g. Monday to Saturday, 9:00 AM - 6:00 PM"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Products</label>
+                <textarea
+                  name="products"
+                  value={formData.products || ''}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
+                  placeholder="List key products, menu items, or product categories."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Services</label>
+                <textarea
+                  name="services"
+                  value={formData.services || ''}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
+                  placeholder="List key services, specialties, or service areas."
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* 4. Logo & Permit */}
-      <Card className="border-slate-200 shadow-sm" id="section-logo-permit">
+      {/* 4. Media */}
+      <Card className="border-slate-200 shadow-sm" id="section-media">
         <CardContent className="p-6 md:p-8">
           <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
             <span className="bg-blue-100 text-[#2563EB] w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">4</span>
-            Logo & Permit
+            Media
           </h2>
-        
+
           <div className="space-y-8">
             <div>
               <h3 className="text-base font-semibold text-gray-900 mb-2">Business Logo <span className="text-red-500">*</span></h3>
+              <p className="text-xs text-gray-500 mb-4">This logo appears on your public profile and listing cards. Maximum file size: 1 MB.</p>
               <div className="flex flex-col sm:flex-row gap-6">
                 {logoUrl ? (
                   <ImagePreviewCard 
@@ -696,7 +908,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                       onFileSelect={handleLogoUpload}
                       accept="image/jpeg, image/png, image/webp"
                       label="Upload Logo"
-                      helperText="JPG, PNG, WEBP. Max 2MB. Square format recommended."
+                      helperText="JPG, PNG, WEBP. Maximum file size: 1 MB. Square format recommended."
                       isUploading={isLogoUploading}
                     />
                   </div>
@@ -708,6 +920,89 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
 
             <hr className="border-gray-200" />
 
+            <div>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">Cover Photo</h3>
+              <p className="text-xs text-gray-500 mb-4">This image appears at the top of your public business profile and listing card. Maximum file size: 1 MB.</p>
+              {coverUrl ? (
+                <ImagePreviewCard
+                  url={coverUrl}
+                  onRemove={() => { setCoverUrl(null); setFormData(prev => ({ ...prev, coverUrl: undefined })); }}
+                  isUploading={isCoverUploading}
+                  progress={coverProgress}
+                  className="w-full max-w-2xl"
+                  aspectRatio="video"
+                />
+              ) : (
+                <div className="w-full max-w-2xl">
+                  <MediaUploader
+                    onFileSelect={handleCoverUpload}
+                    accept="image/jpeg, image/png, image/webp"
+                    label="Upload Cover Photo"
+                    helperText="JPG, PNG, WEBP. Maximum file size: 1 MB. Wide landscape images work best."
+                    isUploading={isCoverUploading}
+                  />
+                </div>
+              )}
+              {coverError && <p className="mt-2 text-sm text-red-500">{coverError}</p>}
+            </div>
+
+            <hr className="border-gray-200" />
+
+            <div>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">Photo Gallery</h3>
+              <p className="text-xs text-gray-500 mb-4">Add photos of your storefront, products, menu, team, projects, or services. Maximum of 5 photos, up to 1 MB each.</p>
+              {gallery.length < MAX_GALLERY_IMAGES ? (
+                <div className="w-full max-w-2xl">
+                  <MediaUploader
+                    onFileSelect={handleGalleryUpload}
+                    accept="image/jpeg, image/png, image/webp"
+                    label="Upload Gallery Photo"
+                    helperText={`JPG, PNG, WEBP. Maximum of ${MAX_GALLERY_IMAGES} photos, up to 1 MB each.`}
+                    isUploading={isGalleryUploading}
+                  />
+                </div>
+              ) : (
+                <div className="w-full max-w-2xl rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
+                  Maximum gallery limit reached. Remove a photo before uploading another.
+                </div>
+              )}
+              {Object.keys(galleryProgress).length > 0 && (
+                <div className="mt-3 space-y-1">
+                  {Object.entries(galleryProgress).map(([fileName, progress]) => (
+                    <p key={fileName} className="text-xs text-gray-500">
+                      Uploading {fileName}: {progress}%
+                    </p>
+                  ))}
+                </div>
+              )}
+              {galleryError && <p className="mt-2 text-sm text-red-500">{galleryError}</p>}
+
+              {gallery.length > 0 && (
+                <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {gallery.map((url) => (
+                    <ImagePreviewCard
+                      key={url}
+                      url={url}
+                      onRemove={() => handleGalleryRemove(url)}
+                      aspectRatio="video"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 5. Verification & Documents */}
+      <Card className="border-slate-200 shadow-sm" id="section-verification-documents">
+        <CardContent className="p-6 md:p-8">
+          <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+            <span className="bg-blue-100 text-[#2563EB] w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">5</span>
+            Verification & Documents
+          </h2>
+
+          <div className="space-y-8">
             <div>
               <h3 className="text-base font-semibold text-gray-900 mb-2">Verification Document / Business Permit <span className="text-red-500">*</span></h3>
               <div className="space-y-4">
@@ -764,4 +1059,3 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
     </div>
   );
 }
-

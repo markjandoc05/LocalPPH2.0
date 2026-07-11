@@ -1,6 +1,7 @@
-export const MAX_LOGO_SIZE_MB = 2;
-export const MAX_COVER_SIZE_MB = 5;
-export const MAX_GALLERY_SIZE_MB = 5;
+export const MAX_LOGO_SIZE_MB = 1;
+export const MAX_COVER_SIZE_MB = 1;
+export const MAX_GALLERY_SIZE_MB = 1;
+export const MAX_GALLERY_IMAGES = 5;
 export const MAX_DOCUMENT_SIZE_MB = 10;
 
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
