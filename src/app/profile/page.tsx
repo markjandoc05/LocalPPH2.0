@@ -1,10 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { getUserById, updateUser } from '@/lib/data-connect';
+import { createUser, getUserById, updateUser } from '@/lib/data-connect';
 import { sendVerificationEmail, resetPassword } from '@/lib/auth/auth-utils';
+import { getMissingProfileFields, isProfileComplete } from '@/lib/auth/profile-completion';
+import { ROLES } from '@/lib/auth/roles';
+import {
+  DirectoryCity,
+  DirectoryProvince,
+  DirectoryRegion,
+  getAllRegions,
+  getCitiesByProvince,
+  getProvincesByRegion,
+} from '@/lib/data-connect/directory-service';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -44,7 +53,7 @@ interface UserData {
 }
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, role, loading: authLoading, refreshUserProfile } = useAuth();
 
   // Profile data states
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -56,6 +65,36 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [requiresCompletion, setRequiresCompletion] = useState(false);
+  const [regionsList, setRegionsList] = useState<DirectoryRegion[]>([]);
+  const [provincesList, setProvincesList] = useState<DirectoryProvince[]>([]);
+  const [citiesList, setCitiesList] = useState<DirectoryCity[]>([]);
+  const [selectedRegionId, setSelectedRegionId] = useState('');
+  const [selectedProvinceId, setSelectedProvinceId] = useState('');
+  const [selectedCityId, setSelectedCityId] = useState('');
+
+  const buildFallbackUserData = useCallback((): UserData | null => {
+    if (!user) return null;
+
+    return {
+      id: user.uid,
+      email: user.email || '',
+      displayName: user.displayName || '',
+      role: role || ROLES.SUBSCRIBER,
+      accountStatus: 'ACTIVE',
+    };
+  }, [role, user]);
+
+  const startProfileCompletion = useCallback((nextUserData: UserData) => {
+    setRequiresCompletion(true);
+    setEditData(nextUserData);
+    setIsEditing(true);
+    setActiveTab('personal');
+    setMessage({
+      type: 'error',
+      text: 'Please complete your personal information, mobile number, and address to continue.',
+    });
+  }, []);
 
   // Initial data loading
   useEffect(() => {
@@ -63,22 +102,166 @@ export default function ProfilePage() {
       if (user) {
         try {
           const res = await getUserById({ id: user.uid });
-          console.log('ProfilePage: userData loaded:', res);
           if (res?.data?.user) {
             setUserData(res.data.user as UserData);
+            if (!isProfileComplete(res.data.user)) {
+              startProfileCompletion(res.data.user as UserData);
+            }
           } else {
-            console.error('ProfilePage: No user data found in response');
+            const fallbackUserData = buildFallbackUserData();
+            if (!fallbackUserData) return;
+
+            await createUser({
+              id: fallbackUserData.id,
+              email: fallbackUserData.email,
+              displayName: fallbackUserData.displayName || user.displayName || user.email || 'User',
+              photoUrl: user.photoURL || undefined,
+              role: fallbackUserData.role,
+            });
+
+            setUserData(fallbackUserData);
+            startProfileCompletion(fallbackUserData);
           }
         } catch (error) {
-          console.error('Failed to load user profile:', error);
+          console.warn('Failed to load user profile:', error);
+          const fallbackUserData = buildFallbackUserData();
+          if (fallbackUserData) {
+            setUserData(fallbackUserData);
+            startProfileCompletion(fallbackUserData);
+          }
         } finally {
           setLoading(false);
         }
+      } else if (!authLoading) {
+        setLoading(false);
       }
     }
 
     loadUserData();
-  }, [user]);
+  }, [authLoading, buildFallbackUserData, startProfileCompletion, user]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadRegions = async () => {
+      try {
+        const regions = await getAllRegions();
+        if (active) setRegionsList(regions);
+      } catch (error) {
+        console.warn('Failed to load profile address regions:', error);
+      }
+    };
+
+    loadRegions();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!editData?.region || regionsList.length === 0 || selectedRegionId) return;
+
+    const matchingRegion = regionsList.find((region) => region.name === editData.region);
+    if (matchingRegion) {
+      setTimeout(() => setSelectedRegionId(matchingRegion.id), 0);
+    }
+  }, [editData?.region, regionsList, selectedRegionId]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProvinces = async () => {
+      if (!selectedRegionId) {
+        await Promise.resolve();
+        if (active) {
+          setProvincesList([]);
+          setCitiesList([]);
+          setSelectedProvinceId('');
+          setSelectedCityId('');
+        }
+        return;
+      }
+
+      try {
+        const provinces = await getProvincesByRegion(selectedRegionId);
+        if (active) setProvincesList(provinces);
+      } catch (error) {
+        console.warn('Failed to load profile address provinces:', error);
+      }
+    };
+
+    loadProvinces();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedRegionId]);
+
+  useEffect(() => {
+    if (!editData?.province || provincesList.length === 0 || selectedProvinceId) return;
+
+    const matchingProvince = provincesList.find((province) => province.name === editData.province);
+    if (matchingProvince) {
+      setTimeout(() => setSelectedProvinceId(matchingProvince.id), 0);
+    }
+  }, [editData?.province, provincesList, selectedProvinceId]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadCities = async () => {
+      if (!selectedProvinceId) {
+        await Promise.resolve();
+        if (active) {
+          setCitiesList([]);
+          setSelectedCityId('');
+        }
+        return;
+      }
+
+      try {
+        const cities = await getCitiesByProvince(selectedProvinceId);
+        if (active) setCitiesList(cities);
+      } catch (error) {
+        console.warn('Failed to load profile address cities:', error);
+      }
+    };
+
+    loadCities();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedProvinceId]);
+
+  useEffect(() => {
+    if (!editData?.city || citiesList.length === 0 || selectedCityId) return;
+
+    const matchingCity = citiesList.find((city) => city.name === editData.city);
+    if (matchingCity) {
+      setTimeout(() => setSelectedCityId(matchingCity.id), 0);
+    }
+  }, [citiesList, editData?.city, selectedCityId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!userData) return;
+
+    const shouldComplete = new URLSearchParams(window.location.search).get('complete') === '1';
+    if (!shouldComplete || isProfileComplete(userData)) return;
+
+    setTimeout(() => {
+      setRequiresCompletion(true);
+      setEditData(userData);
+      setIsEditing(true);
+      setActiveTab('personal');
+      setMessage({
+        type: 'error',
+        text: 'Please complete your personal information, mobile number, and address to continue.',
+      });
+    }, 0);
+  }, [userData]);
 
   // Clean messaging after timer
   useEffect(() => {
@@ -151,12 +334,32 @@ export default function ProfilePage() {
 
   // Validation before submission
   const validate = () => {
-    if (!editData?.firstName || !editData?.lastName) {
-      setMessage({ type: 'error', text: 'First Name and Last Name are required.' });
+    if (!editData) {
+      setMessage({ type: 'error', text: 'Please complete your profile before saving.' });
       return false;
     }
-    if (editData?.mobileNumber && !/^(09|\+639)\d{9}$/.test(editData.mobileNumber)) {
+
+    const missingFields = getMissingProfileFields(editData);
+
+    if (missingFields.length > 0) {
+      if (missingFields.includes('Personal Information')) {
+        setActiveTab('personal');
+      } else if (missingFields.includes('Contact Number')) {
+        setActiveTab('contact');
+      } else if (missingFields.includes('Address')) {
+        setActiveTab('address');
+      }
+
+      setMessage({
+        type: 'error',
+        text: `Please complete: ${missingFields.join(', ')}.`,
+      });
+      return false;
+    }
+
+    if (!/^(09|\+639)\d{9}$/.test(editData.mobileNumber || '')) {
       setMessage({ type: 'error', text: 'Invalid Philippine mobile number format (e.g., 09171234567).' });
+      setActiveTab('contact');
       return false;
     }
     return true;
@@ -172,9 +375,59 @@ export default function ProfilePage() {
 
   // Cancel edit mode
   const handleCancelEdit = () => {
+    if (requiresCompletion) {
+      setMessage({
+        type: 'error',
+        text: 'Please complete your profile before continuing.',
+      });
+      return;
+    }
+
     setIsEditing(false);
     setEditData(null);
+    setSelectedRegionId('');
+    setSelectedProvinceId('');
+    setSelectedCityId('');
     setMessage(null);
+  };
+
+  const handleRegionChange = (regionId: string) => {
+    const selectedRegion = regionsList.find((region) => region.id === regionId);
+
+    setSelectedRegionId(regionId);
+    setSelectedProvinceId('');
+    setSelectedCityId('');
+    setProvincesList([]);
+    setCitiesList([]);
+    setEditData((current) => current ? {
+      ...current,
+      region: selectedRegion?.name || '',
+      province: '',
+      city: '',
+    } : current);
+  };
+
+  const handleProvinceChange = (provinceId: string) => {
+    const selectedProvince = provincesList.find((province) => province.id === provinceId);
+
+    setSelectedProvinceId(provinceId);
+    setSelectedCityId('');
+    setCitiesList([]);
+    setEditData((current) => current ? {
+      ...current,
+      province: selectedProvince?.name || '',
+      city: '',
+    } : current);
+  };
+
+  const handleCityChange = (cityId: string) => {
+    const selectedCity = citiesList.find((city) => city.id === cityId);
+
+    setSelectedCityId(cityId);
+    setEditData((current) => current ? {
+      ...current,
+      city: selectedCity?.name || '',
+    } : current);
   };
 
   // Submit profile edits
@@ -203,6 +456,8 @@ export default function ProfilePage() {
         ...userDataToUse,
         ...updateData
       });
+      setRequiresCompletion(false);
+      await refreshUserProfile();
       setIsEditing(false);
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
     } catch (error) {
@@ -398,6 +653,10 @@ export default function ProfilePage() {
                     <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.province || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
                   <div>
+                    <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Region</span>
+                    <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.region || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
+                  </div>
+                  <div>
                     <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">ZIP Code</span>
                     <p className="text-slate-900 font-semibold mt-0.5">{userDataToUse.zipCode || <span className="text-slate-400 italic font-normal">Not provided</span>}</p>
                   </div>
@@ -415,6 +674,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-3">
                 <button 
                   onClick={handleCancelEdit} 
+                  disabled={requiresCompletion}
                   className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-700 transition-colors"
                 >
                   <LucideArrowLeft className="w-5 h-5" />
@@ -429,6 +689,7 @@ export default function ProfilePage() {
                   type="button" 
                   variant="outline" 
                   onClick={handleCancelEdit} 
+                  disabled={requiresCompletion}
                   className="border-slate-200 text-slate-700 hover:bg-slate-50 h-9 text-xs"
                 >
                   Cancel
@@ -510,7 +771,7 @@ export default function ProfilePage() {
                 {activeTab === 'contact' && editData && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5 sm:col-span-2">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Mobile Number</label>
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Mobile Number <span className="text-rose-500">*</span></label>
                       <Input 
                         value={editData.mobileNumber || ''} 
                         onChange={(e) => setEditData({...editData, mobileNumber: e.target.value})} 
@@ -532,7 +793,7 @@ export default function ProfilePage() {
                 {activeTab === 'address' && editData && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5 sm:col-span-2">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Address Line 1</label>
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Address Line 1 <span className="text-rose-500">*</span></label>
                       <Input 
                         value={editData.addressLine1 || ''} 
                         onChange={(e) => setEditData({...editData, addressLine1: e.target.value})} 
@@ -548,31 +809,56 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Barangay</label>
-                      <Input 
-                        value={editData.barangay || ''} 
-                        onChange={(e) => setEditData({...editData, barangay: e.target.value})} 
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Region <span className="text-rose-500">*</span></label>
+                      <select
+                        value={selectedRegionId}
+                        onChange={(e) => handleRegionChange(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                      >
+                        <option value="">Select Region</option>
+                        {regionsList.map((region) => (
+                          <option key={region.id} value={region.id}>{region.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Province <span className="text-rose-500">*</span></label>
+                      <select
+                        value={selectedProvinceId}
+                        onChange={(e) => handleProvinceChange(e.target.value)}
+                        disabled={!selectedRegionId}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400"
+                      >
+                        <option value="">Select Province</option>
+                        {provincesList.map((province) => (
+                          <option key={province.id} value={province.id}>{province.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">City/Municipality <span className="text-rose-500">*</span></label>
+                      <select
+                        value={selectedCityId}
+                        onChange={(e) => handleCityChange(e.target.value)}
+                        disabled={!selectedProvinceId}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-400"
+                      >
+                        <option value="">Select City</option>
+                        {citiesList.map((city) => (
+                          <option key={city.id} value={city.id}>{city.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Barangay <span className="text-rose-500">*</span></label>
+                      <Input
+                        value={editData.barangay || ''}
+                        onChange={(e) => setEditData({...editData, barangay: e.target.value})}
                         placeholder="Barangay"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">City</label>
-                      <Input 
-                        value={editData.city || ''} 
-                        onChange={(e) => setEditData({...editData, city: e.target.value})} 
-                        placeholder="City"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Province</label>
-                      <Input 
-                        value={editData.province || ''} 
-                        onChange={(e) => setEditData({...editData, province: e.target.value})} 
-                        placeholder="Province"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">ZIP Code</label>
+                      <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">ZIP Code <span className="text-rose-500">*</span></label>
                       <Input 
                         value={editData.zipCode || ''} 
                         onChange={(e) => setEditData({...editData, zipCode: e.target.value})} 

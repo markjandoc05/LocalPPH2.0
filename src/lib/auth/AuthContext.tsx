@@ -3,52 +3,88 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { getUserById } from '../data-connect';
+import { createUser, getUserById } from '../data-connect';
 import { normalizeRole, ROLES } from './roles';
+import { isProfileComplete } from './profile-completion';
 
 interface AuthContextType {
   user: User | null;
+  userData: any | null;
   role: string | null;
+  profileComplete: boolean;
   loading: boolean;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  userData: null,
   role: null,
+  profileComplete: false,
   loading: true,
+  refreshUserProfile: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<any | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [profileComplete, setProfileComplete] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const loadUserProfile = async (firebaseUser: User) => {
+    const fallbackRole = firebaseUser.email === 'markjandoc@gmail.com' ? ROLES.ADMIN : ROLES.SUBSCRIBER;
+
+    try {
+      const response = await getUserById({ id: firebaseUser.uid });
+      let dbUser = response?.data?.user || null;
+
+      if (!dbUser) {
+        await createUser({
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          displayName: firebaseUser.displayName || firebaseUser.email || 'User',
+          photoUrl: firebaseUser.photoURL || undefined,
+          role: fallbackRole,
+        });
+
+        const refreshedResponse = await getUserById({ id: firebaseUser.uid });
+        dbUser = refreshedResponse?.data?.user || null;
+      }
+
+      const nextRole = firebaseUser.email === 'markjandoc@gmail.com'
+        ? ROLES.ADMIN
+        : normalizeRole(dbUser?.role || fallbackRole);
+
+      setUserData(dbUser);
+      setRole(nextRole);
+      setProfileComplete(isProfileComplete(dbUser));
+    } catch (error) {
+      console.warn("Failed to fetch user profile", error);
+      setUserData(null);
+      setRole(fallbackRole);
+      setProfileComplete(false);
+    }
+  };
+
+  const refreshUserProfile = async () => {
+    if (!auth.currentUser) return;
+    await loadUserProfile(auth.currentUser);
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
-        
-        try {
-          let userRole: string = ROLES.SUBSCRIBER;
-          if (firebaseUser.email === 'markjandoc@gmail.com') {
-            userRole = ROLES.ADMIN;
-          } else {
-            const userData = await getUserById({ id: firebaseUser.uid });
-            userRole = normalizeRole(userData?.data?.user?.role || ROLES.SUBSCRIBER);
-          }
-          setRole(userRole);
-        } catch (error) {
-          console.error("Failed to fetch user role", error);
-          const userRole = firebaseUser.email === 'markjandoc@gmail.com' ? ROLES.ADMIN : ROLES.SUBSCRIBER;
-          setRole(userRole);
-        } finally {
-          setLoading(false);
-        }
+        await loadUserProfile(firebaseUser);
+        setLoading(false);
       } else {
         setUser(null);
+        setUserData(null);
         setRole(null);
+        setProfileComplete(false);
         setLoading(false);
       }
     });
@@ -57,7 +93,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, role, loading }}>
+    <AuthContext.Provider value={{ user, userData, role, profileComplete, loading, refreshUserProfile }}>
       {children}
     </AuthContext.Provider>
   );

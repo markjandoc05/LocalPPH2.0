@@ -2,6 +2,7 @@ import { getShortDesc } from '@/lib/utils';
 
 export const SITE_NAME = 'LocalPages.ph';
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://localpages.ph';
+export const SITE_SOCIAL_IMAGE = '/images/localpages-ph-cover.png';
 
 export const generatePageMetadata = (
   title: string,
@@ -22,11 +23,20 @@ export const generatePageMetadata = (
       siteName: SITE_NAME,
       locale: 'en_PH',
       type: 'website',
+      images: [
+        {
+          url: SITE_SOCIAL_IMAGE,
+          width: 1161,
+          height: 630,
+          alt: 'LocalPages.ph - Find Trusted Local Businesses in the Philippines',
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
+      images: [SITE_SOCIAL_IMAGE],
     },
   };
 };
@@ -60,12 +70,20 @@ export const generateBusinessMetadata = (business: any) => {
       siteName: SITE_NAME,
       locale: 'en_PH',
       type: 'article',
-      // images: [ { url: business.logoUrl || fallback } ]
+      images: [
+        {
+          url: business.coverUrl || SITE_SOCIAL_IMAGE,
+          width: 1161,
+          height: 630,
+          alt: `${business.name} on ${SITE_NAME}`,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
+      images: [business.coverUrl || SITE_SOCIAL_IMAGE],
     },
   };
 };

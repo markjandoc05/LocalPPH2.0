@@ -8,6 +8,7 @@ import {
   regions, 
   provinces, 
   cities, 
+  supportTickets,
 } from "../../db/schema";
 import { eq, and, or, ilike, sql, desc, asc, inArray } from "drizzle-orm";
 import { BusinessListing } from "@/types/business";
@@ -86,6 +87,15 @@ const prepareBusinessWriteData = (data: any) => {
   return prepared;
 };
 
+const isMissingSupportTicketsTableError = (error: any) => {
+  const message = String(error?.message || error || '').toLowerCase();
+  return message.includes('support_tickets') && (
+    message.includes('does not exist') ||
+    message.includes('relation') ||
+    message.includes('failed query')
+  );
+};
+
 export const databaseProvider: DataProvider = {
   async createUser(variables) {
     const res = await db.insert(users)
@@ -155,6 +165,99 @@ export const databaseProvider: DataProvider = {
   async getAllUsers() {
     const res = await db.query.users.findMany();
     return { data: { users: res } };
+  },
+
+  async createSupportTicket(variables) {
+    const category = variables.category?.trim();
+    const subject = variables.subject?.trim();
+    const message = variables.message?.trim();
+
+    if (!category || !subject || !message) {
+      throw new Error("Category, subject, and message are required.");
+    }
+
+    let res;
+    try {
+      res = await db.insert(supportTickets)
+        .values({
+          userId: variables.userId,
+          category,
+          subject,
+          message,
+        })
+        .returning({ id: supportTickets.id });
+    } catch (error) {
+      if (isMissingSupportTicketsTableError(error)) {
+        throw new Error("Support inbox setup is not complete yet. Please apply the support_tickets database migration.");
+      }
+      throw error;
+    }
+
+    return { data: { support_ticket_insert: res[0].id } };
+  },
+
+  async getMySupportTickets(variables) {
+    let res;
+    try {
+      res = await db.query.supportTickets.findMany({
+        where: eq(supportTickets.userId, variables.userId),
+        orderBy: [desc(supportTickets.createdAt)],
+      });
+    } catch (error) {
+      if (isMissingSupportTicketsTableError(error)) {
+        return { data: { supportTickets: [] } };
+      }
+      throw error;
+    }
+
+    return { data: { supportTickets: res } };
+  },
+
+  async getAllSupportTickets() {
+    let res;
+    try {
+      res = await db.query.supportTickets.findMany({
+        with: {
+          user: true,
+          respondedBy: true,
+        },
+        orderBy: [desc(supportTickets.createdAt)],
+      });
+    } catch (error) {
+      if (isMissingSupportTicketsTableError(error)) {
+        return { data: { supportTickets: [] } };
+      }
+      throw error;
+    }
+
+    return { data: { supportTickets: res } };
+  },
+
+  async updateSupportTicket(variables) {
+    const allowedStatuses = new Set(['OPEN', 'IN_REVIEW', 'RESOLVED', 'CLOSED']);
+    const setFields: any = {
+      updatedAt: new Date(),
+    };
+
+    if (variables.status) {
+      if (!allowedStatuses.has(variables.status)) {
+        throw new Error("Invalid support ticket status.");
+      }
+      setFields.status = variables.status;
+    }
+
+    if (variables.adminResponse !== undefined) {
+      setFields.adminResponse = variables.adminResponse?.trim() || null;
+      setFields.respondedById = variables.respondedById || null;
+      setFields.respondedAt = setFields.adminResponse ? new Date() : null;
+    }
+
+    const res = await db.update(supportTickets)
+      .set(setFields)
+      .where(eq(supportTickets.id, variables.id))
+      .returning({ id: supportTickets.id });
+
+    return { data: { support_ticket_update: res[0]?.id || variables.id } };
   },
 
   async getMyBusinesses(variables) {

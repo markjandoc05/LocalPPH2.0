@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Authorize
     const { method, variables } = await req.json();
+    let operationVariables = variables;
 
     // Get user role
     const userRes = await databaseProvider.getUserById({ id: userId });
@@ -24,12 +25,17 @@ export async function POST(req: NextRequest) {
 
     // Define method permissions
     const isBusinessMethod = ['createBusinessDraft', 'updateBusiness', 'submitBusiness'].includes(method);
-    const isAdminMethod = ['getAllUsers', 'updateBusinessStatus'].includes(method);
+    const isAdminMethod = ['getAllUsers', 'updateBusinessStatus', 'getAllSupportTickets', 'updateSupportTicket'].includes(method);
 
     if (method === 'getUserById') {
       if (variables?.id !== userId && !isAdmin(role)) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
+    } else if (method === 'createSupportTicket' || method === 'getMySupportTickets') {
+      operationVariables = {
+        ...(variables || {}),
+        userId,
+      };
     } else if (isBusinessMethod) {
       if (!canManageBusiness(role)) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
@@ -51,7 +57,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid method" }, { status: 400 });
     }
 
-    const result = await (databaseProvider as any)[method](variables);
+    if (method === 'updateSupportTicket') {
+      operationVariables = {
+        ...(variables || {}),
+        respondedById: userId,
+      };
+    }
+
+    const result = await (databaseProvider as any)[method](operationVariables);
     return NextResponse.json(result);
   } catch (error: any) {
     console.error("API Data Error:", error);

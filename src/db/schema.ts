@@ -167,9 +167,28 @@ export const businessProfileViews = pgTable('business_profile_views', {
   uniqueBusinessVisitorIdx: uniqueIndex('business_profile_views_business_visitor_idx').on(table.businessId, table.visitorKey),
 }));
 
+export const supportTickets = pgTable('support_tickets', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  category: text('category').notNull(),
+  subject: text('subject').notNull(),
+  message: text('message').notNull(),
+  status: text('status').default('OPEN').notNull(),
+  adminResponse: text('admin_response'),
+  respondedById: text('responded_by_id').references(() => users.id),
+  respondedAt: timestamp('responded_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index('support_tickets_user_id_idx').on(table.userId),
+  statusIdx: index('support_tickets_status_idx').on(table.status),
+  createdAtIdx: index('support_tickets_created_at_idx').on(table.createdAt),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   businesses: many(businesses),
+  supportTickets: many(supportTickets),
 }));
 
 export const businessesRelations = relations(businesses, ({ one, many }) => ({
@@ -205,6 +224,17 @@ export const businessProfileViewsRelations = relations(businessProfileViews, ({ 
   business: one(businesses, {
     fields: [businessProfileViews.businessId],
     references: [businesses.id],
+  }),
+}));
+
+export const supportTicketsRelations = relations(supportTickets, ({ one }) => ({
+  user: one(users, {
+    fields: [supportTickets.userId],
+    references: [users.id],
+  }),
+  respondedBy: one(users, {
+    fields: [supportTickets.respondedById],
+    references: [users.id],
   }),
 }));
 

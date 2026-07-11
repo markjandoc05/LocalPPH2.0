@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { logoutUser } from '@/lib/auth/auth-utils';
@@ -13,6 +13,11 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, role, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const isBusinessPortalRoute =
+    pathname === '/business' ||
+    pathname.startsWith('/business/listings') ||
+    pathname.startsWith('/business/settings');
 
   const handleLogout = async () => {
     try {
@@ -64,17 +69,25 @@ export default function Header() {
               </span>
             ) : user ? (
               <>
-                <Link 
-                  href={getDashboardLink()} 
-                  className={buttonVariants({ variant: 'ghost' })}
-                >
-                  Dashboard
-                </Link>
-                <Link 
-                  href="/profile" 
+                {!isBusinessPortalRoute && (
+                  <Link
+                    href={getDashboardLink()}
+                    className={buttonVariants({ variant: 'ghost' })}
+                  >
+                    Dashboard
+                  </Link>
+                )}
+                <Link
+                  href="/profile"
                   className={buttonVariants({ variant: 'ghost' })}
                 >
                   My Profile
+                </Link>
+                <Link
+                  href="/support"
+                  className={buttonVariants({ variant: 'ghost' })}
+                >
+                  Support
                 </Link>
                 <Button 
                   variant="default"
@@ -120,19 +133,28 @@ export default function Header() {
               </div>
             ) : user ? (
               <>
-                <Link 
-                  href={getDashboardLink()} 
-                  className="text-sm font-medium text-slate-600"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Dashboard
-                </Link>
-                <Link 
-                  href="/profile" 
+                {!isBusinessPortalRoute && (
+                  <Link
+                    href={getDashboardLink()}
+                    className="text-sm font-medium text-slate-600"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                )}
+                <Link
+                  href="/profile"
                   className="text-sm font-medium text-slate-600"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   My Profile
+                </Link>
+                <Link
+                  href="/support"
+                  className="text-sm font-medium text-slate-600"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Support
                 </Link>
                 <Button 
                   variant="default"

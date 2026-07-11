@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { registerUser, loginWithGoogle } from '@/lib/auth/auth-utils';
-import { ROLES, getRedirectPath } from '@/lib/auth/roles';
+import { ROLES } from '@/lib/auth/roles';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -29,7 +29,7 @@ export default function RegisterPage() {
     try {
       await registerUser(email, password, name, accountType);
       trackEvent('signup', { method: 'email', role: accountType, page_type: 'Register' });
-      router.push(getRedirectPath(accountType));
+      router.push('/profile?complete=1');
     } catch (err: any) {
       setError(err.message || 'Failed to register');
     } finally {
@@ -41,9 +41,9 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      const { role } = await loginWithGoogle(accountType);
+      await loginWithGoogle(accountType);
       trackEvent('signup', { method: 'google', role: accountType, page_type: 'Register' });
-      router.push(getRedirectPath(role));
+      router.push('/profile?complete=1');
     } catch (err: any) {
       console.error("Google register error:", err);
       let userFriendlyMessage = err.message || 'Failed to register with Google';

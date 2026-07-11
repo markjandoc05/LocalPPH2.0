@@ -18,6 +18,24 @@ export interface DataProvider {
   }): Promise<{ data: { user_update: string } }>;
   getAllUsers(): Promise<{ data: { users: any[] } }>;
 
+  // Support operations
+  createSupportTicket(variables: {
+    userId: string;
+    category: string;
+    subject: string;
+    message: string;
+  }): Promise<{ data: { support_ticket_insert: string } }>;
+  getMySupportTickets(variables: {
+    userId: string;
+  }): Promise<{ data: { supportTickets: any[] } }>;
+  getAllSupportTickets(): Promise<{ data: { supportTickets: any[] } }>;
+  updateSupportTicket(variables: {
+    id: string;
+    status?: string;
+    adminResponse?: string;
+    respondedById?: string;
+  }): Promise<{ data: { support_ticket_update: string } }>;
+
   // Business operations
   getMyBusinesses(variables: {
     ownerId: string;
