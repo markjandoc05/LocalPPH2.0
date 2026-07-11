@@ -41,18 +41,13 @@ const injectSearchConsole = (metaHtml: string) => {
 
 const injectFavicon = (url: string) => {
   try {
-    const linkId = 'localpages-custom-favicon';
-    let link = document.getElementById(linkId) as HTMLLinkElement | null;
+    const links = document.querySelectorAll("link[rel*='icon']");
+    links.forEach(l => l.remove());
 
-    if (!link) {
-      link = document.createElement('link');
-      link.id = linkId;
-      link.rel = 'icon';
-      document.head.appendChild(link);
-    }
-
+    const link = document.createElement('link');
     link.rel = 'icon';
     link.href = url;
+    document.head.appendChild(link);
   } catch (err) {
     console.error("Failed to inject favicon:", err);
   }

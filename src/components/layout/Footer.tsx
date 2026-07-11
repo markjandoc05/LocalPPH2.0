@@ -42,8 +42,8 @@ export default function Footer() {
               <li><a href="#" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors">Privacy Policy</a></li>
               <li><a href="#" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors">Terms of Service</a></li>
               <li>
-                <a href="mailto:info@localpages.ph" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors flex items-center gap-2">
-                  <Mail className="h-4 w-4" /> info@localpages.ph
+                <a href="mailto:support@localpages.ph" className="text-sm text-slate-500 hover:text-[#0C0C1C] transition-colors flex items-center gap-2">
+                  <Mail className="h-4 w-4" /> support@localpages.ph
                 </a>
               </li>
             </ul>
