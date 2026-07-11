@@ -14,15 +14,6 @@ const toDate = (value?: string | Date | null) => {
   return Number.isNaN(date.getTime()) ? undefined : date;
 };
 
-const toAbsoluteAssetUrl = (value?: string | null) => {
-  if (!value) return null;
-  try {
-    return new URL(value, cleanSiteUrl).toString();
-  } catch {
-    return null;
-  }
-};
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const routes: MetadataRoute.Sitemap = [
     {
@@ -131,20 +122,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const businessRoutes = approved
       .filter((business: any) => business.slug && business.status === 'APPROVED')
-      .map((business: any) => {
-        const images = [
-          toAbsoluteAssetUrl(business.coverUrl),
-          toAbsoluteAssetUrl(business.logoUrl),
-        ].filter(Boolean) as string[];
-
-        return {
-          url: toUrl(`/business/${business.slug}`),
-          lastModified: toDate(business.updatedAt) || STATIC_LAST_MODIFIED,
-          images: images.length ? Array.from(new Set(images)) : undefined,
-          changeFrequency: 'weekly' as const,
-          priority: business.isFeatured ? 0.75 : 0.6,
-        };
-      });
+      .map((business: any) => ({
+        url: toUrl(`/business/${business.slug}`),
+        lastModified: toDate(business.updatedAt) || STATIC_LAST_MODIFIED,
+        changeFrequency: 'weekly' as const,
+        priority: business.isFeatured ? 0.75 : 0.6,
+      }));
 
     return [
       ...routes,
