@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, doublePrecision, pgEnum, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, doublePrecision, pgEnum, uuid, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const businessStatusEnum = pgEnum('business_status', [
@@ -156,6 +156,17 @@ export const businessPhotos = pgTable('business_photos', {
   uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
 });
 
+export const businessProfileViews = pgTable('business_profile_views', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  businessId: uuid('business_id').references(() => businesses.id, { onDelete: 'cascade' }).notNull(),
+  visitorKey: text('visitor_key').notNull(),
+  firstViewedAt: timestamp('first_viewed_at').defaultNow().notNull(),
+  lastViewedAt: timestamp('last_viewed_at').defaultNow().notNull(),
+}, (table) => ({
+  businessIdIdx: index('business_profile_views_business_id_idx').on(table.businessId),
+  uniqueBusinessVisitorIdx: uniqueIndex('business_profile_views_business_visitor_idx').on(table.businessId, table.visitorKey),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   businesses: many(businesses),
@@ -187,6 +198,14 @@ export const businessesRelations = relations(businesses, ({ one, many }) => ({
     references: [cities.id],
   }),
   photos: many(businessPhotos),
+  profileViews: many(businessProfileViews),
+}));
+
+export const businessProfileViewsRelations = relations(businessProfileViews, ({ one }) => ({
+  business: one(businesses, {
+    fields: [businessProfileViews.businessId],
+    references: [businesses.id],
+  }),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -206,4 +225,3 @@ export const siteSettings = pgTable('site_settings', {
   value: text('value').notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
-
