@@ -23,19 +23,21 @@ export default function PublicBusinessCard({ business }: PublicBusinessCardProps
       />
 
       {/* Cover Image Area */}
-      <div className="h-32 bg-slate-50 flex items-center justify-center relative border-b border-slate-100 overflow-hidden">
-        {business.coverUrl ? (
-          <img 
-            src={business.coverUrl} 
-            alt={`${business.name} Cover`}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            referrerPolicy="no-referrer"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-r from-blue-50 to-indigo-100 flex items-center justify-center">
-            <span className="text-slate-400 text-[10px] font-semibold tracking-wider uppercase opacity-40">LocalPages.ph</span>
-          </div>
-        )}
+      <div className="h-32 bg-slate-50 flex items-center justify-center relative border-b border-slate-100 overflow-visible">
+        <div className="absolute inset-0 overflow-hidden">
+          {business.coverUrl ? (
+            <img 
+              src={business.coverUrl} 
+              alt={`${business.name} Cover`}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-blue-50 to-indigo-100 flex items-center justify-center">
+              <span className="text-slate-400 text-[10px] font-semibold tracking-wider uppercase opacity-40">LocalPages.ph</span>
+            </div>
+          )}
+        </div>
 
         {/* Logo Overlay */}
         <BusinessLogo 
