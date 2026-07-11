@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import SearchFilters from '@/components/search/SearchFilters';
 import PublicBusinessList from '@/components/search/PublicBusinessList';
@@ -22,12 +22,13 @@ export default function SearchClient() {
   const [loading, setLoading] = useState(true);
   
   const currentQ = searchParams.get('q') || '';
-  const [prevQ, setPrevQ] = useState(currentQ);
-  const [heroQuery, setHeroQuery] = useState(currentQ);
+  const [heroState, setHeroState] = useState({ urlQ: currentQ, value: currentQ });
+  const heroQuery = heroState.urlQ === currentQ ? heroState.value : currentQ;
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const containerRef = useRef<HTMLFormElement>(null);
+  const resultRequestId = useRef(0);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -62,14 +63,12 @@ export default function SearchClient() {
     return () => clearTimeout(timeoutId);
   }, [heroQuery]);
 
-  if (currentQ !== prevQ) {
-    setPrevQ(currentQ);
-    setHeroQuery(currentQ);
-  }
-
   const itemsPerPage = 12;
 
   useEffect(() => {
+    const requestId = ++resultRequestId.current;
+    let isActive = true;
+
     const fetchResults = async () => {
       setLoading(true);
       try {
@@ -87,6 +86,8 @@ export default function SearchClient() {
         const page = parseInt(searchParams.get('page') || '1', 10);
         
         const result = await searchApprovedBusinesses(filters, { page, limit: itemsPerPage });
+        if (!isActive || requestId !== resultRequestId.current) return;
+
         setBusinesses(result.businesses);
         setTotal(result.total);
 
@@ -113,13 +114,19 @@ export default function SearchClient() {
           });
         }
       } catch (error) {
+        if (!isActive || requestId !== resultRequestId.current) return;
         console.error("Search failed", error);
       } finally {
-        setLoading(false);
+        if (isActive && requestId === resultRequestId.current) {
+          setLoading(false);
+        }
       }
     };
     
     fetchResults();
+    return () => {
+      isActive = false;
+    };
   }, [searchParams, itemsPerPage]);
 
   useEffect(() => {
@@ -161,7 +168,7 @@ export default function SearchClient() {
               type="text"
               value={heroQuery}
               disabled={loading}
-              onChange={(e) => setHeroQuery(e.target.value)}
+              onChange={(e) => setHeroState({ urlQ: currentQ, value: e.target.value })}
               onFocus={() => heroQuery.trim().length >= 2 && setShowSuggestions(true)}
               placeholder="Search by name, category, or location"
               className="block w-full pl-10 pr-4 py-2.5 border-0 rounded-xl text-gray-900 bg-white placeholder-gray-500 focus:ring-2 focus:ring-[#2563EB] sm:text-sm outline-none shadow-sm disabled:opacity-50"
@@ -178,7 +185,7 @@ export default function SearchClient() {
                         key={s.id}
                         type="button"
                         onClick={() => {
-                          setHeroQuery(s.text);
+                          setHeroState({ urlQ: currentQ, value: s.text });
                           setShowSuggestions(false);
                           if (s.type === 'business') {
                             router.push(`/business/${s.slug}`);
