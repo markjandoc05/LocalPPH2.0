@@ -20,6 +20,126 @@ import { eq, and, or, ilike, sql, desc, asc, inArray } from "drizzle-orm";
 import { BusinessListing } from "@/types/business";
 import { formatAppDateTime } from "@/lib/time";
 
+const businessInquiryCategory = 'BUSINESS_INQUIRY';
+const businessInquiryPrefix = 'LOCALPAGES_BUSINESS_INQUIRY::';
+const businessInquiryThreadPrefix = 'LOCALPAGES_INQUIRY_THREAD::';
+
+const parseBusinessInquiryMessage = (message?: string | null) => {
+  if (!message?.startsWith(businessInquiryPrefix)) return null;
+
+  try {
+    return JSON.parse(message.slice(businessInquiryPrefix.length));
+  } catch (error) {
+    console.error("Error parsing business inquiry metadata:", error);
+    return null;
+  }
+};
+
+const parseBusinessInquiryThread = (response?: string | null) => {
+  if (!response) return [];
+  if (!response.startsWith(businessInquiryThreadPrefix)) {
+    return [{
+      id: 'legacy-owner-response',
+      sender: 'owner',
+      body: response,
+      createdAt: null,
+    }];
+  }
+
+  try {
+    const parsed = JSON.parse(response.slice(businessInquiryThreadPrefix.length));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error("Error parsing business inquiry thread:", error);
+    return [];
+  }
+};
+
+const serializeBusinessInquiryThread = (messages: any[]) =>
+  `${businessInquiryThreadPrefix}${JSON.stringify(messages)}`;
+
+const getBusinessInquiryTime = (value?: string | Date | null) => {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : 0;
+};
+
+const formatBusinessInquiry = (ticket: any) => {
+  if (!ticket) return null;
+  const details = parseBusinessInquiryMessage(ticket.message);
+  if (!details) return null;
+  const threadMessages = parseBusinessInquiryThread(ticket.adminResponse);
+  const initialMessage = {
+    id: `${ticket.id}-initial`,
+    sender: 'user',
+    body: details.message || '',
+    createdAt: ticket.createdAt,
+  };
+  const visibleMessages = [initialMessage, ...threadMessages].filter((message) =>
+    message.sender === 'user' || message.sender === 'owner'
+  );
+  const latestMessageTime = Math.max(...visibleMessages.map((message) => getBusinessInquiryTime(message.createdAt)));
+  const latestSenderDeleteTime = Math.max(
+    0,
+    ...threadMessages
+      .filter((message) => message.type === 'inbox_deleted' && message.side === 'sender')
+      .map((message) => getBusinessInquiryTime(message.createdAt))
+  );
+  const latestOwnerDeleteTime = Math.max(
+    0,
+    ...threadMessages
+      .filter((message) => message.type === 'inbox_deleted' && message.side === 'owner')
+      .map((message) => getBusinessInquiryTime(message.createdAt))
+  );
+  const latestSenderReadTime = Math.max(
+    0,
+    ...threadMessages
+      .filter((message) => message.type === 'inbox_read' && message.side === 'sender')
+      .map((message) => getBusinessInquiryTime(message.createdAt))
+  );
+  const latestOwnerReadTime = Math.max(
+    0,
+    ...threadMessages
+      .filter((message) => message.type === 'inbox_read' && message.side === 'owner')
+      .map((message) => getBusinessInquiryTime(message.createdAt))
+  );
+  const latestSenderMessageTime = Math.max(
+    0,
+    ...visibleMessages
+      .filter((message) => message.sender === 'user')
+      .map((message) => getBusinessInquiryTime(message.createdAt))
+  );
+  const latestOwnerMessageTime = Math.max(
+    0,
+    ...visibleMessages
+      .filter((message) => message.sender === 'owner')
+      .map((message) => getBusinessInquiryTime(message.createdAt))
+  );
+
+  return {
+    id: ticket.id,
+    createdAt: ticket.createdAt,
+    updatedAt: ticket.updatedAt,
+    businessId: details.businessId,
+    businessName: details.businessName,
+    businessSlug: details.businessSlug,
+    ownerId: details.ownerId,
+    subject: details.subject || ticket.subject || 'Business inquiry',
+    senderName: details.senderName || ticket.user?.displayName || '',
+    senderEmail: details.senderEmail || ticket.user?.email || '',
+    senderContactNumber: details.senderContactNumber || '',
+    message: details.message || '',
+    response: ticket.adminResponse || '',
+    respondedAt: ticket.respondedAt,
+    messages: visibleMessages,
+    deletedForSender: latestSenderDeleteTime >= latestMessageTime,
+    deletedForOwner: latestOwnerDeleteTime >= latestMessageTime,
+    unreadForSender: latestOwnerMessageTime > latestSenderReadTime,
+    unreadForOwner: latestSenderMessageTime > latestOwnerReadTime,
+    sender: ticket.user || null,
+  };
+};
+
 const formatBusinessRow = (b: any): BusinessListing => {
   if (!b) return b;
   let parsedDocuments = [];
@@ -474,7 +594,10 @@ export const databaseProvider: DataProvider = {
     let res;
     try {
       res = await db.query.supportTickets.findMany({
-        where: eq(supportTickets.userId, variables.userId),
+        where: and(
+          eq(supportTickets.userId, variables.userId),
+          sql`${supportTickets.category} <> ${businessInquiryCategory}`,
+        ),
         orderBy: [desc(supportTickets.createdAt)],
       });
     } catch (error) {
@@ -491,6 +614,7 @@ export const databaseProvider: DataProvider = {
     let res;
     try {
       res = await db.query.supportTickets.findMany({
+        where: sql`${supportTickets.category} <> ${businessInquiryCategory}`,
         with: {
           user: true,
           respondedBy: true,
@@ -532,6 +656,285 @@ export const databaseProvider: DataProvider = {
       .returning({ id: supportTickets.id });
 
     return { data: { support_ticket_update: res[0]?.id || variables.id } };
+  },
+
+  async getMyBusinessInquiries(variables) {
+    const ownerId = variables.ownerId;
+    if (!ownerId) {
+      throw new Error("Business owner is required.");
+    }
+
+    let res;
+    try {
+      res = await db.query.supportTickets.findMany({
+        where: eq(supportTickets.category, businessInquiryCategory),
+        with: {
+          user: true,
+        },
+        orderBy: [desc(supportTickets.createdAt)],
+      });
+    } catch (error) {
+      if (isMissingSupportTicketsTableError(error)) {
+        return { data: { inquiries: [] } };
+      }
+      throw error;
+    }
+
+    const inquiries = res
+      .map(formatBusinessInquiry)
+      .filter((inquiry) => inquiry?.ownerId === ownerId && !inquiry.deletedForOwner);
+
+    return { data: { inquiries } };
+  },
+
+  async respondBusinessInquiry(variables) {
+    const response = variables.response?.trim();
+    if (!response) {
+      throw new Error("Response message is required.");
+    }
+
+    const ticket = await db.query.supportTickets.findFirst({
+      where: and(
+        eq(supportTickets.id, variables.id),
+        eq(supportTickets.category, businessInquiryCategory),
+      ),
+    });
+    const inquiry = formatBusinessInquiry(ticket);
+
+    if (!ticket || !inquiry || inquiry.ownerId !== variables.ownerId) {
+      throw new Error("Inquiry not found or access denied.");
+    }
+
+    const existingThread = parseBusinessInquiryThread(ticket.adminResponse);
+    const nextThread = [
+      ...existingThread,
+      {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        sender: 'owner',
+        body: response,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    const res = await db.update(supportTickets)
+      .set({
+        adminResponse: serializeBusinessInquiryThread(nextThread),
+        respondedById: variables.ownerId,
+        respondedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(supportTickets.id, variables.id))
+      .returning({ id: supportTickets.id });
+
+    return { data: { inquiry_update: res[0]?.id || variables.id } };
+  },
+
+  async markBusinessInquiryRead(variables) {
+    const ticket = await db.query.supportTickets.findFirst({
+      where: and(
+        eq(supportTickets.id, variables.id),
+        eq(supportTickets.category, businessInquiryCategory),
+      ),
+    });
+    const inquiry = formatBusinessInquiry(ticket);
+
+    if (!ticket || !inquiry || inquiry.ownerId !== variables.ownerId) {
+      throw new Error("Inquiry not found or access denied.");
+    }
+
+    const existingThread = parseBusinessInquiryThread(ticket.adminResponse);
+    const nextThread = [
+      ...existingThread,
+      {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        type: 'inbox_read',
+        side: 'owner',
+        userId: variables.ownerId,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    const res = await db.update(supportTickets)
+      .set({
+        adminResponse: serializeBusinessInquiryThread(nextThread),
+        updatedAt: new Date(),
+      })
+      .where(eq(supportTickets.id, variables.id))
+      .returning({ id: supportTickets.id });
+
+    return { data: { inquiry_update: res[0]?.id || variables.id } };
+  },
+
+  async deleteBusinessInquiry(variables) {
+    const ticket = await db.query.supportTickets.findFirst({
+      where: and(
+        eq(supportTickets.id, variables.id),
+        eq(supportTickets.category, businessInquiryCategory),
+      ),
+    });
+    const inquiry = formatBusinessInquiry(ticket);
+
+    if (!ticket || !inquiry || inquiry.ownerId !== variables.ownerId) {
+      throw new Error("Inquiry not found or access denied.");
+    }
+
+    const existingThread = parseBusinessInquiryThread(ticket.adminResponse);
+    const nextThread = [
+      ...existingThread,
+      {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        type: 'inbox_deleted',
+        side: 'owner',
+        userId: variables.ownerId,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    const res = await db.update(supportTickets)
+      .set({
+        adminResponse: serializeBusinessInquiryThread(nextThread),
+        updatedAt: new Date(),
+      })
+      .where(eq(supportTickets.id, variables.id))
+      .returning({ id: supportTickets.id });
+
+    return { data: { inquiry_delete: res[0]?.id || variables.id } };
+  },
+
+  async getMySentBusinessInquiries(variables) {
+    let res;
+    try {
+      res = await db.query.supportTickets.findMany({
+        where: and(
+          eq(supportTickets.userId, variables.userId),
+          eq(supportTickets.category, businessInquiryCategory),
+        ),
+        orderBy: [desc(supportTickets.createdAt)],
+      });
+    } catch (error) {
+      if (isMissingSupportTicketsTableError(error)) {
+        return { data: { inquiries: [] } };
+      }
+      throw error;
+    }
+
+    const inquiries = res
+      .map(formatBusinessInquiry)
+      .filter((inquiry) => inquiry && !inquiry.deletedForSender);
+
+    return { data: { inquiries } };
+  },
+
+  async deleteMyBusinessInquiry(variables) {
+    const ticket = await db.query.supportTickets.findFirst({
+      where: and(
+        eq(supportTickets.id, variables.id),
+        eq(supportTickets.userId, variables.userId),
+        eq(supportTickets.category, businessInquiryCategory),
+      ),
+    });
+
+    if (!ticket) {
+      throw new Error("Inquiry not found or access denied.");
+    }
+
+    const existingThread = parseBusinessInquiryThread(ticket.adminResponse);
+    const nextThread = [
+      ...existingThread,
+      {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        type: 'inbox_deleted',
+        side: 'sender',
+        userId: variables.userId,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    const res = await db.update(supportTickets)
+      .set({
+        adminResponse: serializeBusinessInquiryThread(nextThread),
+        updatedAt: new Date(),
+      })
+      .where(eq(supportTickets.id, variables.id))
+      .returning({ id: supportTickets.id });
+
+    return { data: { inquiry_delete: res[0]?.id || variables.id } };
+  },
+
+  async markMyBusinessInquiryRead(variables) {
+    const ticket = await db.query.supportTickets.findFirst({
+      where: and(
+        eq(supportTickets.id, variables.id),
+        eq(supportTickets.userId, variables.userId),
+        eq(supportTickets.category, businessInquiryCategory),
+      ),
+    });
+
+    if (!ticket) {
+      throw new Error("Inquiry not found or access denied.");
+    }
+
+    const existingThread = parseBusinessInquiryThread(ticket.adminResponse);
+    const nextThread = [
+      ...existingThread,
+      {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        type: 'inbox_read',
+        side: 'sender',
+        userId: variables.userId,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    const res = await db.update(supportTickets)
+      .set({
+        adminResponse: serializeBusinessInquiryThread(nextThread),
+        updatedAt: new Date(),
+      })
+      .where(eq(supportTickets.id, variables.id))
+      .returning({ id: supportTickets.id });
+
+    return { data: { inquiry_update: res[0]?.id || variables.id } };
+  },
+
+  async replyMyBusinessInquiry(variables) {
+    const response = variables.response?.trim();
+    if (!response) {
+      throw new Error("Message is required.");
+    }
+
+    const ticket = await db.query.supportTickets.findFirst({
+      where: and(
+        eq(supportTickets.id, variables.id),
+        eq(supportTickets.userId, variables.userId),
+        eq(supportTickets.category, businessInquiryCategory),
+      ),
+    });
+
+    if (!ticket) {
+      throw new Error("Inquiry not found or access denied.");
+    }
+
+    const existingThread = parseBusinessInquiryThread(ticket.adminResponse);
+    const nextThread = [
+      ...existingThread,
+      {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        sender: 'user',
+        body: response,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    const res = await db.update(supportTickets)
+      .set({
+        adminResponse: serializeBusinessInquiryThread(nextThread),
+        updatedAt: new Date(),
+      })
+      .where(eq(supportTickets.id, variables.id))
+      .returning({ id: supportTickets.id });
+
+    return { data: { inquiry_update: res[0]?.id || variables.id } };
   },
 
   async createBackupSnapshot(variables) {

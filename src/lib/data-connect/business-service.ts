@@ -37,3 +37,27 @@ export const resubmitBusiness = async (id: string) => {
   const result = await provider.submitBusiness({ id });
   return result.data.business_update;
 };
+
+export const getMyBusinessInquiries = async (ownerId: string) => {
+  const result = await provider.getMyBusinessInquiries({ ownerId });
+  return result.data.inquiries;
+};
+
+export const respondBusinessInquiry = async (
+  id: string,
+  ownerId: string,
+  response: string,
+) => {
+  const result = await provider.respondBusinessInquiry({ id, ownerId, response });
+  return result.data.inquiry_update;
+};
+
+export const markBusinessInquiryRead = async (id: string, ownerId: string) => {
+  const result = await provider.markBusinessInquiryRead({ id, ownerId });
+  return result.data.inquiry_update;
+};
+
+export const deleteBusinessInquiry = async (id: string, ownerId: string) => {
+  const result = await provider.deleteBusinessInquiry({ id, ownerId });
+  return result.data.inquiry_delete;
+};

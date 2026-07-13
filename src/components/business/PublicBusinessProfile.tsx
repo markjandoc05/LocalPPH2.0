@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { BusinessListing } from '@/types/business';
 import {
   LucideMapPin,
@@ -22,6 +23,8 @@ import { trackEvent } from '@/lib/analytics';
 import { PageType } from '@/lib/analytics/types';
 import { getFullDesc, getShortDesc } from '@/lib/utils';
 import { getGoogleMapsEmbedSrc } from '@/lib/google-maps';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { createSupportTicket } from '@/lib/data-connect';
 
 interface PublicBusinessProfileProps {
   business: BusinessListing;
@@ -56,6 +59,7 @@ const getOrCreateProfileVisitorKey = () => {
 };
 
 export default function PublicBusinessProfile({ business }: PublicBusinessProfileProps) {
+  const { user } = useAuth();
   const galleryImages = parseGallery(business.gallery);
   const googleMapsEmbedSrc = getGoogleMapsEmbedSrc(business.googleMapsUrl);
   const shortDescription = getShortDesc(business.description);
@@ -95,10 +99,12 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
   const [shareCopied, setShareCopied] = useState(false);
   
   // Contact Form state
-  const [contactName, setContactName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
+  const [contactSubject, setContactSubject] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
   const [contactMsg, setContactMsg] = useState('');
   const [contactSent, setContactSent] = useState(false);
+  const [contactSending, setContactSending] = useState(false);
+  const [contactError, setContactError] = useState('');
 
   // Review Form state
   const [reviewRating, setReviewRating] = useState(5);
@@ -257,17 +263,54 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
     trackEvent('share_business', getEventParams({ share_platform: platform }));
   };
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contactName.trim() || !contactEmail.trim() || !contactMsg.trim()) return;
-    setContactSent(true);
-    // Track contact submission (Requirement 4 & 9)
-    trackEvent('contact_business', getEventParams({
-      interaction_type: 'email_form',
-      sender_name: contactName,
-      sender_email: contactEmail,
-    }));
-    setContactMsg('');
+    if (!user || !contactSubject.trim() || !contactNumber.trim() || !contactMsg.trim()) return;
+
+    const senderName = user.displayName || user.email || 'Registered user';
+    const senderEmail = user.email || '';
+    const ownerId = business.ownerId;
+
+    if (!ownerId) {
+      setContactError('This business is not ready to receive inquiries yet.');
+      return;
+    }
+
+    setContactSending(true);
+    setContactError('');
+
+    try {
+      await createSupportTicket({
+        userId: user.uid,
+        category: 'BUSINESS_INQUIRY',
+        subject: contactSubject.trim(),
+        message: `LOCALPAGES_BUSINESS_INQUIRY::${JSON.stringify({
+          businessId: business.id,
+          businessName: business.name,
+          businessSlug: business.slug,
+          ownerId,
+          senderName,
+          senderEmail,
+          subject: contactSubject.trim(),
+          senderContactNumber: contactNumber.trim(),
+          message: contactMsg.trim(),
+        })}`,
+      });
+
+      setContactSent(true);
+      trackEvent('contact_business', getEventParams({
+        interaction_type: 'platform_inquiry',
+        sender_name: senderName,
+        sender_email: senderEmail,
+      }));
+      setContactSubject('');
+      setContactNumber('');
+      setContactMsg('');
+    } catch (error: any) {
+      setContactError(error?.message || 'Failed to send inquiry. Please try again.');
+    } finally {
+      setContactSending(false);
+    }
   };
 
   const handleReviewSubmit = (e: React.FormEvent) => {
@@ -652,31 +695,66 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
           {/* Interactive Inquiry Form */}
           <div className="order-6 bg-[#0C0C1C] rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-white shadow-xl">
             <h3 className="text-xl font-bold mb-2">Send an Inquiry</h3>
-            <p className="text-slate-400 text-sm mb-5 sm:mb-6">Need more info? Send a direct message to the business owner.</p>
+            <p className="text-slate-400 text-sm mb-5 sm:mb-6">
+              Need more info? Registered users can send a direct message to this business owner.
+            </p>
             
-            {contactSent ? (
+            {!user ? (
+              <div className="rounded-xl border border-white/15 bg-white/5 p-4 sm:rounded-2xl sm:p-6">
+                <div className="mb-5 flex items-start gap-3">
+                  <div className="shrink-0 rounded-xl bg-blue-500/15 p-2 text-blue-200">
+                    <LucideMessageSquare className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-base font-bold leading-6 text-white">Create an account to inquire</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-300">
+                      Sign in or register to message {business.name} directly through LocalPages.ph.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Link
+                    href="/auth/register"
+                    className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-center text-sm font-bold leading-5 text-white shadow-lg transition hover:bg-blue-500"
+                  >
+                    Register to Message
+                  </Link>
+                  <Link
+                    href="/auth/login"
+                    className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-white/10"
+                  >
+                    Log In
+                  </Link>
+                </div>
+              </div>
+            ) : contactSent ? (
               <div className="bg-white/10 border border-white/20 p-5 sm:p-6 rounded-xl sm:rounded-2xl">
                 <div className="flex items-center gap-3 mb-2">
                   <LucideCheck className="w-5 h-5 text-emerald-400" />
                   <span className="font-bold text-emerald-400">Message Sent!</span>
                 </div>
-                <p className="text-slate-300 text-xs">The owner has been notified and will get back to you via email soon.</p>
+                <p className="text-slate-300 text-xs">The owner has received your inquiry in their LocalPages.ph business inbox.</p>
               </div>
             ) : (
               <form onSubmit={handleContactSubmit} className="space-y-3.5 sm:space-y-4">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sending as</p>
+                  <p className="mt-1 font-semibold text-white">{user.displayName || user.email || 'Registered user'}</p>
+                  {user.email && <p className="text-xs text-slate-400">{user.email}</p>}
+                </div>
                 <input
                   type="text"
-                  placeholder="Full Name"
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
+                  placeholder="Subject"
+                  value={contactSubject}
+                  onChange={(e) => setContactSubject(e.target.value)}
                   required
                   className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-500"
                 />
                 <input
-                  type="email"
-                  placeholder="Email Address"
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
+                  type="tel"
+                  placeholder="Contact number"
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
                   required
                   className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-500"
                 />
@@ -688,11 +766,17 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
                   required
                   className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-500"
                 />
+                {contactError && (
+                  <p className="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-xs font-semibold text-red-100">
+                    {contactError}
+                  </p>
+                )}
                 <button
                   type="submit"
-                  className="w-full py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg active:scale-95"
+                  disabled={contactSending}
+                  className="w-full py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  Send Message
+                  {contactSending ? 'Sending...' : 'Send Message'}
                 </button>
               </form>
             )}

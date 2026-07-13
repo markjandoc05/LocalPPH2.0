@@ -16,6 +16,7 @@ export default function Header() {
   const pathname = usePathname();
   const isBusinessPortalRoute =
     pathname === '/business' ||
+    pathname.startsWith('/business/inquiries') ||
     pathname.startsWith('/business/listings') ||
     pathname.startsWith('/business/settings');
 

@@ -6,6 +6,10 @@ import {
   sendEmailVerification,
   GoogleAuthProvider,
   signInWithPopup,
+  fetchSignInMethodsForEmail,
+  linkWithPopup,
+  unlink,
+  updatePassword,
   updateProfile,
   type User
 } from 'firebase/auth';
@@ -15,6 +19,12 @@ import { ROLES } from './roles';
 
 export const BANNED_ACCOUNT_MESSAGE = 'Your account is banned. Please contact support for assistance.';
 export const BLOCKED_ACCOUNT_MESSAGE = 'Your account is not allowed to use the platform. Please contact support for assistance.';
+export const GOOGLE_LOGIN_PASSWORD_ACCOUNT_MESSAGE =
+  'This email already has an account. Please log in with your password first, then connect Google in Account Security.';
+export const EMAIL_LOGIN_GOOGLE_ACCOUNT_MESSAGE =
+  'This email is registered with Google. Please log in using Google instead of a password.';
+export const GOOGLE_LINK_EMAIL_MISMATCH_MESSAGE =
+  'Please choose the same Google email address as your current LocalPages account.';
 
 const getEmailActionSettings = () => {
   if (typeof window === 'undefined') return undefined;
@@ -89,6 +99,19 @@ export const registerUser = async (email: string, password: string, displayName:
 
 export const loginUser = async (email: string, password: string) => {
   try {
+    const normalizedEmail = email.trim();
+    if (normalizedEmail) {
+      const signInMethods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
+      if (
+        signInMethods.includes(GoogleAuthProvider.PROVIDER_ID) &&
+        !signInMethods.includes('password')
+      ) {
+        const error = new Error(EMAIL_LOGIN_GOOGLE_ACCOUNT_MESSAGE) as Error & { code?: string };
+        error.code = 'auth/email-login-google-account';
+        throw error;
+      }
+    }
+
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
@@ -105,8 +128,19 @@ export const loginUser = async (email: string, password: string) => {
     const role = userData?.data?.user?.role || ROLES.SUBSCRIBER;
     
     return { user, role };
-  } catch (error) {
-    console.error("Error logging in:", error);
+  } catch (error: any) {
+    const expectedAuthErrors = new Set([
+      'auth/invalid-credential',
+      'auth/user-not-found',
+      'auth/wrong-password',
+      'auth/invalid-email',
+      'auth/too-many-requests',
+      'auth/email-login-google-account',
+    ]);
+
+    if (!expectedAuthErrors.has(error?.code)) {
+      console.warn("Unexpected login error:", error);
+    }
     throw error;
   }
 };
@@ -158,10 +192,121 @@ export const loginWithGoogle = async (role: string = ROLES.SUBSCRIBER) => {
     }
     
     return { user, role: userRole };
-  } catch (error) {
-    console.error("Error with Google Sign-In:", error);
+  } catch (error: any) {
+    const expectedAuthErrors = new Set([
+      'auth/account-exists-with-different-credential',
+      'auth/popup-closed-by-user',
+      'auth/popup-blocked',
+      'auth/cancelled-popup-request',
+      'auth/operation-not-allowed',
+      'auth/unauthorized-domain',
+      'auth/web-storage-unsupported',
+    ]);
+
+    if (error?.code === 'auth/account-exists-with-different-credential') {
+      error.message = GOOGLE_LOGIN_PASSWORD_ACCOUNT_MESSAGE;
+    } else if (!expectedAuthErrors.has(error?.code)) {
+      console.warn("Unexpected Google Sign-In error:", error);
+    }
     throw error;
   }
+};
+
+export const connectGoogleLogin = async () => {
+  const currentUser = auth.currentUser;
+
+  if (!currentUser) {
+    throw new Error('You must be signed in before connecting Google login.');
+  }
+
+  const providerIds = new Set(currentUser.providerData.map((providerInfo) => providerInfo.providerId));
+  if (providerIds.has(GoogleAuthProvider.PROVIDER_ID)) return { alreadyGoogle: true };
+
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const credential = await linkWithPopup(currentUser, provider);
+    const linkedUser = credential.user;
+    const googleProfile = linkedUser.providerData.find(
+      (providerInfo) => providerInfo.providerId === GoogleAuthProvider.PROVIDER_ID
+    );
+    const googleEmail = googleProfile?.email?.toLowerCase();
+    const accountEmail = linkedUser.email?.toLowerCase();
+
+    if (googleEmail && accountEmail && googleEmail !== accountEmail) {
+      await unlink(linkedUser, GoogleAuthProvider.PROVIDER_ID);
+      const error = new Error(GOOGLE_LINK_EMAIL_MISMATCH_MESSAGE) as Error & { code?: string };
+      error.code = 'auth/google-link-email-mismatch';
+      throw error;
+    }
+
+    await linkedUser.reload();
+
+    await updateUser({
+      id: linkedUser.uid,
+      data: {
+        emailVerified: true,
+        photoUrl: linkedUser.photoURL || undefined,
+      },
+    });
+
+    return { alreadyGoogle: false };
+  } catch (error: any) {
+    const expectedAuthErrors = new Set([
+      'auth/google-link-email-mismatch',
+      'auth/popup-closed-by-user',
+      'auth/popup-blocked',
+      'auth/cancelled-popup-request',
+      'auth/credential-already-in-use',
+      'auth/provider-already-linked',
+      'auth/requires-recent-login',
+      'auth/unauthorized-domain',
+      'auth/web-storage-unsupported',
+    ]);
+
+    if (!expectedAuthErrors.has(error?.code)) {
+      console.warn("Unexpected Google link error:", error);
+    }
+    throw error;
+  }
+};
+
+export const disconnectGoogleLogin = async () => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('You must be signed in before disconnecting Google login.');
+  }
+
+  const providerIds = new Set(currentUser.providerData.map((providerInfo) => providerInfo.providerId));
+  if (!providerIds.has(GoogleAuthProvider.PROVIDER_ID)) {
+    return { alreadyDisconnected: true };
+  }
+
+  if (!providerIds.has('password')) {
+    throw new Error('Set a password before disconnecting Google login.');
+  }
+
+  await unlink(currentUser, GoogleAuthProvider.PROVIDER_ID);
+  await currentUser.reload();
+  return { alreadyDisconnected: false };
+};
+
+export const setPasswordLogin = async (password: string) => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('You must be signed in before setting a password.');
+  }
+
+  if (password.length < 6) {
+    throw new Error('Password must be at least 6 characters.');
+  }
+
+  const providerIds = new Set(currentUser.providerData.map((providerInfo) => providerInfo.providerId));
+  if (providerIds.has('password')) return { alreadyPassword: true };
+
+  await updatePassword(currentUser, password);
+  await currentUser.reload();
+  return { alreadyPassword: false };
 };
 
 export const logoutUser = async () => {

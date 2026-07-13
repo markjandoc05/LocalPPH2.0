@@ -18,7 +18,8 @@ import {
   LucideSettings,
   LucideUpload,
   LucideMessageSquare,
-  LucideArchiveRestore
+  LucideArchiveRestore,
+  LucideInbox
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { canAccessAdmin } from "@/lib/auth/roles";
@@ -82,6 +83,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       href: "/admin/support",
       icon: LucideMessageSquare,
       exact: false,
+    },
+    {
+      name: "My Inquiries",
+      href: "/inquiries",
+      icon: LucideInbox,
+      exact: true,
     },
     {
       name: "Integrations",

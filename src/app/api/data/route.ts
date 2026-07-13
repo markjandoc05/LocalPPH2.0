@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Define method permissions
-    const isBusinessMethod = ['createBusinessDraft', 'updateBusiness', 'submitBusiness'].includes(method);
+    const isBusinessMethod = ['createBusinessDraft', 'updateBusiness', 'submitBusiness', 'getMyBusinessInquiries', 'respondBusinessInquiry', 'markBusinessInquiryRead', 'deleteBusinessInquiry'].includes(method);
     const backupMethods = [
       'createBackupSnapshot',
       'getBackupSnapshots',
@@ -53,6 +53,12 @@ export async function POST(req: NextRequest) {
       if (!canManageBusiness(role)) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
+      if (method === 'getMyBusinessInquiries' || method === 'respondBusinessInquiry' || method === 'markBusinessInquiryRead' || method === 'deleteBusinessInquiry') {
+        operationVariables = {
+          ...(variables || {}),
+          ownerId: userId,
+        };
+      }
       // If updating, check ownership
       if (method === 'updateBusiness' || method === 'submitBusiness') {
         const business = await databaseProvider.getBusinessById({ id: variables.id });
@@ -74,6 +80,13 @@ export async function POST(req: NextRequest) {
       operationVariables = {
         ...(variables || {}),
         respondedById: userId,
+      };
+    }
+
+    if (method === 'getMySentBusinessInquiries' || method === 'deleteMyBusinessInquiry' || method === 'markMyBusinessInquiryRead' || method === 'replyMyBusinessInquiry') {
+      operationVariables = {
+        ...(variables || {}),
+        userId,
       };
     }
 

@@ -3,7 +3,15 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { createSupportTicket, createUser, getMySupportTickets, getUserById, updateUser } from '@/lib/data-connect';
-import { getAuthEmailErrorMessage, sendVerificationEmail, resetPassword } from '@/lib/auth/auth-utils';
+import {
+  connectGoogleLogin,
+  disconnectGoogleLogin,
+  getAuthEmailErrorMessage,
+  GOOGLE_LINK_EMAIL_MISMATCH_MESSAGE,
+  resetPassword,
+  sendVerificationEmail,
+  setPasswordLogin,
+} from '@/lib/auth/auth-utils';
 import { getMissingProfileFields, isProfileComplete } from '@/lib/auth/profile-completion';
 import { normalizeRole, ROLES } from '@/lib/auth/roles';
 import {
@@ -63,6 +71,11 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [connectingGoogle, setConnectingGoogle] = useState(false);
+  const [disconnectingGoogle, setDisconnectingGoogle] = useState(false);
+  const [settingPassword, setSettingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -326,6 +339,9 @@ export default function ProfilePage() {
     accountStatus: 'ACTIVE',
   } as UserData;
   const userDataToUse = displayUserData;
+  const providerIds = new Set(user.providerData.map((providerInfo) => providerInfo.providerId));
+  const usesPasswordLogin = providerIds.has('password');
+  const usesGoogleLogin = providerIds.has('google.com');
 
 
   // Helper to get initials
@@ -546,6 +562,109 @@ export default function ProfilePage() {
       });
     } finally {
       setResettingPassword(false);
+    }
+  };
+
+  const handleConnectGoogleLogin = async () => {
+    setConnectingGoogle(true);
+    setMessage(null);
+    try {
+      const result = await connectGoogleLogin();
+      await user.reload();
+      await refreshUserProfile();
+      setMessage({
+        type: 'success',
+        text: result.alreadyGoogle
+          ? 'Google login is already connected.'
+          : 'Google login is now connected. You can sign in with either your password or Google.',
+      });
+    } catch (error: any) {
+      let errorMessage = error?.message || 'Failed to connect Google login.';
+      const expectedGoogleLinkErrors = new Set([
+        'auth/popup-closed-by-user',
+        'auth/popup-blocked',
+        'auth/requires-recent-login',
+        'auth/credential-already-in-use',
+        'auth/provider-already-linked',
+        'auth/google-link-email-mismatch',
+        'auth/cancelled-popup-request',
+        'auth/unauthorized-domain',
+        'auth/web-storage-unsupported',
+      ]);
+
+      if (!expectedGoogleLinkErrors.has(error?.code)) {
+        console.warn('Unexpected Google link profile error:', error);
+      }
+
+      if (error?.code === 'auth/popup-closed-by-user') {
+        errorMessage = 'The Google sign-in window was closed before Google login was connected.';
+      } else if (error?.code === 'auth/popup-blocked') {
+        errorMessage = 'The Google sign-in popup was blocked by your browser. Please allow popups and try again.';
+      } else if (error?.code === 'auth/requires-recent-login') {
+        errorMessage = 'For security, please log out, log back in, then try connecting Google again.';
+      } else if (error?.code === 'auth/credential-already-in-use') {
+        errorMessage = 'That Google account is already connected to another LocalPages account.';
+      } else if (error?.code === 'auth/google-link-email-mismatch') {
+        errorMessage = GOOGLE_LINK_EMAIL_MISMATCH_MESSAGE;
+      }
+
+      setMessage({ type: 'error', text: errorMessage });
+    } finally {
+      setConnectingGoogle(false);
+    }
+  };
+
+  const handleDisconnectGoogleLogin = async () => {
+    setDisconnectingGoogle(true);
+    setMessage(null);
+    try {
+      const result = await disconnectGoogleLogin();
+      await user.reload();
+      await refreshUserProfile();
+      setMessage({
+        type: 'success',
+        text: result.alreadyDisconnected
+          ? 'Google login is already disconnected.'
+          : 'Google login was disconnected. You can continue using your email and password.',
+      });
+    } catch (error: any) {
+      const messageText = error?.code === 'auth/requires-recent-login'
+        ? 'For security, please log out, log back in, then try disconnecting Google again.'
+        : error?.message || 'Failed to disconnect Google login.';
+      setMessage({ type: 'error', text: messageText });
+    } finally {
+      setDisconnectingGoogle(false);
+    }
+  };
+
+  const handleSetPasswordLogin = async () => {
+    if (newPassword !== confirmNewPassword) {
+      setMessage({ type: 'error', text: 'Passwords do not match.' });
+      return;
+    }
+
+    setSettingPassword(true);
+    setMessage(null);
+    try {
+      const result = await setPasswordLogin(newPassword);
+      await user.reload();
+      await refreshUserProfile();
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setMessage({
+        type: 'success',
+        text: result.alreadyPassword
+          ? 'Password login is already enabled.'
+          : 'Password login is now enabled. You can sign in with either Google or your password.',
+      });
+    } catch (error: any) {
+      let messageText = error?.message || 'Failed to set password login.';
+      if (error?.code === 'auth/requires-recent-login') {
+        messageText = 'For security, please log out, log back in with Google, then try setting a password again.';
+      }
+      setMessage({ type: 'error', text: messageText });
+    } finally {
+      setSettingPassword(false);
     }
   };
 
@@ -1003,17 +1122,109 @@ export default function ProfilePage() {
                         <LucideShield className="w-4 h-4 text-slate-700" />
                         Account Security & Password
                       </h3>
-                      <p className="text-xs text-slate-500 mb-4">You can request a password reset email to safely secure or update your current login credentials.</p>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={handlePasswordReset}
-                        isLoading={resettingPassword}
-                        disabled={resettingPassword || !(user.email || userDataToUse.email)}
-                        className="bg-white border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-semibold px-4 h-9"
-                      >
-                        Send Password Reset Email
-                      </Button>
+                      <p className="text-xs text-slate-500 mb-4">
+                        Current login methods:{' '}
+                        <span className="font-bold text-slate-800">
+                          {usesPasswordLogin && usesGoogleLogin
+                            ? 'Email/password and Google'
+                            : usesGoogleLogin
+                              ? 'Google only'
+                              : 'Email and password only'}
+                        </span>
+                      </p>
+
+                      <div className="space-y-4">
+                        {usesPasswordLogin && (
+                          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={handlePasswordReset}
+                              isLoading={resettingPassword}
+                              disabled={resettingPassword || !(user.email || userDataToUse.email)}
+                              className="bg-white border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-semibold px-4 h-9"
+                            >
+                              Send Password Reset Email
+                            </Button>
+                            {!usesGoogleLogin && (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={handleConnectGoogleLogin}
+                                isLoading={connectingGoogle}
+                                disabled={connectingGoogle}
+                                className="text-xs font-semibold px-4 h-9"
+                              >
+                                Connect Google Login
+                              </Button>
+                            )}
+                            {usesGoogleLogin && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleDisconnectGoogleLogin}
+                                isLoading={disconnectingGoogle}
+                                disabled={disconnectingGoogle}
+                                className="bg-white border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-semibold px-4 h-9"
+                              >
+                                Disconnect Google Login
+                              </Button>
+                            )}
+                          </div>
+                        )}
+
+                        {usesGoogleLogin && !usesPasswordLogin && (
+                          <div className="space-y-3 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                            <p className="text-xs font-semibold text-blue-800">
+                              This account currently signs in with Google only. Set a password if you want email/password login as a backup.
+                            </p>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <Input
+                                type="password"
+                                value={newPassword}
+                                onChange={(event) => setNewPassword(event.target.value)}
+                                placeholder="New password"
+                                className="bg-white"
+                              />
+                              <Input
+                                type="password"
+                                value={confirmNewPassword}
+                                onChange={(event) => setConfirmNewPassword(event.target.value)}
+                                placeholder="Confirm password"
+                                className="bg-white"
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={handleSetPasswordLogin}
+                              isLoading={settingPassword}
+                              disabled={settingPassword || !newPassword || !confirmNewPassword}
+                              className="text-xs font-semibold px-4 h-9"
+                            >
+                              Set Password Login
+                            </Button>
+                          </div>
+                        )}
+
+                        {!usesGoogleLogin && !usesPasswordLogin && (
+                          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                            <p className="text-xs font-semibold text-rose-700">
+                              No login provider was detected. Please connect a login method.
+                            </p>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={handleConnectGoogleLogin}
+                              isLoading={connectingGoogle}
+                              disabled={connectingGoogle}
+                              className="text-xs font-semibold px-4 h-9"
+                            >
+                              Connect Google Login
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {!user.emailVerified && (

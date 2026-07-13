@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { registerUser, loginWithGoogle } from '@/lib/auth/auth-utils';
+import { GOOGLE_LOGIN_PASSWORD_ACCOUNT_MESSAGE, registerUser, loginWithGoogle } from '@/lib/auth/auth-utils';
 import { ROLES } from '@/lib/auth/roles';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -45,7 +45,19 @@ export default function RegisterPage() {
       trackEvent('signup', { method: 'google', role: accountType, page_type: 'Register' });
       router.push('/profile?complete=1');
     } catch (err: any) {
-      console.error("Google register error:", err);
+      const expectedGoogleErrors = new Set([
+        'auth/google-login-password-account',
+        'auth/account-exists-with-different-credential',
+        'auth/popup-closed-by-user',
+        'auth/popup-blocked',
+        'auth/cancelled-popup-request',
+        'auth/operation-not-allowed',
+        'auth/unauthorized-domain',
+        'auth/web-storage-unsupported',
+      ]);
+      if (!expectedGoogleErrors.has(err?.code)) {
+        console.warn("Unexpected Google register error:", err);
+      }
       let userFriendlyMessage = err.message || 'Failed to register with Google';
       
       if (err.code === 'auth/popup-blocked') {
@@ -59,6 +71,8 @@ export default function RegisterPage() {
         userFriendlyMessage = `This domain (${currentDomain}) is not authorized for Google Sign-In in your Firebase project. Please add it to the authorized domains list in the Firebase Console (Authentication > Settings > Authorized domains).`;
       } else if (err.code === 'auth/web-storage-unsupported' || err.message?.includes('storage-unsupported') || err.message?.includes('third-party')) {
         userFriendlyMessage = 'Third-party storage/cookies are restricted in this preview frame, which blocks Google Login. Please open this app in a new tab using the button at the top-right of the screen and register there.';
+      } else if (err.code === 'auth/google-login-password-account' || err.code === 'auth/account-exists-with-different-credential') {
+        userFriendlyMessage = GOOGLE_LOGIN_PASSWORD_ACCOUNT_MESSAGE;
       } else if (typeof window !== 'undefined' && window.self !== window.top) {
         userFriendlyMessage = `${userFriendlyMessage} (Tip: Since this app is running in a preview frame, browsers often block Google authentication popups. Try opening the app in a new tab using the top-right button to register successfully.)`;
       }

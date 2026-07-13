@@ -160,11 +160,11 @@ export default function SupportPage() {
         <Card className="p-5 sm:p-6 lg:col-span-2">
           <div className="mb-5 flex items-center gap-3">
             <LucideMessageSquare className="h-5 w-5 text-blue-600" />
-            <h2 className="font-bold text-slate-900">My Messages</h2>
+            <h2 className="font-bold text-slate-900">My Support Tickets</h2>
           </div>
 
           {loading ? (
-            <p className="text-sm text-slate-500">Loading messages...</p>
+            <p className="text-sm text-slate-500">Loading support tickets...</p>
           ) : tickets.length === 0 ? (
             <p className="text-sm text-slate-500">No support messages yet.</p>
           ) : (

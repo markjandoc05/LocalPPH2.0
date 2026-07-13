@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { loginUser, loginWithGoogle } from '@/lib/auth/auth-utils';
+import { EMAIL_LOGIN_GOOGLE_ACCOUNT_MESSAGE, GOOGLE_LOGIN_PASSWORD_ACCOUNT_MESSAGE, loginUser, loginWithGoogle } from '@/lib/auth/auth-utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -38,7 +38,12 @@ export default function LoginPage() {
       trackEvent('login', { method: 'email', page_type: 'Login' });
       router.push(getRedirectPath(role));
     } catch (err: any) {
-      setError(err?.message?.includes('contact support') ? err.message : 'Incorrect email or password. Please try again.');
+      const isAccountBlockedMessage = err?.message?.includes('contact support') || err?.message?.includes('not allowed');
+      if (err?.code === 'auth/email-login-google-account') {
+        setError(EMAIL_LOGIN_GOOGLE_ACCOUNT_MESSAGE);
+      } else {
+        setError(isAccountBlockedMessage ? err.message : 'Incorrect email or password. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -52,7 +57,19 @@ export default function LoginPage() {
       trackEvent('login', { method: 'google', page_type: 'Login' });
       router.push(getRedirectPath(role));
     } catch (err: any) {
-      console.error("Google login error:", err);
+      const expectedGoogleErrors = new Set([
+        'auth/google-login-password-account',
+        'auth/account-exists-with-different-credential',
+        'auth/popup-closed-by-user',
+        'auth/popup-blocked',
+        'auth/cancelled-popup-request',
+        'auth/operation-not-allowed',
+        'auth/unauthorized-domain',
+        'auth/web-storage-unsupported',
+      ]);
+      if (!expectedGoogleErrors.has(err?.code)) {
+        console.warn("Unexpected Google login error:", err);
+      }
       let userFriendlyMessage = err.message || 'Failed to log in with Google';
       
       if (err.code === 'auth/popup-blocked') {
@@ -66,6 +83,8 @@ export default function LoginPage() {
         userFriendlyMessage = `This domain (${currentDomain}) is not authorized for Google Sign-In in your Firebase project. Please add it to the authorized domains list in the Firebase Console (Authentication > Settings > Authorized domains).`;
       } else if (err.code === 'auth/web-storage-unsupported' || err.message?.includes('storage-unsupported') || err.message?.includes('third-party')) {
         userFriendlyMessage = 'Third-party storage/cookies are restricted in this preview frame, which blocks Google Login. Please open this app in a new tab using the button at the top-right of the screen and log in there.';
+      } else if (err.code === 'auth/google-login-password-account' || err.code === 'auth/account-exists-with-different-credential') {
+        userFriendlyMessage = GOOGLE_LOGIN_PASSWORD_ACCOUNT_MESSAGE;
       } else if (typeof window !== 'undefined' && window.self !== window.top) {
         userFriendlyMessage = `${userFriendlyMessage} (Tip: Since this app is running in a preview frame, browsers often block Google authentication popups. Try opening the app in a new tab using the top-right button to log in successfully.)`;
       }

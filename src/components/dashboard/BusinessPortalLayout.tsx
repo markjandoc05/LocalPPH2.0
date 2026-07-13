@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LucideLayoutDashboard, LucideStore, LucideSettings, LucideMenu, LucideX } from 'lucide-react';
+import { LucideInbox, LucideLayoutDashboard, LucideStore, LucideSettings, LucideMenu, LucideX } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { cn } from '@/lib/utils';
 
@@ -18,6 +18,8 @@ export default function BusinessPortalLayout({ children }: BusinessPortalLayoutP
   const navigation = [
     { name: 'Dashboard', href: '/business', icon: LucideLayoutDashboard },
     { name: 'My Listings', href: '/business/listings', icon: LucideStore },
+    { name: 'Inquiries', href: '/business/inquiries', icon: LucideInbox },
+    { name: 'My Inquiries', href: '/inquiries', icon: LucideInbox },
     { name: 'Settings', href: '/business/settings', icon: LucideSettings },
   ];
 

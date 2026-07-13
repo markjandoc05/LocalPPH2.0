@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { canAccessAdmin, isBusiness } from '@/lib/auth/roles';
 import { 
   LucideSearch, 
   LucideGrid, 
@@ -13,7 +11,8 @@ import {
   LucideHeart, 
   LucideCompass,
   LucideArrowRight,
-  LucideSparkles
+  LucideSparkles,
+  LucideInbox
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -113,6 +112,13 @@ export default function DashboardPage() {
       icon: LucideUser,
       buttonText: 'Manage Profile',
     },
+    {
+      title: 'My Inquiries',
+      description: 'Read business replies and manage your sent inquiries.',
+      href: '/inquiries',
+      icon: LucideInbox,
+      buttonText: 'View Messages',
+    },
   ];
 
   return (
@@ -136,28 +142,34 @@ export default function DashboardPage() {
                 <LucideCompass className="w-5 h-5 text-blue-600" />
                 Quick Actions
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:border-0 sm:bg-transparent sm:shadow-none">
                 {quickActions.map((action, i) => {
                   const Icon = action.icon;
                   return (
-                    <div 
+                    <Link
                       key={i} 
-                      className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 hover:shadow-md transition-all"
+                      href={action.href}
+                      className="group flex items-center gap-3 border-b border-slate-100 bg-white p-4 transition-colors last:border-b-0 hover:bg-slate-50 sm:min-h-[220px] sm:flex-col sm:items-start sm:justify-between sm:rounded-xl sm:border sm:border-slate-200 sm:p-6 sm:shadow-sm sm:hover:border-slate-300 sm:hover:bg-white sm:hover:shadow-md"
                     >
-                      <div>
-                        <div className="p-3 rounded-lg bg-blue-50 text-blue-600 w-fit mb-4">
+                      <div className="flex min-w-0 flex-1 items-center gap-3 sm:block">
+                        <div className="shrink-0 rounded-xl bg-blue-50 p-3 text-blue-600 sm:mb-4 sm:w-fit">
                           <Icon className="w-5 h-5" />
                         </div>
-                        <h3 className="font-bold text-slate-900 text-base mb-1">{action.title}</h3>
-                        <p className="text-sm text-slate-500 mb-6">{action.description}</p>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-bold text-slate-900 sm:text-base">{action.title}</h3>
+                          <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-slate-500 sm:mt-1 sm:text-sm">
+                            {action.description}
+                          </p>
+                        </div>
                       </div>
-                      <Link href={action.href} className="w-full">
+                      <div className="hidden w-full sm:block">
                         <Button variant="secondary" className="w-full font-medium">
                           {action.buttonText}
                           <LucideArrowRight className="w-4 h-4 ml-2" />
                         </Button>
-                      </Link>
-                    </div>
+                      </div>
+                      <LucideArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-600 sm:hidden" />
+                    </Link>
                   );
                 })}
               </div>

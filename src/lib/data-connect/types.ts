@@ -47,6 +47,38 @@ export interface DataProvider {
     adminResponse?: string;
     respondedById?: string;
   }): Promise<{ data: { support_ticket_update: string } }>;
+  getMyBusinessInquiries(variables: {
+    ownerId: string;
+  }): Promise<{ data: { inquiries: any[] } }>;
+  respondBusinessInquiry(variables: {
+    id: string;
+    ownerId: string;
+    response: string;
+  }): Promise<{ data: { inquiry_update: string } }>;
+  markBusinessInquiryRead(variables: {
+    id: string;
+    ownerId: string;
+  }): Promise<{ data: { inquiry_update: string } }>;
+  deleteBusinessInquiry(variables: {
+    id: string;
+    ownerId: string;
+  }): Promise<{ data: { inquiry_delete: string } }>;
+  getMySentBusinessInquiries(variables: {
+    userId: string;
+  }): Promise<{ data: { inquiries: any[] } }>;
+  deleteMyBusinessInquiry(variables: {
+    id: string;
+    userId: string;
+  }): Promise<{ data: { inquiry_delete: string } }>;
+  markMyBusinessInquiryRead(variables: {
+    id: string;
+    userId: string;
+  }): Promise<{ data: { inquiry_update: string } }>;
+  replyMyBusinessInquiry(variables: {
+    id: string;
+    userId: string;
+    response: string;
+  }): Promise<{ data: { inquiry_update: string } }>;
 
   // Backup and recovery operations
   createBackupSnapshot(variables: {
