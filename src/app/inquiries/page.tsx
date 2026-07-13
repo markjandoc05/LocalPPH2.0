@@ -287,10 +287,12 @@ export default function MyInquiriesPage() {
                         variant="outline"
                         onClick={() => handleDelete(selectedInquiry.id)}
                         disabled={deletingId === selectedInquiry.id}
-                        className="text-red-700 hover:text-red-800"
+                        aria-label="Delete inquiry"
+                        title="Delete inquiry"
+                        className="h-9 w-9 p-0 text-red-700 hover:text-red-800 sm:w-auto sm:px-3"
                       >
-                        <LucideTrash2 className="mr-1.5 h-3.5 w-3.5" />
-                        Delete
+                        <LucideTrash2 className="h-3.5 w-3.5 sm:mr-1.5" />
+                        <span className="hidden sm:inline">Delete</span>
                       </Button>
                     </div>
                   </div>
