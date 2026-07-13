@@ -9,6 +9,11 @@ export const metadata: Metadata = generatePageMetadata(
   '/search'
 );
 
+metadata.robots = {
+  index: false,
+  follow: true,
+};
+
 export default function SearchPage() {
   return (
     <div className="flex-1 bg-gray-50 flex flex-col min-h-screen">

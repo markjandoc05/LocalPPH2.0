@@ -23,12 +23,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1.0,
     },
     {
-      url: toUrl('/search'),
-      lastModified: STATIC_LAST_MODIFIED,
-      changeFrequency: 'daily' as const,
-      priority: 0.8,
-    },
-    {
       url: toUrl('/categories'),
       lastModified: STATIC_LAST_MODIFIED,
       changeFrequency: 'weekly' as const,

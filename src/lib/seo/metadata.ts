@@ -4,6 +4,17 @@ export const SITE_NAME = 'LocalPages.ph';
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://localpages.ph';
 export const SITE_SOCIAL_IMAGE = '/images/localpages-ph-cover.png';
 
+const cleanText = (value?: string | null) => {
+  if (!value) return '';
+  return value.replace(/\s+/g, ' ').trim();
+};
+
+export const toAbsoluteUrl = (url?: string | null) => {
+  if (!url) return undefined;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${SITE_URL}${url.startsWith('/') ? url : `/${url}`}`;
+};
+
 export const generatePageMetadata = (
   title: string,
   description: string,
@@ -52,10 +63,16 @@ export const generateBusinessMetadata = (business: any) => {
     };
   }
 
-  const title = `${business.name} - ${business.categoryName || business.categoryId} in ${business.cityName || business.cityId}`;
-  const shortDesc = getShortDesc(business.description);
-  const description = shortDesc.slice(0, 150) + (shortDesc.length > 150 ? '...' : '');
+  const category = cleanText(business.categoryName) || 'Local Business';
+  const city = cleanText(business.cityName);
+  const province = cleanText(business.provinceName);
+  const location = [city, province].filter(Boolean).join(', ') || 'Philippines';
+  const title = `${business.name} – ${category} in ${location} | ${SITE_NAME}`;
+  const shortDesc = cleanText(getShortDesc(business.description));
+  const descriptionSource = shortDesc || `Find contact information, location, services, and business details for ${business.name} on ${SITE_NAME}.`;
+  const description = descriptionSource.slice(0, 155) + (descriptionSource.length > 155 ? '...' : '');
   const url = `${SITE_URL}/business/${business.slug}`;
+  const imageUrl = toAbsoluteUrl(business.coverUrl || business.logoUrl) || toAbsoluteUrl(SITE_SOCIAL_IMAGE);
 
   return {
     title,
@@ -72,7 +89,7 @@ export const generateBusinessMetadata = (business: any) => {
       type: 'article',
       images: [
         {
-          url: business.coverUrl || SITE_SOCIAL_IMAGE,
+          url: imageUrl,
           width: 1161,
           height: 630,
           alt: `${business.name} on ${SITE_NAME}`,
@@ -83,7 +100,7 @@ export const generateBusinessMetadata = (business: any) => {
       card: 'summary_large_image',
       title,
       description,
-      images: [business.coverUrl || SITE_SOCIAL_IMAGE],
+      images: [imageUrl],
     },
   };
 };

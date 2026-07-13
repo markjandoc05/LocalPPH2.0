@@ -8,6 +8,7 @@ import SiteIntegrations from "@/components/integrations/SiteIntegrations";
 import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
 import ProfileCompletionGuard from "@/components/auth/ProfileCompletionGuard";
 import { SITE_SOCIAL_IMAGE, SITE_URL } from "@/lib/seo/metadata";
+import { generateSiteJsonLd } from "@/lib/seo/jsonld";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -47,8 +48,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const siteJsonLd = generateSiteJsonLd();
+
   return (
     <html lang="en" className={`${inter.variable} antialiased text-slate-900 bg-[#F8FAFC]`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
+        />
+      </head>
       <body className="min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white bg-[#F8FAFC]">
         <AuthProvider>
           <Header />

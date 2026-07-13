@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { LucideArrowLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { generateBusinessMetadata } from '@/lib/seo/metadata';
-import { generateLocalBusinessJsonLd } from '@/lib/seo/jsonld';
+import { generateBreadcrumbJsonLd, generateLocalBusinessJsonLd } from '@/lib/seo/jsonld';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import PageTracker from '@/components/analytics/PageTracker';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -50,12 +50,22 @@ export default async function BusinessProfilePage({ params }: { params: Promise<
     notFound();
   }
 
-  const jsonLd = generateLocalBusinessJsonLd(business);
+  const categoryHref = business.categorySlug ? `/categories/${business.categorySlug}` : '/categories';
+  const cityHref = business.regionSlug && business.provinceSlug && business.citySlug
+    ? `/locations/${business.regionSlug}/${business.provinceSlug}/${business.citySlug}`
+    : '/locations';
 
   const breadcrumbs = [
-    { label: business.categoryName || business.categoryId || 'Category', href: `/search?category=${business.categorySlug || business.categoryId}` },
-    { label: business.cityName || business.cityId || 'City', href: `/search?city=${business.citySlug || business.cityId}` },
+    { label: business.categoryName || 'Categories', href: categoryHref },
+    { label: business.cityName || business.provinceName || 'Locations', href: cityHref },
     { label: business.name },
+  ];
+  const jsonLd = [
+    generateLocalBusinessJsonLd(business),
+    generateBreadcrumbJsonLd([
+      { label: 'Home', href: '/' },
+      ...breadcrumbs,
+    ]),
   ];
 
   return (

@@ -64,6 +64,10 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
   const googleMapsEmbedSrc = getGoogleMapsEmbedSrc(business.googleMapsUrl);
   const shortDescription = getShortDesc(business.description);
   const fullDescription = getFullDesc(business.description);
+  const categoryHref = business.categorySlug ? `/categories/${business.categorySlug}` : '/categories';
+  const locationHref = business.regionSlug && business.provinceSlug && business.citySlug
+    ? `/locations/${business.regionSlug}/${business.provinceSlug}/${business.citySlug}`
+    : '/locations';
   const hasOnlineLinks = !!(
     business.facebookUrl ||
     business.instagramUrl ||
@@ -383,14 +387,16 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 sm:gap-x-6 gap-y-1.5 sm:gap-y-2 text-sm text-slate-500">
-              <p className="font-semibold text-blue-600">{business.categoryName || 'General Business'}</p>
+              <Link href={categoryHref} className="font-semibold text-blue-600 hover:text-blue-700 hover:underline">
+                {business.categoryName || 'General Business'}
+              </Link>
               {business.subcategoryName && business.subcategoryName !== 'Not assigned' && (
                 <p className="font-semibold text-slate-600">{business.subcategoryName}</p>
               )}
-              <div className="flex items-center gap-1.5">
+              <Link href={locationHref} className="flex items-center gap-1.5 hover:text-slate-700 hover:underline">
                 <LucideMapPin className="w-4 h-4 text-slate-400" />
                 <span>{[business.cityName, business.provinceName].filter(Boolean).join(', ')}</span>
-              </div>
+              </Link>
               <div className="flex items-center gap-1.5 text-blue-600 font-bold">
                 <LucideEye className="w-4 h-4" />
                 <span>{profileViewCount === null ? '...' : profileViewCount.toLocaleString()}</span>
