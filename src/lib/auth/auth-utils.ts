@@ -6,7 +6,8 @@ import {
   sendEmailVerification,
   GoogleAuthProvider,
   signInWithPopup,
-  updateProfile
+  updateProfile,
+  type User
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { createUser, getUserById } from '../data-connect';
@@ -14,6 +15,34 @@ import { ROLES } from './roles';
 
 export const BANNED_ACCOUNT_MESSAGE = 'Your account is banned. Please contact support for assistance.';
 export const BLOCKED_ACCOUNT_MESSAGE = 'Your account is not allowed to use the platform. Please contact support for assistance.';
+
+const getEmailActionSettings = () => {
+  if (typeof window === 'undefined') return undefined;
+
+  return {
+    url: `${window.location.origin}/profile`,
+    handleCodeInApp: false,
+  };
+};
+
+export const getAuthEmailErrorMessage = (error: any, fallback: string) => {
+  switch (error?.code) {
+    case 'auth/missing-email':
+    case 'auth/invalid-email':
+      return 'Please make sure your account has a valid email address.';
+    case 'auth/user-not-found':
+      return 'No account was found for this email address.';
+    case 'auth/too-many-requests':
+      return 'Too many email requests were made. Please wait a few minutes and try again.';
+    case 'auth/network-request-failed':
+      return 'Network error while sending the email. Please check your connection and try again.';
+    case 'auth/unauthorized-continue-uri':
+    case 'auth/invalid-continue-uri':
+      return 'The email action link is not authorized in Firebase. Please check the Firebase Authentication authorized domains.';
+    default:
+      return error?.message || fallback;
+  }
+};
 
 export const registerUser = async (email: string, password: string, displayName: string, role: string) => {
   try {
@@ -133,20 +162,32 @@ export const logoutUser = async () => {
 
 export const resetPassword = async (email: string) => {
   try {
-    await sendPasswordResetEmail(auth, email);
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      throw new Error('A registered email address is required before sending a password reset link.');
+    }
+    await sendPasswordResetEmail(auth, normalizedEmail, getEmailActionSettings());
   } catch (error) {
     console.error("Error sending password reset email:", error);
     throw error;
   }
 };
 
-export const sendVerificationEmail = async () => {
-  if (auth.currentUser) {
-    try {
-      await sendEmailVerification(auth.currentUser);
-    } catch (error) {
-      console.error("Error sending verification email:", error);
-      throw error;
+export const sendVerificationEmail = async (targetUser: User | null = auth.currentUser) => {
+  try {
+    if (!targetUser) {
+      throw new Error('You must be signed in before sending an email verification link.');
     }
+
+    await targetUser.reload();
+    if (targetUser.emailVerified) {
+      return { alreadyVerified: true };
+    }
+
+    await sendEmailVerification(targetUser, getEmailActionSettings());
+    return { alreadyVerified: false };
+  } catch (error) {
+    console.error("Error sending verification email:", error);
+    throw error;
   }
 };

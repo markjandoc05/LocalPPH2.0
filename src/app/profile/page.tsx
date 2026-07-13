@@ -3,7 +3,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { createUser, getUserById, updateUser } from '@/lib/data-connect';
-import { sendVerificationEmail, resetPassword } from '@/lib/auth/auth-utils';
+import { getAuthEmailErrorMessage, sendVerificationEmail, resetPassword } from '@/lib/auth/auth-utils';
 import { getMissingProfileFields, isProfileComplete } from '@/lib/auth/profile-completion';
 import { ROLES } from '@/lib/auth/roles';
 import {
@@ -470,29 +470,47 @@ export default function ProfilePage() {
 
   const handleSendVerification = async () => {
     setSendingEmail(true);
+    setMessage(null);
     try {
-      await sendVerificationEmail();
-      setMessage({ type: 'success', text: 'Verification email sent! Please check your inbox.' });
-    } catch (error) {
+      const result = await sendVerificationEmail(user);
+      setMessage({
+        type: 'success',
+        text: result.alreadyVerified
+          ? 'Your email is already verified.'
+          : `Verification email sent to ${user.email || userDataToUse.email}. Please check your inbox.`,
+      });
+    } catch (error: any) {
       console.error(error);
-      setMessage({ type: 'error', text: 'Failed to send verification email.' });
+      setMessage({
+        type: 'error',
+        text: getAuthEmailErrorMessage(error, 'Failed to send verification email.'),
+      });
     } finally {
       setSendingEmail(false);
     }
   };
 
   const handlePasswordReset = async () => {
-    if (user.email) {
-      setResettingPassword(true);
-      try {
-        await resetPassword(user.email);
-        setMessage({ type: 'success', text: 'Password reset link sent to your email.' });
-      } catch (error) {
-        console.error(error);
-        setMessage({ type: 'error', text: 'Failed to send password reset email.' });
-      } finally {
-        setResettingPassword(false);
-      }
+    const email = user.email || userDataToUse.email;
+
+    if (!email) {
+      setMessage({ type: 'error', text: 'No registered email address was found for this account.' });
+      return;
+    }
+
+    setResettingPassword(true);
+    setMessage(null);
+    try {
+      await resetPassword(email);
+      setMessage({ type: 'success', text: `Password reset link sent to ${email}. Please check your inbox.` });
+    } catch (error: any) {
+      console.error(error);
+      setMessage({
+        type: 'error',
+        text: getAuthEmailErrorMessage(error, 'Failed to send password reset email.'),
+      });
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -881,6 +899,7 @@ export default function ProfilePage() {
                         variant="outline" 
                         onClick={handlePasswordReset}
                         isLoading={resettingPassword}
+                        disabled={resettingPassword || !(user.email || userDataToUse.email)}
                         className="bg-white border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-semibold px-4 h-9"
                       >
                         Send Password Reset Email
@@ -899,6 +918,7 @@ export default function ProfilePage() {
                           variant="outline" 
                           onClick={handleSendVerification}
                           isLoading={sendingEmail}
+                          disabled={sendingEmail}
                           className="bg-white border-amber-200 hover:bg-amber-100/40 text-amber-800 text-xs font-semibold px-4 h-9"
                         >
                           Send Verification Email
