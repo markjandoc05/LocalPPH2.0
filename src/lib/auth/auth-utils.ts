@@ -17,19 +17,33 @@ export const BLOCKED_ACCOUNT_MESSAGE = 'Your account is not allowed to use the p
 
 export const registerUser = async (email: string, password: string, displayName: string, role: string) => {
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    let userCredential;
+
+    try {
+      userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    } catch (error: any) {
+      if (error?.code !== 'auth/email-already-in-use') {
+        throw error;
+      }
+
+      userCredential = await signInWithEmailAndPassword(auth, email, password);
+    }
+
     const user = userCredential.user;
     
     // Update Firebase Auth profile
     await updateProfile(user, { displayName });
     
     // Sync to PostgreSQL via Data Connect
-    await createUser({
-      id: user.uid,
-      email: user.email!,
-      displayName,
-      role
-    });
+    const existingProfile = await getUserById({ id: user.uid });
+    if (!existingProfile?.data?.user) {
+      await createUser({
+        id: user.uid,
+        email: user.email!,
+        displayName,
+        role
+      });
+    }
     
     return { user, role };
   } catch (error) {

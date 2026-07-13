@@ -102,15 +102,6 @@ export async function POST(req: NextRequest) {
       if (!variables?.id || variables.id === userId) {
         return NextResponse.json({ error: "You cannot delete your own administrator account." }, { status: 400 });
       }
-      const result = await databaseProvider.deleteUserAccount(operationVariables);
-      try {
-        await adminAuth.deleteUser(variables.id);
-      } catch (deleteAuthError: any) {
-        if (deleteAuthError?.code !== 'auth/user-not-found') {
-          throw deleteAuthError;
-        }
-      }
-      return NextResponse.json(result);
     }
 
     const result = await (databaseProvider as any)[method](operationVariables);

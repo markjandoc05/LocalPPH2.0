@@ -848,7 +848,7 @@ export default function AdminUserTable({ users, onUserStatusChange, onUserDelete
             </p>
           ) : (
             <p>
-              This will permanently delete the user account, all business listings created under this account, support messages, and related platform data. The person can use the platform again only by creating a new account.
+              This will permanently delete the LocalPages user account, all business listings created under this account, support messages, and related platform data. The person can use the platform again by registering or signing in again, which creates a new LocalPages profile.
             </p>
           )}
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
