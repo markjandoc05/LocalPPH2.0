@@ -9,6 +9,7 @@ export const {
   getUserById,
   updateUser,
   updateUserAccountStatus,
+  deleteUserAccount,
   getAllUsers,
   createSupportTicket,
   getMySupportTickets,

@@ -113,6 +113,11 @@ export const updateUserAccountStatus = async (
   return result.data.user_update;
 };
 
+export const deleteUserAccount = async (id: string) => {
+  const result = await provider.deleteUserAccount({ id });
+  return result.data;
+};
+
 export const createBackupSnapshot = async (variables: {
   label?: string;
   scope: string[];

@@ -12,7 +12,7 @@ import { Select } from '../ui/Select';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { isAdmin, normalizeRole } from '@/lib/auth/roles';
 import { getUserById, getMyBusinesses } from '@/lib/data-connect';
-import { updateUserAccountStatus } from '@/lib/data-connect/admin-service';
+import { deleteUserAccount, updateUserAccountStatus } from '@/lib/data-connect/admin-service';
 import { formatAppDate, formatAppDateTime } from '@/lib/time';
 import { BusinessListing } from '@/types/business';
 import { 
@@ -36,6 +36,7 @@ import {
 interface AdminUserTableProps {
   users: UserAccount[];
   onUserStatusChange?: (id: string, accountStatus: string) => void;
+  onUserDeleted?: (id: string) => void;
 }
 
 type AccountAction = 'BAN' | 'DELETE' | 'UNBAN';
@@ -67,7 +68,7 @@ const USERS_PER_PAGE = 10;
 
 const displayValue = (value?: string | null) => value?.trim() || 'Not set';
 
-export default function AdminUserTable({ users, onUserStatusChange }: AdminUserTableProps) {
+export default function AdminUserTable({ users, onUserStatusChange, onUserDeleted }: AdminUserTableProps) {
   const { user: currentUser, role } = useAuth();
   const isCurrentUserAdmin = isAdmin(role);
 
@@ -154,11 +155,22 @@ export default function AdminUserTable({ users, onUserStatusChange }: AdminUserT
   const confirmAccountAction = async () => {
     if (!accountAction || !actionUser) return;
 
-    const nextStatus = accountAction === 'BAN' ? 'BANNED' : accountAction === 'UNBAN' ? 'ACTIVE' : 'DELETED';
-
     try {
       setActionLoading(true);
       setActionError('');
+
+      if (accountAction === 'DELETE') {
+        await deleteUserAccount(actionUser.id);
+        onUserDeleted?.(actionUser.id);
+        if (selectedUser?.id === actionUser.id) {
+          handleCloseDetails();
+        }
+        setAccountAction(null);
+        setActionUser(null);
+        return;
+      }
+
+      const nextStatus = accountAction === 'BAN' ? 'BANNED' : 'ACTIVE';
       await updateUserAccountStatus(actionUser.id, nextStatus);
       onUserStatusChange?.(actionUser.id, nextStatus);
       if (selectedUser?.id === actionUser.id) {
@@ -780,7 +792,7 @@ export default function AdminUserTable({ users, onUserStatusChange }: AdminUserT
                     type="button"
                     variant="outline"
                     onClick={() => openAccountAction('DELETE', selectedUser)}
-                    disabled={selectedUser.id === currentUser?.uid || selectedUser.accountStatus === 'DELETED'}
+                    disabled={selectedUser.id === currentUser?.uid}
                     className="text-xs font-semibold h-9 px-3 text-red-700 hover:text-red-800"
                   >
                     <LucideTrash2 className="mr-1.5 h-3.5 w-3.5" />
@@ -836,7 +848,7 @@ export default function AdminUserTable({ users, onUserStatusChange }: AdminUserT
             </p>
           ) : (
             <p>
-              This will mark the user as <strong>DELETED</strong>. The account record will be retained for audit/history, but the user will no longer be allowed to use the platform.
+              This will permanently delete the user account, all business listings created under this account, support messages, and related platform data. The person can use the platform again only by creating a new account.
             </p>
           )}
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">

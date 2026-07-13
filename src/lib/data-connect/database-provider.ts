@@ -343,6 +343,77 @@ export const databaseProvider: DataProvider = {
     };
   },
 
+  async deleteUserAccount(variables) {
+    const targetUserId = variables.id;
+    if (!targetUserId) {
+      throw new Error("User ID is required.");
+    }
+
+    try {
+      await db.update(backupSnapshots)
+        .set({
+          createdById: sql`case when ${backupSnapshots.createdById} = ${targetUserId} then null else ${backupSnapshots.createdById} end`,
+          restoredById: sql`case when ${backupSnapshots.restoredById} = ${targetUserId} then null else ${backupSnapshots.restoredById} end`,
+          updatedAt: new Date(),
+        })
+        .where(or(eq(backupSnapshots.createdById, targetUserId), eq(backupSnapshots.restoredById, targetUserId)) as any);
+
+      await db.update(backupSchedules)
+        .set({
+          updatedById: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(backupSchedules.updatedById, targetUserId));
+    } catch (error) {
+      if (!isMissingBackupTablesError(error)) {
+        throw error;
+      }
+    }
+
+    return db.transaction(async (tx) => {
+      const ownedBusinesses = await tx.select({ id: businesses.id })
+        .from(businesses)
+        .where(eq(businesses.ownerId, targetUserId));
+      const ownedBusinessIds = ownedBusinesses.map((business) => business.id);
+
+      await tx.delete(supportTickets)
+        .where(eq(supportTickets.userId, targetUserId));
+
+      await tx.update(supportTickets)
+        .set({
+          respondedById: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(supportTickets.respondedById, targetUserId));
+
+      if (ownedBusinessIds.length > 0) {
+        await tx.delete(businessProfileViews)
+          .where(inArray(businessProfileViews.businessId, ownedBusinessIds));
+
+        await tx.delete(businessPhotos)
+          .where(inArray(businessPhotos.businessId, ownedBusinessIds));
+
+        await tx.delete(businesses)
+          .where(eq(businesses.ownerId, targetUserId));
+      }
+
+      const deletedUsers = await tx.delete(users)
+        .where(eq(users.id, targetUserId))
+        .returning({ id: users.id });
+
+      if (!deletedUsers[0]?.id) {
+        throw new Error("User account not found.");
+      }
+
+      return {
+        data: {
+          user_delete: deletedUsers[0].id,
+          deletedBusinesses: ownedBusinessIds.length,
+        },
+      };
+    });
+  },
+
   async getAllUsers() {
     const res = await db.query.users.findMany();
     return { data: { users: res } };

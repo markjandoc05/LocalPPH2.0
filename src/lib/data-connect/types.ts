@@ -20,6 +20,9 @@ export interface DataProvider {
     id: string;
     accountStatus: string;
   }): Promise<{ data: { user_update: string } }>;
+  deleteUserAccount(variables: {
+    id: string;
+  }): Promise<{ data: { user_delete: string; deletedBusinesses: number } }>;
   getAllUsers(): Promise<{ data: { users: any[] } }>;
 
   // Support operations

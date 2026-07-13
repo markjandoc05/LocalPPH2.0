@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       'updateBackupSchedule',
       'runDueBackupSchedule',
     ];
-    const isAdminMethod = ['getAllUsers', 'updateUserAccountStatus', 'updateBusinessStatus', 'getAllSupportTickets', 'updateSupportTicket', ...backupMethods].includes(method);
+    const isAdminMethod = ['getAllUsers', 'updateUserAccountStatus', 'deleteUserAccount', 'updateBusinessStatus', 'getAllSupportTickets', 'updateSupportTicket', ...backupMethods].includes(method);
 
     if (method === 'getUserById') {
       if (variables?.id !== userId && !isAdmin(role)) {
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         }
       }
     } else if (isAdminMethod) {
-      if (['getAllUsers', 'updateUserAccountStatus', ...backupMethods].includes(method) ? !isAdmin(role) : !canApproveBusiness(role)) {
+      if (['getAllUsers', 'updateUserAccountStatus', 'deleteUserAccount', ...backupMethods].includes(method) ? !isAdmin(role) : !canApproveBusiness(role)) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
     }
@@ -96,6 +96,21 @@ export async function POST(req: NextRequest) {
         ...(variables || {}),
         updatedById: userId,
       };
+    }
+
+    if (method === 'deleteUserAccount') {
+      if (!variables?.id || variables.id === userId) {
+        return NextResponse.json({ error: "You cannot delete your own administrator account." }, { status: 400 });
+      }
+      const result = await databaseProvider.deleteUserAccount(operationVariables);
+      try {
+        await adminAuth.deleteUser(variables.id);
+      } catch (deleteAuthError: any) {
+        if (deleteAuthError?.code !== 'auth/user-not-found') {
+          throw deleteAuthError;
+        }
+      }
+      return NextResponse.json(result);
     }
 
     const result = await (databaseProvider as any)[method](operationVariables);

@@ -63,6 +63,11 @@ export default function AdminUsersPage() {
               )
             );
           }}
+          onUserDeleted={(id) => {
+            setUsers((currentUsers) =>
+              currentUsers.filter((currentUser) => currentUser.id !== id)
+            );
+          }}
         />
       )}
     </AdminLayout>
