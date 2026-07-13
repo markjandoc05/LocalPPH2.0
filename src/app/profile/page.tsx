@@ -2,10 +2,10 @@
 
 import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { createUser, getUserById, updateUser } from '@/lib/data-connect';
+import { createSupportTicket, createUser, getMySupportTickets, getUserById, updateUser } from '@/lib/data-connect';
 import { getAuthEmailErrorMessage, sendVerificationEmail, resetPassword } from '@/lib/auth/auth-utils';
 import { getMissingProfileFields, isProfileComplete } from '@/lib/auth/profile-completion';
-import { ROLES } from '@/lib/auth/roles';
+import { normalizeRole, ROLES } from '@/lib/auth/roles';
 import {
   DirectoryCity,
   DirectoryProvince,
@@ -28,7 +28,8 @@ import {
   LucideAlertTriangle, 
   LucideEdit, 
   LucideSave,
-  LucideArrowLeft
+  LucideArrowLeft,
+  LucideBuilding
 } from 'lucide-react';
 
 interface UserData {
@@ -72,6 +73,9 @@ export default function ProfilePage() {
   const [selectedRegionId, setSelectedRegionId] = useState('');
   const [selectedProvinceId, setSelectedProvinceId] = useState('');
   const [selectedCityId, setSelectedCityId] = useState('');
+  const [upgradeRequest, setUpgradeRequest] = useState<any | null>(null);
+  const [loadingUpgradeRequest, setLoadingUpgradeRequest] = useState(false);
+  const [requestingUpgrade, setRequestingUpgrade] = useState(false);
 
   const buildFallbackUserData = useCallback((): UserData | null => {
     if (!user) return null;
@@ -262,6 +266,37 @@ export default function ProfilePage() {
       });
     }, 0);
   }, [userData]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadUpgradeRequest = async () => {
+      if (!user) return;
+
+      setLoadingUpgradeRequest(true);
+      try {
+        const result = await getMySupportTickets({ userId: user.uid });
+        const pendingRequest = result.data.supportTickets.find((ticket: any) =>
+          ticket.category === 'ACCOUNT_UPGRADE' &&
+          !['RESOLVED', 'CLOSED'].includes(ticket.status)
+        );
+
+        if (active) {
+          setUpgradeRequest(pendingRequest || null);
+        }
+      } catch (error) {
+        console.warn('Failed to load account upgrade request status:', error);
+      } finally {
+        if (active) setLoadingUpgradeRequest(false);
+      }
+    };
+
+    loadUpgradeRequest();
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   // Clean messaging after timer
   useEffect(() => {
@@ -514,6 +549,44 @@ export default function ProfilePage() {
     }
   };
 
+  const handleBusinessUpgradeRequest = async () => {
+    if (!user) return;
+
+    setRequestingUpgrade(true);
+    setMessage(null);
+    try {
+      const messageText = 'I would like to upgrade my LocalPages.ph account from Subscriber to Business so I can create and manage business listings.';
+      const result = await createSupportTicket({
+        userId: user.uid,
+        category: 'ACCOUNT_UPGRADE',
+        subject: 'Business account upgrade request',
+        message: messageText,
+      });
+
+      setUpgradeRequest({
+        id: result.data.support_ticket_insert,
+        userId: user.uid,
+        category: 'ACCOUNT_UPGRADE',
+        subject: 'Business account upgrade request',
+        message: messageText,
+        status: 'OPEN',
+        createdAt: new Date().toISOString(),
+      });
+      setMessage({
+        type: 'success',
+        text: 'Your business account upgrade request was sent. An administrator will review it in User Management.',
+      });
+    } catch (error: any) {
+      console.error('Business upgrade request error:', error);
+      setMessage({
+        type: 'error',
+        text: error?.message || 'Failed to send business account upgrade request.',
+      });
+    } finally {
+      setRequestingUpgrade(false);
+    }
+  };
+
   const tabs = [
     { id: 'personal', label: 'Personal Information', icon: LucideUser },
     { id: 'contact', label: 'Contact Details', icon: LucidePhone },
@@ -575,9 +648,14 @@ export default function ProfilePage() {
                           Verified Email
                         </Badge>
                       ) : (
-                        <Badge variant="warning">
-                          Unverified Email
-                        </Badge>
+                        <button
+                          type="button"
+                          onClick={handleSendVerification}
+                          disabled={sendingEmail}
+                          className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {sendingEmail ? 'Sending Verification...' : 'Unverified Email - Verify'}
+                        </button>
                       )}
                     </div>
                   </div>
@@ -595,6 +673,38 @@ export default function ProfilePage() {
                 </div>
               </div>
             </Card>
+
+            {normalizeRole(userDataToUse.role) === ROLES.SUBSCRIBER && (
+              <Card className="p-5 md:p-6 border border-blue-100 bg-blue-50/40 shadow-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-blue-100">
+                      <LucideBuilding className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900">Upgrade to a Business Account</h2>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">
+                        Send a request to unlock business listing tools after administrator approval.
+                      </p>
+                      {upgradeRequest && (
+                        <p className="mt-2 text-xs font-semibold text-blue-700">
+                          Request status: {upgradeRequest.status || 'OPEN'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleBusinessUpgradeRequest}
+                    isLoading={requestingUpgrade}
+                    disabled={requestingUpgrade || loadingUpgradeRequest || Boolean(upgradeRequest)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                  >
+                    {upgradeRequest ? 'Request Pending' : 'Request Upgrade'}
+                  </Button>
+                </div>
+              </Card>
+            )}
 
             {/* Profile Grid Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

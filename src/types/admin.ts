@@ -15,5 +15,19 @@ export interface UserAccount {
   displayName: string;
   role: string;
   accountStatus: string;
+  emailVerified?: boolean;
   createdAt?: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  userId: string;
+  category: string;
+  subject: string;
+  message: string;
+  status: string;
+  adminResponse?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  user?: UserAccount | null;
 }

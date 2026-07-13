@@ -1,6 +1,6 @@
 import { provider } from "./provider";
 import { BusinessListing, BusinessStatus } from "@/types/business";
-import { UserAccount, AdminDashboardStats } from "@/types/admin";
+import { UserAccount, AdminDashboardStats, SupportTicket } from "@/types/admin";
 import { normalizeRole } from "@/lib/auth/roles";
 
 // Wrapper service around the Data Connect operations (or mocks) for Admin functionality
@@ -113,9 +113,25 @@ export const updateUserAccountStatus = async (
   return result.data.user_update;
 };
 
+export const updateUserRole = async (
+  id: string,
+  nextRole: 'BUSINESS',
+) => {
+  const result = await provider.updateUserRole({
+    id,
+    role: nextRole,
+  });
+  return result.data.user_update;
+};
+
 export const deleteUserAccount = async (id: string) => {
   const result = await provider.deleteUserAccount({ id });
   return result.data;
+};
+
+export const getAllSupportTickets = async (): Promise<SupportTicket[]> => {
+  const result = await provider.getAllSupportTickets();
+  return result.data.supportTickets as SupportTicket[];
 };
 
 export const createBackupSnapshot = async (variables: {

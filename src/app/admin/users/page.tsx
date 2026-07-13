@@ -6,8 +6,8 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { canAccessAdmin } from '@/lib/auth/roles';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminUserTable from '@/components/admin/AdminUserTable';
-import { getAllUsers } from '@/lib/data-connect/admin-service';
-import { UserAccount } from '@/types/admin';
+import { getAllSupportTickets, getAllUsers } from '@/lib/data-connect/admin-service';
+import { SupportTicket, UserAccount } from '@/types/admin';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { parseError, handleAuthRedirect } from '@/lib/utils/error';
@@ -16,6 +16,7 @@ export default function AdminUsersPage() {
   const { user, role, loading } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<UserAccount[]>([]);
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -23,8 +24,12 @@ export default function AdminUsersPage() {
     if (user && canAccessAdmin(role)) {
       const fetchData = async () => {
         try {
-          const data = await getAllUsers();
-          setUsers(data);
+          const [usersData, ticketsData] = await Promise.all([
+            getAllUsers(),
+            getAllSupportTickets(),
+          ]);
+          setUsers(usersData);
+          setSupportTickets(ticketsData);
         } catch (err: any) {
           const friendly = parseError(err);
           setError(friendly.message);
@@ -66,6 +71,25 @@ export default function AdminUsersPage() {
           onUserDeleted={(id) => {
             setUsers((currentUsers) =>
               currentUsers.filter((currentUser) => currentUser.id !== id)
+            );
+          }}
+          upgradeRequests={supportTickets.filter((ticket) => ticket.category === 'ACCOUNT_UPGRADE')}
+          onUserRoleChange={(id, nextRole) => {
+            setUsers((currentUsers) =>
+              currentUsers.map((currentUser) =>
+                currentUser.id === id
+                  ? { ...currentUser, role: nextRole }
+                  : currentUser
+              )
+            );
+          }}
+          onUpgradeRequestResolved={(ticketId) => {
+            setSupportTickets((currentTickets) =>
+              currentTickets.map((ticket) =>
+                ticket.id === ticketId
+                  ? { ...ticket, status: 'RESOLVED' }
+                  : ticket
+              )
             );
           }}
         />

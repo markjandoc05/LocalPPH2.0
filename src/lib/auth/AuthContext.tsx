@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { createUser, getUserById } from '../data-connect';
+import { createUser, getUserById, updateUser } from '../data-connect';
 import { normalizeRole, ROLES } from './roles';
 import { isProfileComplete } from './profile-completion';
 import { BANNED_ACCOUNT_MESSAGE, BLOCKED_ACCOUNT_MESSAGE } from './auth-utils';
@@ -49,10 +49,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           displayName: firebaseUser.displayName || firebaseUser.email || 'User',
           photoUrl: firebaseUser.photoURL || undefined,
           role: fallbackRole,
+          emailVerified: firebaseUser.emailVerified,
         });
 
         const refreshedResponse = await getUserById({ id: firebaseUser.uid });
         dbUser = refreshedResponse?.data?.user || null;
+      }
+
+      if (dbUser && dbUser.emailVerified !== firebaseUser.emailVerified) {
+        await updateUser({
+          id: firebaseUser.uid,
+          data: { emailVerified: firebaseUser.emailVerified },
+        });
+        dbUser = {
+          ...dbUser,
+          emailVerified: firebaseUser.emailVerified,
+        };
       }
 
       if (dbUser?.accountStatus && dbUser.accountStatus !== 'ACTIVE') {

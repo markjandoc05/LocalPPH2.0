@@ -10,7 +10,7 @@ import {
   type User
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { createUser, getUserById } from '../data-connect';
+import { createUser, getUserById, updateUser } from '../data-connect';
 import { ROLES } from './roles';
 
 export const BANNED_ACCOUNT_MESSAGE = 'Your account is banned. Please contact support for assistance.';
@@ -70,7 +70,13 @@ export const registerUser = async (email: string, password: string, displayName:
         id: user.uid,
         email: user.email!,
         displayName,
-        role
+        role,
+        emailVerified: user.emailVerified,
+      });
+    } else if (existingProfile.data.user.emailVerified !== user.emailVerified) {
+      await updateUser({
+        id: user.uid,
+        data: { emailVerified: user.emailVerified },
       });
     }
     
@@ -127,7 +133,8 @@ export const loginWithGoogle = async (role: string = ROLES.SUBSCRIBER) => {
           email: user.email!,
           displayName: user.displayName || 'Unknown',
           photoUrl: user.photoURL || undefined,
-          role: userRole
+          role: userRole,
+          emailVerified: true,
         });
       } else {
         const accountStatus = userData.data.user.accountStatus || 'ACTIVE';
@@ -136,6 +143,12 @@ export const loginWithGoogle = async (role: string = ROLES.SUBSCRIBER) => {
           throw new Error(accountStatus === 'BANNED' ? BANNED_ACCOUNT_MESSAGE : BLOCKED_ACCOUNT_MESSAGE);
         }
         userRole = user.email === 'markjandoc@gmail.com' ? ROLES.ADMIN : userData.data.user.role;
+        if (!userData.data.user.emailVerified) {
+          await updateUser({
+            id: user.uid,
+            data: { emailVerified: true },
+          });
+        }
       }
     } catch (dbError: any) {
       if (dbError?.message?.includes('contact support')) {

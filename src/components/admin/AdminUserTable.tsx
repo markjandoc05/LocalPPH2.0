@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { UserAccount } from '@/types/admin';
+import { SupportTicket, UserAccount } from '@/types/admin';
 import { EmptyState } from '../ui/EmptyState';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/Table';
 import { Badge } from '../ui/Badge';
@@ -11,8 +11,8 @@ import { Modal } from '../ui/Modal';
 import { Select } from '../ui/Select';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { isAdmin, normalizeRole } from '@/lib/auth/roles';
-import { getUserById, getMyBusinesses } from '@/lib/data-connect';
-import { deleteUserAccount, updateUserAccountStatus } from '@/lib/data-connect/admin-service';
+import { getUserById, getMyBusinesses, updateSupportTicket } from '@/lib/data-connect';
+import { deleteUserAccount, updateUserAccountStatus, updateUserRole } from '@/lib/data-connect/admin-service';
 import { formatAppDate, formatAppDateTime } from '@/lib/time';
 import { BusinessListing } from '@/types/business';
 import { 
@@ -30,13 +30,17 @@ import {
   LucideSearch,
   LucideSlidersHorizontal,
   LucideTrash2,
-  LucideUserCheck
+  LucideUserCheck,
+  LucideArrowUpCircle
 } from 'lucide-react';
 
 interface AdminUserTableProps {
   users: UserAccount[];
+  upgradeRequests?: SupportTicket[];
   onUserStatusChange?: (id: string, accountStatus: string) => void;
+  onUserRoleChange?: (id: string, nextRole: string) => void;
   onUserDeleted?: (id: string) => void;
+  onUpgradeRequestResolved?: (ticketId: string) => void;
 }
 
 type AccountAction = 'BAN' | 'DELETE' | 'UNBAN';
@@ -68,7 +72,14 @@ const USERS_PER_PAGE = 10;
 
 const displayValue = (value?: string | null) => value?.trim() || 'Not set';
 
-export default function AdminUserTable({ users, onUserStatusChange, onUserDeleted }: AdminUserTableProps) {
+export default function AdminUserTable({
+  users,
+  upgradeRequests = [],
+  onUserStatusChange,
+  onUserRoleChange,
+  onUserDeleted,
+  onUpgradeRequestResolved,
+}: AdminUserTableProps) {
   const { user: currentUser, role } = useAuth();
   const isCurrentUserAdmin = isAdmin(role);
 
@@ -92,6 +103,8 @@ export default function AdminUserTable({ users, onUserStatusChange, onUserDelete
   const [actionUser, setActionUser] = useState<UserAccount | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [roleActionLoading, setRoleActionLoading] = useState(false);
+  const [roleActionError, setRoleActionError] = useState('');
 
   // Fetch full details when a user is selected
   useEffect(() => {
@@ -125,10 +138,29 @@ export default function AdminUserTable({ users, onUserStatusChange, onUserDelete
     fetchDetails();
   }, [selectedUser, isOpen]);
 
+  const pendingUpgradeByUserId = useMemo(() => {
+    const pending = new Map<string, SupportTicket>();
+
+    upgradeRequests.forEach((request) => {
+      if (!request.userId || request.category !== 'ACCOUNT_UPGRADE') return;
+      if (['RESOLVED', 'CLOSED'].includes(request.status)) return;
+
+      const existing = pending.get(request.userId);
+      if (!existing || getDateValue(request.createdAt) > getDateValue(existing.createdAt)) {
+        pending.set(request.userId, request);
+      }
+    });
+
+    return pending;
+  }, [upgradeRequests]);
+
+  const selectedUpgradeRequest = selectedUser ? pendingUpgradeByUserId.get(selectedUser.id) : null;
+
   const handleOpenDetails = (user: UserAccount) => {
     setSelectedUser(user);
     setFullUserData(null);
     setUserBusinesses([]);
+    setRoleActionError('');
     setIsOpen(true);
   };
 
@@ -137,6 +169,32 @@ export default function AdminUserTable({ users, onUserStatusChange, onUserDelete
     setSelectedUser(null);
     setFullUserData(null);
     setUserBusinesses([]);
+    setRoleActionError('');
+  };
+
+  const handleApproveBusinessUpgrade = async () => {
+    if (!selectedUser || !selectedUpgradeRequest) return;
+
+    try {
+      setRoleActionLoading(true);
+      setRoleActionError('');
+      await updateUserRole(selectedUser.id, 'BUSINESS');
+      await updateSupportTicket({
+        id: selectedUpgradeRequest.id,
+        status: 'RESOLVED',
+        adminResponse: 'Approved. Account upgraded from Subscriber to Business.',
+      });
+
+      setSelectedUser((previous) => previous ? { ...previous, role: 'BUSINESS' } : previous);
+      setFullUserData((previous: any) => previous ? { ...previous, role: 'BUSINESS' } : previous);
+      setUserBusinesses([]);
+      onUserRoleChange?.(selectedUser.id, 'BUSINESS');
+      onUpgradeRequestResolved?.(selectedUpgradeRequest.id);
+    } catch (err: any) {
+      setRoleActionError(err?.message || 'Failed to approve account upgrade request.');
+    } finally {
+      setRoleActionLoading(false);
+    }
   };
 
   const openAccountAction = (action: AccountAction, targetUser: UserAccount) => {
@@ -473,13 +531,18 @@ export default function AdminUserTable({ users, onUserStatusChange, onUserDelete
                   <TableHead>User</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Request</TableHead>
                   <TableHead>Joined Date</TableHead>
                   {isCurrentUserAdmin && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedUsers.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-blue-50/50">
+                {paginatedUsers.map((user) => {
+                  const upgradeRequest = pendingUpgradeByUserId.get(user.id);
+
+                  return (
+                  <TableRow key={user.id} className={upgradeRequest ? 'bg-blue-50/40 hover:bg-blue-50' : 'hover:bg-blue-50/50'}>
                     <TableCell>
                       <div className="font-semibold text-slate-900">{user.displayName || 'No Name'}</div>
                       <div className="text-xs text-slate-600">{user.email}</div>
@@ -501,6 +564,26 @@ export default function AdminUserTable({ users, onUserStatusChange, onUserDelete
                         {user.accountStatus}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <Badge variant={user.emailVerified ? 'success' : 'warning'} className="text-xs">
+                        {user.emailVerified ? 'Verified' : 'Unverified'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {upgradeRequest ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleOpenDetails(user)}
+                          className="h-8 border-blue-200 bg-white px-2.5 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                        >
+                          <LucideArrowUpCircle className="mr-1.5 h-3.5 w-3.5" />
+                          Upgrade
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-slate-500">None</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-xs text-slate-700">
                       {formatAppDate(user.createdAt, 'N/A')}
                     </TableCell>
@@ -519,7 +602,8 @@ export default function AdminUserTable({ users, onUserStatusChange, onUserDelete
                       </TableCell>
                     )}
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
             <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -615,6 +699,40 @@ export default function AdminUserTable({ users, onUserStatusChange, onUserDelete
                 </Badge>
               </div>
             </div>
+
+            {selectedUpgradeRequest && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h4 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                      <LucideArrowUpCircle className="h-4 w-4 text-blue-600" />
+                      Business Account Upgrade Request
+                    </h4>
+                    <p className="mt-1 text-xs leading-5 text-slate-700">
+                      {selectedUpgradeRequest.message}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-600">
+                      <span>Status: {selectedUpgradeRequest.status}</span>
+                      <span>Requested: {formatAppDateTime(selectedUpgradeRequest.createdAt)}</span>
+                    </div>
+                    {roleActionError && (
+                      <p className="mt-3 rounded-lg border border-red-200 bg-white p-3 text-xs font-semibold text-red-700">
+                        {roleActionError}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleApproveBusinessUpgrade}
+                    isLoading={roleActionLoading}
+                    disabled={roleActionLoading || normalizeRole(fullUserData.role) === 'BUSINESS'}
+                    className="bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700"
+                  >
+                    Upgrade to Business
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Profile Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">

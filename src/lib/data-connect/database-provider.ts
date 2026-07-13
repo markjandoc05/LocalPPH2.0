@@ -265,6 +265,7 @@ export const databaseProvider: DataProvider = {
         displayName: variables.displayName,
         photoUrl: variables.photoUrl,
         role: variables.role as any,
+        emailVerified: Boolean(variables.emailVerified),
       })
       .onConflictDoUpdate({
         target: users.id,
@@ -272,6 +273,7 @@ export const databaseProvider: DataProvider = {
           email: variables.email,
           displayName: variables.displayName,
           photoUrl: variables.photoUrl,
+          emailVerified: Boolean(variables.emailVerified),
           updatedAt: new Date(),
         }
       })
@@ -298,7 +300,7 @@ export const databaseProvider: DataProvider = {
         'firstName', 'lastName', 'displayName', 'photoUrl', 'mobileNumber',
         'telephoneNumber', 'dateOfBirth', 'gender', 'addressLine1',
         'addressLine2', 'barangay', 'city', 'province', 'region',
-        'zipCode', 'country'
+        'zipCode', 'country', 'emailVerified'
       ];
       
       for (const field of allowedFields) {
@@ -333,6 +335,26 @@ export const databaseProvider: DataProvider = {
     const res = await db.update(users)
       .set({
         accountStatus: nextStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, variables.id))
+      .returning({ id: users.id });
+
+    return {
+      data: { user_update: res[0]?.id || variables.id },
+    };
+  },
+
+  async updateUserRole(variables) {
+    const nextRole = String(variables.role || '').toUpperCase();
+
+    if (nextRole !== 'BUSINESS') {
+      throw new Error("Only Business account upgrades are supported from User Management.");
+    }
+
+    const res = await db.update(users)
+      .set({
+        role: nextRole,
         updatedAt: new Date(),
       })
       .where(eq(users.id, variables.id))

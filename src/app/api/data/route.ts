@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       'updateBackupSchedule',
       'runDueBackupSchedule',
     ];
-    const isAdminMethod = ['getAllUsers', 'updateUserAccountStatus', 'deleteUserAccount', 'updateBusinessStatus', 'getAllSupportTickets', 'updateSupportTicket', ...backupMethods].includes(method);
+    const isAdminMethod = ['getAllUsers', 'updateUserAccountStatus', 'updateUserRole', 'deleteUserAccount', 'updateBusinessStatus', 'getAllSupportTickets', 'updateSupportTicket', ...backupMethods].includes(method);
 
     if (method === 'getUserById') {
       if (variables?.id !== userId && !isAdmin(role)) {
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         }
       }
     } else if (isAdminMethod) {
-      if (['getAllUsers', 'updateUserAccountStatus', 'deleteUserAccount', ...backupMethods].includes(method) ? !isAdmin(role) : !canApproveBusiness(role)) {
+      if (['getAllUsers', 'updateUserAccountStatus', 'updateUserRole', 'deleteUserAccount', ...backupMethods].includes(method) ? !isAdmin(role) : !canApproveBusiness(role)) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
     }

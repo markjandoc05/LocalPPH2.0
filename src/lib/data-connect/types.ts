@@ -8,6 +8,7 @@ export interface DataProvider {
     displayName: string;
     photoUrl?: string;
     role: string;
+    emailVerified?: boolean;
   }): Promise<{ data: { user_insert: string } }>;
   getUserById(variables: {
     id: string;
@@ -19,6 +20,10 @@ export interface DataProvider {
   updateUserAccountStatus(variables: {
     id: string;
     accountStatus: string;
+  }): Promise<{ data: { user_update: string } }>;
+  updateUserRole(variables: {
+    id: string;
+    role: string;
   }): Promise<{ data: { user_update: string } }>;
   deleteUserAccount(variables: {
     id: string;
