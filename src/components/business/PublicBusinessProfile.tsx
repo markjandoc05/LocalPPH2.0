@@ -77,6 +77,8 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
     business.lazadaUrl
   );
   const hasProductsServices = !!(business.products || business.services);
+  const showUniqueViews = false;
+  const showCustomerReviews = false;
 
   // Interactive UI state
   const [bookmarked, setBookmarked] = useState<boolean>(false);
@@ -397,11 +399,13 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
                 <LucideMapPin className="w-4 h-4 text-slate-400" />
                 <span>{[business.cityName, business.provinceName].filter(Boolean).join(', ')}</span>
               </Link>
-              <div className="flex items-center gap-1.5 text-blue-600 font-bold">
-                <LucideEye className="w-4 h-4" />
-                <span>{profileViewCount === null ? '...' : profileViewCount.toLocaleString()}</span>
-                <span className="text-slate-400 font-normal text-xs ml-1">Unique Views</span>
-              </div>
+              {showUniqueViews && (
+                <div className="flex items-center gap-1.5 text-blue-600 font-bold">
+                  <LucideEye className="w-4 h-4" />
+                  <span>{profileViewCount === null ? '...' : profileViewCount.toLocaleString()}</span>
+                  <span className="text-slate-400 font-normal text-xs ml-1">Unique Views</span>
+                </div>
+              )}
             </div>
 
             {shortDescription && (
@@ -549,68 +553,70 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
           )}
 
           {/* Reviews Section */}
-          <section className="order-7 bg-white p-5 sm:p-10 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm">
-            <h2 className="text-xl sm:text-2xl font-sans font-bold text-slate-900 mb-5 sm:mb-8 flex items-center gap-3">
-              <LucideMessageSquare className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
-              <span>Customer Reviews</span>
-            </h2>
+          {showCustomerReviews && (
+            <section className="order-7 bg-white p-5 sm:p-10 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm">
+              <h2 className="text-xl sm:text-2xl font-sans font-bold text-slate-900 mb-5 sm:mb-8 flex items-center gap-3">
+                <LucideMessageSquare className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
+                <span>Customer Reviews</span>
+              </h2>
 
-            {reviewSubmitted ? (
-              <div className="bg-emerald-50 border border-emerald-100 p-5 sm:p-8 rounded-xl sm:rounded-2xl flex items-start gap-4 sm:gap-5">
-                <div className="shrink-0 p-3 bg-emerald-100 rounded-2xl text-emerald-600">
-                  <LucideCheck className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="text-emerald-900 font-bold text-lg">Review Submitted</h4>
-                  <p className="text-emerald-700 mt-2 leading-relaxed">Thank you for sharing your experience! Your feedback helps others make better decisions.</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-5 sm:space-y-8">
-                <form onSubmit={handleReviewSubmit} className="bg-slate-50/50 border border-slate-100 rounded-2xl sm:rounded-3xl p-5 sm:p-8 space-y-5 sm:space-y-6">
-                  <h3 className="font-bold text-lg text-slate-900">Write a Review</h3>
-                  
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <span className="text-sm font-bold text-slate-500">How would you rate your experience?</span>
-                    <div className="flex items-center gap-1.5">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setReviewRating(star)}
-                          className="focus:outline-none transition-transform hover:scale-125"
-                        >
-                          <LucideStar className={`w-8 h-8 ${star <= reviewRating ? 'text-yellow-400 fill-current' : 'text-slate-300'}`} />
-                        </button>
-                      ))}
-                    </div>
+              {reviewSubmitted ? (
+                <div className="bg-emerald-50 border border-emerald-100 p-5 sm:p-8 rounded-xl sm:rounded-2xl flex items-start gap-4 sm:gap-5">
+                  <div className="shrink-0 p-3 bg-emerald-100 rounded-2xl text-emerald-600">
+                    <LucideCheck className="w-6 h-6" />
                   </div>
-
                   <div>
-                    <label htmlFor="review_comment" className="block text-sm font-bold text-slate-700 mb-2">
-                      Your Feedback
-                    </label>
-                    <textarea
-                      id="review_comment"
-                      rows={4}
-                      value={reviewComment}
-                      onChange={(e) => setReviewComment(e.target.value)}
-                      placeholder="Tell us what you liked (or didn't like)..."
-                      required
-                      className="block w-full rounded-2xl border border-slate-200 p-4 text-base focus:ring-4 focus:ring-blue-100 focus:border-blue-600 transition-all outline-none"
-                    />
+                    <h4 className="text-emerald-900 font-bold text-lg">Review Submitted</h4>
+                    <p className="text-emerald-700 mt-2 leading-relaxed">Thank you for sharing your experience! Your feedback helps others make better decisions.</p>
                   </div>
+                </div>
+              ) : (
+                <div className="space-y-5 sm:space-y-8">
+                  <form onSubmit={handleReviewSubmit} className="bg-slate-50/50 border border-slate-100 rounded-2xl sm:rounded-3xl p-5 sm:p-8 space-y-5 sm:space-y-6">
+                    <h3 className="font-bold text-lg text-slate-900">Write a Review</h3>
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      <span className="text-sm font-bold text-slate-500">How would you rate your experience?</span>
+                      <div className="flex items-center gap-1.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setReviewRating(star)}
+                            className="focus:outline-none transition-transform hover:scale-125"
+                          >
+                            <LucideStar className={`w-8 h-8 ${star <= reviewRating ? 'text-yellow-400 fill-current' : 'text-slate-300'}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-                  <button
-                    type="submit"
-                    className="inline-flex items-center gap-2 px-8 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95"
-                  >
-                    Submit Review
-                  </button>
-                </form>
-              </div>
-            )}
-          </section>
+                    <div>
+                      <label htmlFor="review_comment" className="block text-sm font-bold text-slate-700 mb-2">
+                        Your Feedback
+                      </label>
+                      <textarea
+                        id="review_comment"
+                        rows={4}
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        placeholder="Tell us what you liked (or didn't like)..."
+                        required
+                        className="block w-full rounded-2xl border border-slate-200 p-4 text-base focus:ring-4 focus:ring-blue-100 focus:border-blue-600 transition-all outline-none"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-2 px-8 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                    >
+                      Submit Review
+                    </button>
+                  </form>
+                </div>
+              )}
+            </section>
+          )}
         </div>
 
         {/* Right Column: Sidebar Information */}
