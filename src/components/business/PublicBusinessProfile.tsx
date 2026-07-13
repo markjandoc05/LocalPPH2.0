@@ -49,17 +49,17 @@ const getOrCreateProfileVisitorKey = () => {
     const existingKey = localStorage.getItem(profileVisitorStorageKey);
     if (existingKey) return existingKey;
 
-    const nextKey = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const nextKey = `anonymous:${window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
     localStorage.setItem(profileVisitorStorageKey, nextKey);
     return nextKey;
   } catch (error) {
     console.warn('Unable to persist profile visitor key:', error);
-    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return `anonymous:${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
 };
 
 export default function PublicBusinessProfile({ business }: PublicBusinessProfileProps) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const galleryImages = parseGallery(business.gallery);
   const googleMapsEmbedSrc = getGoogleMapsEmbedSrc(business.googleMapsUrl);
   const shortDescription = getShortDesc(business.description);
@@ -162,11 +162,13 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
   }, [business]);
 
   useEffect(() => {
+    if (authLoading) return;
+
     let cancelled = false;
 
     const trackProfileView = async () => {
       try {
-        const visitorKey = getOrCreateProfileVisitorKey();
+        const visitorKey = user?.uid ? `user:${user.uid}` : getOrCreateProfileVisitorKey();
         const response = await fetch('/api/business/profile-view', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -189,7 +191,7 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
     return () => {
       cancelled = true;
     };
-  }, [business.id]);
+  }, [authLoading, business.id, user?.uid]);
 
   const handleWebsiteClick = () => {
     trackEvent('business_website_click', getEventParams({ link_url: business.websiteUrl }));

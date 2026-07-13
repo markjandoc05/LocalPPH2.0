@@ -1,13 +1,15 @@
 import * as React from "react"
 import { Card, CardContent } from "./Card"
-import { LucideIcon } from "lucide-react"
+import { LucideArrowRight, LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 interface StatCardProps {
   title: string
   value: string | number
   description?: string
   icon: LucideIcon
+  href?: string
   trend?: {
     value: number
     label: string
@@ -16,18 +18,23 @@ interface StatCardProps {
   className?: string
 }
 
-export function StatCard({ title, value, description, icon: Icon, trend, className }: StatCardProps) {
-  return (
-    <Card className={cn("overflow-hidden", className)}>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between space-y-0 pb-4">
-          <h3 className="text-sm font-medium text-slate-500">{title}</h3>
-          <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-            <Icon className="h-5 w-5" />
+export function StatCard({ title, value, description, icon: Icon, href, trend, className }: StatCardProps) {
+  const content = (
+    <>
+      <CardContent className="p-3.5 sm:p-5">
+        <div className="mb-4 flex items-start justify-between gap-2">
+          <h3 className="text-[11px] font-medium leading-tight text-slate-500 sm:text-sm">{title}</h3>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {href && (
+              <LucideArrowRight className="h-3.5 w-3.5 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-600 sm:h-4 sm:w-4" />
+            )}
+            <div className="rounded-lg bg-blue-50 p-1.5 text-blue-600 sm:p-2">
+              <Icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
+            </div>
           </div>
         </div>
         <div>
-          <div className="text-2xl font-bold text-slate-900">{value}</div>
+          <div className="text-lg font-bold leading-none text-slate-900 sm:text-2xl">{value}</div>
           {(description || trend) && (
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
               {trend && (
@@ -40,6 +47,26 @@ export function StatCard({ title, value, description, icon: Icon, trend, classNa
           )}
         </div>
       </CardContent>
+    </>
+  )
+
+  const cardClassName = cn(
+    "group overflow-hidden rounded-xl shadow-sm transition-all",
+    href && "hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2",
+    className
+  )
+
+  if (href) {
+    return (
+      <Link href={href} className={cn("block border border-slate-200 bg-white text-slate-950", cardClassName)}>
+        {content}
+      </Link>
+    )
+  }
+
+  return (
+    <Card className={cardClassName}>
+      {content}
     </Card>
   )
 }
