@@ -25,6 +25,7 @@ import {
   LucideBookmark,
   LucideChevronLeft,
   LucideChevronRight,
+  LucideDownload,
   LucideFilter,
   LucideRotateCcw,
   LucideSearch,
@@ -71,6 +72,11 @@ const getDateValue = (value?: string) => value ? new Date(value).getTime() || 0 
 const USERS_PER_PAGE = 10;
 
 const displayValue = (value?: string | null) => value?.trim() || 'Not set';
+
+const escapeCsvValue = (value?: string | null) => {
+  const text = String(value || '').replace(/\r?\n|\r/g, ' ').trim();
+  return `"${text.replace(/"/g, '""')}"`;
+};
 
 export default function AdminUserTable({
   users,
@@ -338,6 +344,31 @@ export default function AdminUserTable({
     setCurrentPage(1);
   };
 
+  const exportFilteredUsersCsv = () => {
+    const rows = [
+      ['Name', 'Email', 'User Role'],
+      ...filteredUsers.map((user) => [
+        user.displayName || 'No Name',
+        user.email || '',
+        normalizeRole(user.role),
+      ]),
+    ];
+    const csv = rows
+      .map((row) => row.map((value) => escapeCsvValue(value)).join(','))
+      .join('\n');
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const roleSuffix = roleFilter === 'ALL' ? 'all-users' : roleFilter.toLowerCase();
+
+    link.href = url;
+    link.download = `localpages-${roleSuffix}-contacts.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   if (!users || users.length === 0) {
     return (
       <EmptyState title="No users found" description="There are no users to display." />
@@ -408,21 +439,35 @@ export default function AdminUserTable({
   return (
     <>
       <div className="space-y-4">
-        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[150px_minmax(260px,1fr)_150px_190px_auto_auto] lg:items-end">
-              <div className="lg:pb-1">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <LucideFilter className="h-4 w-4 text-blue-600" />
-                  Filter users
+	        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+	          <div className="space-y-3">
+	            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+	              <div>
+	                <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+	                  <LucideFilter className="h-4 w-4 text-blue-600" />
+	                  Filter users
                 </div>
                 <p className="mt-1 text-xs text-slate-600">
-                  {filteredUsers.length} of {users.length} users
-                </p>
-              </div>
+	                  {filteredUsers.length} of {users.length} users
+	                </p>
+	              </div>
+	              <Button
+	                type="button"
+	                variant="secondary"
+	                onClick={exportFilteredUsersCsv}
+	                disabled={filteredUsers.length === 0}
+	                size="sm"
+	                className="h-8 w-full px-3 text-xs font-semibold sm:w-auto"
+	              >
+	                <LucideDownload className="mr-1.5 h-3.5 w-3.5" />
+	                Export CSV
+	              </Button>
+	            </div>
 
-              <label className="space-y-1 sm:col-span-2 lg:col-span-1">
-                <span className="text-xs font-medium text-slate-600">Search</span>
+	            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(260px,1fr)_150px_190px_auto_auto] lg:items-end">
+
+	              <label className="space-y-1 sm:col-span-2 lg:col-span-1">
+	                <span className="text-xs font-medium text-slate-600">Search</span>
                 <div className="relative">
                   <LucideSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                   <Input
@@ -486,10 +531,10 @@ export default function AdminUserTable({
                 size="sm"
                 className="h-10 w-full"
               >
-                <LucideRotateCcw className="mr-2 h-4 w-4" />
-                Reset
-              </Button>
-            </div>
+	                <LucideRotateCcw className="mr-2 h-4 w-4" />
+	                Reset
+	              </Button>
+	            </div>
 
             {showAdvancedFilters && (
               <div className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3 sm:grid-cols-3">
