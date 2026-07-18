@@ -83,6 +83,10 @@ const emptyToUndefined = (value: unknown) => {
   return typeof value === 'string' && value.trim() === '' ? undefined : value;
 };
 
+const SeoFieldTip = ({ children }: { children: React.ReactNode }) => (
+  <p className="mt-1 text-xs leading-5 text-slate-500">{children}</p>
+);
+
 export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: BusinessFormProps) {
   const [formData, setFormData] = useState<Partial<BusinessListing>>({
     name: '',
@@ -486,6 +490,9 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
           <p className="text-xs text-blue-700 mt-0.5">
             Submit your business for review. Once approved, it will appear in LocalPages.ph. You can also save your progress as a draft at any time.
           </p>
+          <p className="text-xs text-blue-700 mt-2">
+            SEO tip: complete every relevant field with accurate business details, location terms, products, services, and real photos. This helps Google, AI search tools, and customers understand what your business offers.
+          </p>
         </div>
       </div>
 
@@ -509,6 +516,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="e.g. Juan's Coffee Shop"
               />
               {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+              <SeoFieldTip>Use the exact public business name customers know. Avoid adding extra keywords unless they are part of the official name.</SeoFieldTip>
             </div>
 
             <div>
@@ -540,6 +548,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                   ))}
                 </select>
                 {errors.categoryId && <p className="mt-1 text-sm text-red-500">{errors.categoryId}</p>}
+                <SeoFieldTip>Choose the closest category so search engines can understand your main business type.</SeoFieldTip>
               </div>
 
               <div>
@@ -556,6 +565,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                     <option key={sub.id} value={sub.id}>{sub.name}</option>
                   ))}
                 </select>
+                <SeoFieldTip>Add a subcategory when available to improve niche searches like cafe, dental clinic, salon, or furniture supplier.</SeoFieldTip>
               </div>
             </div>
 
@@ -575,6 +585,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="A brief 1-2 sentence summary of your business to show in cards and lists."
               />
               {errors.shortDescription && <p className="mt-1 text-sm text-red-500">{errors.shortDescription}</p>}
+              <SeoFieldTip>Write a natural summary that includes what you offer and where you serve, for example: coffee shop in Mandaluyong serving pastries and specialty drinks.</SeoFieldTip>
             </div>
 
             <div>
@@ -593,6 +604,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="Detailed description of your history, team, values, specialties, and anything else you want customers to know."
               />
               {errors.fullDescription && <p className="mt-1 text-sm text-red-500">{errors.fullDescription}</p>}
+              <SeoFieldTip>Include your services, products, location, customer type, specialties, and trust signals. This content helps AI search answer detailed customer questions.</SeoFieldTip>
             </div>
 
             <div>
@@ -605,7 +617,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
                 placeholder="e.g. coffee, cafe, breakfast, pastries, coworking, Mandaluyong"
               />
-              <p className="mt-1 text-xs text-gray-500">Add comma-separated terms customers may use when searching for your business.</p>
+              <SeoFieldTip>Add 5-10 comma-separated search phrases customers may use, including service, product, brand specialty, city, and nearby area.</SeoFieldTip>
             </div>
           </div>
         </CardContent>
@@ -631,7 +643,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="e.g. 0917 123 4567"
               />
               {errors.contactMobile && <p className="mt-1 text-sm text-red-500">{errors.contactMobile}</p>}
-              <p className="mt-1 text-xs text-gray-400">At least mobile or landline number is required.</p>
+              <SeoFieldTip>Use an active public number. Clear contact details improve customer trust and local business completeness.</SeoFieldTip>
             </div>
             
             <div>
@@ -644,6 +656,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
                 placeholder="e.g. (02) 8123 4567"
               />
+              <SeoFieldTip>Add a landline if customers can call it. Consistent phone numbers across the web help local search confidence.</SeoFieldTip>
             </div>
 
             <div>
@@ -656,6 +669,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
                 placeholder="e.g. contact@juanscoffeeshop.com"
               />
+              <SeoFieldTip>Use a public business email customers can contact. Domain emails are ideal when available.</SeoFieldTip>
             </div>
             
             <div>
@@ -669,6 +683,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="e.g. https://www.juanscoffeeshop.com"
               />
               {errors.websiteUrl && <p className="mt-1 text-sm text-red-500">{errors.websiteUrl}</p>}
+              <SeoFieldTip>Add your official website so search engines can connect your LocalPages profile with your main site.</SeoFieldTip>
             </div>
 
             <div>
@@ -682,6 +697,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="e.g. https://facebook.com/juanscoffeeshop"
               />
               {errors.facebookUrl && <p className="mt-1 text-sm text-red-500">{errors.facebookUrl}</p>}
+              <SeoFieldTip>Add only official social profiles. These links help confirm the business identity online.</SeoFieldTip>
             </div>
 
             <div>
@@ -695,6 +711,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="e.g. https://instagram.com/juanscoffeeshop"
               />
               {errors.instagramUrl && <p className="mt-1 text-sm text-red-500">{errors.instagramUrl}</p>}
+              <SeoFieldTip>Use your official Instagram profile if customers can view products, services, menus, or recent work there.</SeoFieldTip>
             </div>
 
             <div>
@@ -708,6 +725,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="e.g. https://www.linkedin.com/company/juanscoffeeshop"
               />
               {errors.linkedinUrl && <p className="mt-1 text-sm text-red-500">{errors.linkedinUrl}</p>}
+              <SeoFieldTip>Add LinkedIn for companies, professional services, suppliers, and B2B businesses.</SeoFieldTip>
             </div>
 
             <div>
@@ -721,6 +739,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="e.g. https://www.tiktok.com/@juanscoffeeshop"
               />
               {errors.tiktokUrl && <p className="mt-1 text-sm text-red-500">{errors.tiktokUrl}</p>}
+              <SeoFieldTip>Add TikTok if it shows official business content, product demos, food videos, or service examples.</SeoFieldTip>
             </div>
 
             <div>
@@ -734,6 +753,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="e.g. https://shopee.ph/juanscoffeeshop"
               />
               {errors.shopeeUrl && <p className="mt-1 text-sm text-red-500">{errors.shopeeUrl}</p>}
+              <SeoFieldTip>Add your official store link so customers and search engines can connect your products with your listing.</SeoFieldTip>
             </div>
 
             <div>
@@ -747,6 +767,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="e.g. https://www.lazada.com.ph/shop/juanscoffeeshop"
               />
               {errors.lazadaUrl && <p className="mt-1 text-sm text-red-500">{errors.lazadaUrl}</p>}
+              <SeoFieldTip>Add your official Lazada shop when customers can buy your products there.</SeoFieldTip>
             </div>
           </div>
         </CardContent>
@@ -775,6 +796,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 ))}
               </select>
               {errors.regionId && <p className="mt-1 text-sm text-red-500">{errors.regionId}</p>}
+              <SeoFieldTip>Select the correct region for local search and location pages.</SeoFieldTip>
             </div>
 
             <div>
@@ -792,6 +814,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 ))}
               </select>
               {errors.provinceId && <p className="mt-1 text-sm text-red-500">{errors.provinceId}</p>}
+              <SeoFieldTip>Use the exact province or Metro Manila area where customers can find or contact you.</SeoFieldTip>
             </div>
 
             <div>
@@ -809,6 +832,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 ))}
               </select>
               {errors.cityId && <p className="mt-1 text-sm text-red-500">{errors.cityId}</p>}
+              <SeoFieldTip>City is important for searches like "near me" and "service in [city]".</SeoFieldTip>
             </div>
           </div>
 
@@ -824,6 +848,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="e.g. Unit 101, Ground Floor, XYZ Building, 123 Main St., Brgy. San Lorenzo"
               />
               {errors.addressLine1 && <p className="mt-1 text-sm text-red-500">{errors.addressLine1}</p>}
+              <SeoFieldTip>Include building, street, barangay, and landmarks when useful. A complete address helps customers and local SEO.</SeoFieldTip>
             </div>
 
             <div>
@@ -836,7 +861,13 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
                 placeholder='Paste a Google Maps share link or iframe embed code, e.g. <iframe src="https://www.google.com/maps/embed?..."></iframe>'
               />
-              <p className="mt-1 text-xs text-gray-500">On Google Maps, choose Share, then either copy the map link or Embed a map code.</p>
+              <SeoFieldTip>On Google Maps, open your business location, click Share, choose Embed a map, then copy and paste the full iframe code here.</SeoFieldTip>
+              <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-600">
+                <p className="font-medium text-slate-700">Example format:</p>
+                <code className="mt-1 block whitespace-pre-wrap break-all text-slate-600">
+                  {'<iframe src="https://www.google.com/maps/embed?pb=..." width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>'}
+                </code>
+              </div>
             </div>
 
             <div>
@@ -847,8 +878,9 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 onChange={handleChange}
                 rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
-                placeholder="e.g. Monday to Saturday, 9:00 AM - 6:00 PM"
+                placeholder="e.g. Monday-Friday: 9:00 AM - 6:00 PM&#10;Saturday: 10:00 AM - 4:00 PM"
               />
+              <SeoFieldTip>Use a consistent 12-hour format with days and times. Accurate hours help customers know when you are open.</SeoFieldTip>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -860,8 +892,9 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                   onChange={handleChange}
                   rows={4}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
-                  placeholder="List key products, menu items, or product categories."
+                  placeholder="e.g. Espresso, iced coffee, cakes, pastries, catering trays"
                 />
+                <SeoFieldTip>List specific products, menu items, brands, or categories customers search for.</SeoFieldTip>
               </div>
 
               <div>
@@ -872,8 +905,9 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                   onChange={handleChange}
                   rows={4}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563EB] outline-none"
-                  placeholder="List key services, specialties, or service areas."
+                  placeholder="e.g. Dine-in, takeaway, catering, delivery, private events"
                 />
+                <SeoFieldTip>List services and specialties in plain customer language, including service areas when relevant.</SeoFieldTip>
               </div>
             </div>
           </div>
@@ -891,7 +925,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
           <div className="space-y-8">
             <div>
               <h3 className="text-base font-semibold text-gray-900 mb-2">Business Logo <span className="text-red-500">*</span></h3>
-              <p className="text-xs text-gray-500 mb-4">This logo appears on your public profile and listing cards. Maximum file size: 1 MB.</p>
+              <p className="text-xs text-gray-500 mb-4">Use a clear square logo that is not cropped. This helps customers recognize your business in listings and shared links. Maximum file size: 1 MB.</p>
               <div className="flex flex-col sm:flex-row gap-6">
                 {logoUrl ? (
                   <ImagePreviewCard 
@@ -922,7 +956,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
 
             <div>
               <h3 className="text-base font-semibold text-gray-900 mb-2">Cover Photo</h3>
-              <p className="text-xs text-gray-500 mb-4">This image appears at the top of your public business profile and listing card. Maximum file size: 1 MB.</p>
+              <p className="text-xs text-gray-500 mb-4">Use a real, bright photo of your storefront, products, food, venue, or completed work. Strong cover photos improve clicks from search and social previews. Maximum file size: 1 MB.</p>
               {coverUrl ? (
                 <ImagePreviewCard
                   url={coverUrl}
@@ -950,7 +984,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
 
             <div>
               <h3 className="text-base font-semibold text-gray-900 mb-2">Photo Gallery</h3>
-              <p className="text-xs text-gray-500 mb-4">Add photos of your storefront, products, menu, team, projects, or services. Maximum of 5 photos, up to 1 MB each.</p>
+              <p className="text-xs text-gray-500 mb-4">Add real photos of your storefront, products, menu, team, projects, or services. Varied images help customers and AI search understand what you offer. Maximum of 5 photos, up to 1 MB each.</p>
               {gallery.length < MAX_GALLERY_IMAGES ? (
                 <div className="w-full max-w-2xl">
                   <MediaUploader

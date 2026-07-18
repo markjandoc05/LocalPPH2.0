@@ -79,6 +79,19 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
   const hasProductsServices = !!(business.products || business.services);
   const showUniqueViews = false;
   const showCustomerReviews = false;
+  const serviceArea = [business.cityName, business.provinceName, business.regionName].filter(Boolean).join(', ');
+  const fullAddress = [business.addressLine1, business.cityName, business.provinceName, business.regionName, business.zipCode].filter(Boolean).join(', ');
+  const primaryContactNumber = business.contactMobile || business.contactPhone;
+  const businessFacts = [
+    { label: 'Business name', value: business.name },
+    { label: 'Category', value: [business.categoryName, business.subcategoryName !== 'Not assigned' ? business.subcategoryName : ''].filter(Boolean).join(' / ') },
+    { label: 'Location', value: serviceArea },
+    { label: 'Address', value: fullAddress },
+    { label: 'Contact number', value: primaryContactNumber },
+    { label: 'Email', value: business.contactEmail },
+    { label: 'Website', value: business.websiteUrl },
+    { label: 'Keywords', value: business.keywords },
+  ].filter((fact) => fact.value);
 
   // Interactive UI state
   const [bookmarked, setBookmarked] = useState<boolean>(false);
@@ -521,6 +534,26 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
                   </div>
                 )}
               </div>
+            </section>
+          )}
+
+          {businessFacts.length > 0 && (
+            <section className="order-3 bg-white p-5 sm:p-10 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-4 sm:mb-6 font-sans">
+                Business Facts
+              </h2>
+              <p className="mb-4 text-sm leading-6 text-slate-600">
+                Key information about {business.name} for people searching for {business.categoryName || 'local businesses'}
+                {serviceArea ? ` in ${serviceArea}` : ' in the Philippines'}.
+              </p>
+              <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {businessFacts.map((fact) => (
+                  <div key={fact.label} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                    <dt className="text-xs font-bold uppercase tracking-wider text-slate-400">{fact.label}</dt>
+                    <dd className="mt-1 break-words text-sm font-semibold text-slate-800">{fact.value}</dd>
+                  </div>
+                ))}
+              </dl>
             </section>
           )}
 

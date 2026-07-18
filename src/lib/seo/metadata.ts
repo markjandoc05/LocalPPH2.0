@@ -9,6 +9,13 @@ const cleanText = (value?: string | null) => {
   return value.replace(/\s+/g, ' ').trim();
 };
 
+const splitTerms = (value?: string | null) => {
+  return cleanText(value)
+    .split(/[,;\n|]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
 export const toAbsoluteUrl = (url?: string | null) => {
   if (!url) return undefined;
   if (/^https?:\/\//i.test(url)) return url;
@@ -69,7 +76,24 @@ export const generateBusinessMetadata = (business: any) => {
   const location = [city, province].filter(Boolean).join(', ') || 'Philippines';
   const title = `${business.name} – ${category} in ${location} | ${SITE_NAME}`;
   const shortDesc = cleanText(getShortDesc(business.description));
-  const descriptionSource = shortDesc || `Find contact information, location, services, and business details for ${business.name} on ${SITE_NAME}.`;
+  const services = cleanText(business.services);
+  const products = cleanText(business.products);
+  const keywordTerms = [
+    business.name,
+    category,
+    business.subcategoryName,
+    city,
+    province,
+    business.regionName,
+    ...splitTerms(business.keywords),
+    ...splitTerms(products),
+    ...splitTerms(services),
+  ].filter(Boolean);
+  const descriptionSource =
+    shortDesc ||
+    services ||
+    products ||
+    `Find contact information, location, services, products, business hours, and business details for ${business.name} in ${location} on ${SITE_NAME}.`;
   const description = descriptionSource.slice(0, 155) + (descriptionSource.length > 155 ? '...' : '');
   const url = `${SITE_URL}/business/${business.slug}`;
   const imageUrl = toAbsoluteUrl(business.coverUrl || business.logoUrl) || toAbsoluteUrl(SITE_SOCIAL_IMAGE);
@@ -77,6 +101,15 @@ export const generateBusinessMetadata = (business: any) => {
   return {
     title,
     description,
+    keywords: Array.from(new Set(keywordTerms)).slice(0, 24),
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+      },
+    },
     alternates: {
       canonical: url,
     },
@@ -86,7 +119,7 @@ export const generateBusinessMetadata = (business: any) => {
       url,
       siteName: SITE_NAME,
       locale: 'en_PH',
-      type: 'article',
+      type: 'website',
       images: [
         {
           url: imageUrl,

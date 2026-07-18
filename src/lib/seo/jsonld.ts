@@ -19,6 +19,90 @@ const parseGallery = (gallery: BusinessListing['gallery']) => {
   }
 };
 
+const splitTextItems = (value?: string | null) =>
+  clean(value)
+    ?.split(/[\n;,|]+/)
+    .map((item) => item.trim())
+    .filter(Boolean) || [];
+
+const dayMap: Record<string, string> = {
+  mon: 'Monday',
+  monday: 'Monday',
+  tue: 'Tuesday',
+  tues: 'Tuesday',
+  tuesday: 'Tuesday',
+  wed: 'Wednesday',
+  wednesday: 'Wednesday',
+  thu: 'Thursday',
+  thur: 'Thursday',
+  thurs: 'Thursday',
+  thursday: 'Thursday',
+  fri: 'Friday',
+  friday: 'Friday',
+  sat: 'Saturday',
+  saturday: 'Saturday',
+  sun: 'Sunday',
+  sunday: 'Sunday',
+};
+
+const normalizeTime = (value: string) => {
+  const trimmed = value.trim().toLowerCase().replace(/\./g, '');
+  const match = trimmed.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
+  if (!match) return undefined;
+
+  let hour = Number(match[1]);
+  const minute = match[2] || '00';
+  const period = match[3];
+
+  if (period === 'pm' && hour < 12) hour += 12;
+  if (period === 'am' && hour === 12) hour = 0;
+
+  if (hour > 23 || Number(minute) > 59) return undefined;
+  return `${String(hour).padStart(2, '0')}:${minute}`;
+};
+
+const parseDayNames = (value: string) => {
+  const normalized = value.toLowerCase();
+  const rangeMatch = normalized.match(/\b(mon(?:day)?|tue(?:s|sday)?|wed(?:nesday)?|thu(?:r|rs|rsday|rday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\s*[-–]\s*(mon(?:day)?|tue(?:s|sday)?|wed(?:nesday)?|thu(?:r|rs|rsday|rday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b/);
+  const orderedDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  if (rangeMatch) {
+    const start = dayMap[rangeMatch[1]];
+    const end = dayMap[rangeMatch[2]];
+    const startIndex = orderedDays.indexOf(start);
+    const endIndex = orderedDays.indexOf(end);
+    if (startIndex >= 0 && endIndex >= startIndex) {
+      return orderedDays.slice(startIndex, endIndex + 1);
+    }
+  }
+
+  return Array.from(normalized.matchAll(/\b(mon(?:day)?|tue(?:s|sday)?|wed(?:nesday)?|thu(?:r|rs|rsday|rday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b/g))
+    .map((match) => dayMap[match[1]])
+    .filter(Boolean);
+};
+
+const parseOpeningHoursSpecification = (value?: string | null) => {
+  const lines = clean(value)?.split(/\n|;/).map((line) => line.trim()).filter(Boolean) || [];
+
+  return lines
+    .map((line) => {
+      const days = parseDayNames(line);
+      const timeMatch = line.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)\s*[-–]\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)/i);
+      const opens = timeMatch ? normalizeTime(timeMatch[1]) : undefined;
+      const closes = timeMatch ? normalizeTime(timeMatch[2]) : undefined;
+
+      if (!days.length || !opens || !closes) return undefined;
+
+      return {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: days,
+        opens,
+        closes,
+      };
+    })
+    .filter(Boolean);
+};
+
 const removeEmpty = (value: any): any => {
   if (Array.isArray(value)) {
     const cleaned = value.map(removeEmpty).filter((item) => item !== undefined);
@@ -110,6 +194,11 @@ export const generateLocalBusinessJsonLd = (business: BusinessListing) => {
     business.shopeeUrl,
     business.lazadaUrl,
   ].map(clean).filter(Boolean);
+  const productItems = splitTextItems(business.products);
+  const serviceItems = splitTextItems(business.services);
+  const keywords = splitTextItems(business.keywords);
+  const openingHoursSpecification = parseOpeningHoursSpecification(business.businessHours);
+  const location = [business.cityName, business.provinceName, business.regionName].filter(Boolean).join(', ');
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -120,8 +209,17 @@ export const generateLocalBusinessJsonLd = (business: BusinessListing) => {
     url: businessUrl,
     logo: toAbsoluteUrl(business.logoUrl),
     image: images,
+    slogan: category ? `${category} in ${location || 'the Philippines'}` : undefined,
     telephone: clean(business.contactMobile || business.contactPhone),
     email: clean(business.contactEmail),
+    contactPoint: (business.contactMobile || business.contactPhone || business.contactEmail) ? {
+      '@type': 'ContactPoint',
+      telephone: clean(business.contactMobile || business.contactPhone),
+      email: clean(business.contactEmail),
+      contactType: 'customer service',
+      areaServed: 'PH',
+      availableLanguage: ['en', 'fil'],
+    } : undefined,
     address: {
       '@type': 'PostalAddress',
       streetAddress: clean(business.addressLine1),
@@ -136,11 +234,25 @@ export const generateLocalBusinessJsonLd = (business: BusinessListing) => {
       longitude: business.longitude,
     } : undefined,
     openingHours: clean(business.businessHours),
+    openingHoursSpecification,
     category,
-    knowsAbout: clean([business.products, business.services].filter(Boolean).join(', ')),
+    keywords: keywords.length ? keywords.join(', ') : undefined,
+    knowsAbout: Array.from(new Set([...keywords, ...productItems, ...serviceItems, category].filter(Boolean))),
+    areaServed: {
+      '@type': 'AdministrativeArea',
+      name: location || 'Philippines',
+    },
+    makesOffer: [...productItems, ...serviceItems].map((item) => ({
+      '@type': 'Offer',
+      itemOffered: {
+        '@type': 'Service',
+        name: item,
+      },
+    })),
     sameAs,
     hasMap: clean(business.googleMapsUrl),
     dateModified: clean(business.updatedAt),
+    dateCreated: clean(business.createdAt),
   };
 
   return removeEmpty(jsonLd);
