@@ -89,7 +89,15 @@ const getAdminEmailRecipients = async () => {
 
 const sendNotificationSafely = async (sender: () => Promise<unknown>) => {
   try {
-    await sender();
+    const result = await sender();
+    if (
+      result &&
+      typeof result === 'object' &&
+      'sent' in result &&
+      (result as { sent?: boolean }).sent === false
+    ) {
+      console.warn('Email notification was not sent:', result);
+    }
   } catch (error) {
     console.error('Email notification hook failed:', error);
   }
@@ -1394,13 +1402,28 @@ export const databaseProvider: DataProvider = {
       .returning({ id: businesses.id });
 
     if (res[0]?.id && variables.status === 'APPROVED' && businessBeforeUpdate?.status !== 'APPROVED') {
-      await sendNotificationSafely(() =>
-        notifyUserOfApprovedListing(
-          toEmailRecipient(businessBeforeUpdate?.owner),
+      await sendNotificationSafely(async () => {
+        const owner = businessBeforeUpdate?.owner || (
+          businessBeforeUpdate?.ownerId
+            ? await db.query.users.findFirst({ where: eq(users.id, businessBeforeUpdate.ownerId) })
+            : null
+        );
+        const recipient = toEmailRecipient(owner);
+
+        if (!recipient.email) {
+          console.warn('Listing approval email skipped: business owner email was not found.', {
+            businessId: res[0].id,
+            ownerId: businessBeforeUpdate?.ownerId,
+          });
+          return { sent: false, reason: 'missing_owner_email' };
+        }
+
+        return notifyUserOfApprovedListing(
+          recipient,
           businessBeforeUpdate?.name || 'Your business listing',
           businessBeforeUpdate?.slug,
-        ),
-      );
+        );
+      });
     }
     
     return {

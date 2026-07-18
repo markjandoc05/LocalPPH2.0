@@ -84,7 +84,7 @@ export default function BusinessListingTable({ listings }: { listings: BusinessL
                   </Button>
                 </Link>
                 {listing.status === 'APPROVED' && (
-                  <Link href={`/biz/${listing.slug}`} target="_blank" title="View Public Profile">
+                  <Link href={`/business/${listing.slug}`} target="_blank" title="View Public Profile">
                     <Button variant="ghost" size="icon">
                       <LucideEye className="w-4 h-4 text-slate-500 hover:text-blue-600" />
                     </Button>

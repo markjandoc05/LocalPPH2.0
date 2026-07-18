@@ -522,7 +522,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
                 placeholder="juans-coffee-shop"
                 readOnly
               />
-              <p className="mt-1 text-xs text-gray-500">Auto-generated from business name. This will be your public URL (localpages.ph/biz/slug).</p>
+              <p className="mt-1 text-xs text-gray-500">Auto-generated from business name. This will be your public URL (localpages.ph/business/slug).</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -19,7 +19,6 @@ export default function BusinessPortalLayout({ children }: BusinessPortalLayoutP
     { name: 'Dashboard', href: '/business', icon: LucideLayoutDashboard },
     { name: 'My Listings', href: '/business/listings', icon: LucideStore },
     { name: 'Inquiries', href: '/business/inquiries', icon: LucideInbox },
-    { name: 'My Inquiries', href: '/inquiries', icon: LucideInbox },
     { name: 'Settings', href: '/business/settings', icon: LucideSettings },
   ];
 

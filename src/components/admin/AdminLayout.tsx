@@ -85,7 +85,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       exact: false,
     },
     {
-      name: "My Inquiries",
+      name: "Inquiries",
       href: "/inquiries",
       icon: LucideInbox,
       exact: true,

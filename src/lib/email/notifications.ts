@@ -135,7 +135,7 @@ const sendTemplatedNotification = async (
 };
 
 export const notifyAdminsOfUpgradeRequest = async (admins: EmailRecipient[], requester: EmailRecipient) => {
-  await sendTemplatedNotification('upgradeRequestAdmin', admins, {
+  return sendTemplatedNotification('upgradeRequestAdmin', admins, {
     requesterName: requester.name || requester.email || 'User',
     requesterEmail: requester.email || 'Not provided',
     adminUsersUrl: `${SITE_URL}/admin/users`,
@@ -143,7 +143,7 @@ export const notifyAdminsOfUpgradeRequest = async (admins: EmailRecipient[], req
 };
 
 export const notifyUserOfAccountUpgrade = async (user: EmailRecipient) => {
-  await sendTemplatedNotification('upgradeApprovedUser', user, {
+  return sendTemplatedNotification('upgradeApprovedUser', user, {
     userName: user.name || 'there',
     userEmail: user.email || '',
     businessDashboardUrl: `${SITE_URL}/business`,
@@ -151,7 +151,7 @@ export const notifyUserOfAccountUpgrade = async (user: EmailRecipient) => {
 };
 
 export const notifyUserOfApprovedListing = async (user: EmailRecipient, businessName: string, slug?: string | null) => {
-  await sendTemplatedNotification('listingApprovedOwner', user, {
+  return sendTemplatedNotification('listingApprovedOwner', user, {
     userName: user.name || 'there',
     userEmail: user.email || '',
     businessName,
@@ -170,7 +170,7 @@ export const notifyAdminsOfSubmittedListing = async (
     location?: string | null;
   },
 ) => {
-  await sendTemplatedNotification('listingSubmittedAdmin', admins, {
+  return sendTemplatedNotification('listingSubmittedAdmin', admins, {
     businessName: listing.businessName,
     ownerName: listing.ownerName || listing.ownerEmail || 'Business owner',
     ownerEmail: listing.ownerEmail || 'Not provided',
@@ -191,7 +191,7 @@ export const notifyBusinessOwnerOfInquiry = async (
     message: string;
   },
 ) => {
-  await sendTemplatedNotification('inquiryReceivedOwner', owner, {
+  return sendTemplatedNotification('inquiryReceivedOwner', owner, {
     ownerName: owner.name || 'there',
     ownerEmail: owner.email || '',
     businessName: inquiry.businessName,
@@ -212,7 +212,7 @@ export const notifyInquirySenderOfReply = async (
     message: string;
   },
 ) => {
-  await sendTemplatedNotification('inquiryReplyUser', sender, {
+  return sendTemplatedNotification('inquiryReplyUser', sender, {
     userName: sender.name || 'there',
     userEmail: sender.email || '',
     businessName: inquiry.businessName,
