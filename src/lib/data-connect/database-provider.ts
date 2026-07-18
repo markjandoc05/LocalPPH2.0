@@ -24,10 +24,8 @@ import {
   notifyAdminsOfSubmittedListing,
   notifyBusinessOwnerOfInquiry,
   notifyInquirySenderOfReply,
-  requireEmailNotificationSent,
   notifyUserOfAccountUpgrade,
   notifyUserOfApprovedListing,
-  verifyEmailNotificationReady,
 } from "@/lib/email/notifications";
 
 const businessInquiryCategory = 'BUSINESS_INQUIRY';
@@ -1406,34 +1404,38 @@ export const databaseProvider: DataProvider = {
       approvalRecipient = toEmailRecipient(owner);
 
       if (!approvalRecipient.email) {
-        throw new Error("Cannot approve listing until the business owner has a registered email address.");
+        console.warn('Listing approval email skipped: business owner registered email was not found.', {
+          businessId: variables.id,
+          ownerId: businessBeforeUpdate?.ownerId,
+        });
+        approvalRecipient = null;
+      } else {
+        console.info('Listing approval email will be sent to registered owner email.', {
+          businessId: variables.id,
+          ownerId: businessBeforeUpdate?.ownerId,
+          ownerEmail: approvalRecipient.email,
+        });
       }
-
-      const readiness = await verifyEmailNotificationReady('listingApprovedOwner');
-      requireEmailNotificationSent(readiness, "Cannot approve listing because the approval email is not ready");
     }
 
-    const res = await db.transaction(async (tx) => {
-      const updated = await tx.update(businesses)
-        .set({
-          status: variables.status,
-          moderatorNotes: variables.moderatorNotes,
-          updatedAt: new Date(),
-        })
-        .where(eq(businesses.id, variables.id))
-        .returning({ id: businesses.id });
+    const res = await db.update(businesses)
+      .set({
+        status: variables.status,
+        moderatorNotes: variables.moderatorNotes,
+        updatedAt: new Date(),
+      })
+      .where(eq(businesses.id, variables.id))
+      .returning({ id: businesses.id });
 
-      if (updated[0]?.id && isFirstApproval && approvalRecipient) {
-        const notificationResult = await notifyUserOfApprovedListing(
+    if (res[0]?.id && isFirstApproval && approvalRecipient) {
+      await sendNotificationSafely(async () => {
+        return notifyUserOfApprovedListing(
           approvalRecipient,
           businessBeforeUpdate?.name || 'Your business listing',
           businessBeforeUpdate?.slug,
         );
-        requireEmailNotificationSent(notificationResult, "Listing approval email was not sent");
-      }
-
-      return updated;
-    });
+      });
+    }
     
     return {
       data: {

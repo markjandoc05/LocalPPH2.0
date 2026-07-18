@@ -75,6 +75,9 @@ const getTransporter = () => {
       user: config.user,
       pass: config.pass,
     },
+    tls: process.env.SMTP_TLS_REJECT_UNAUTHORIZED === 'false'
+      ? { rejectUnauthorized: false }
+      : undefined,
   });
 
   return transporter;
