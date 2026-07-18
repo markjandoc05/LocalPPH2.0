@@ -339,6 +339,19 @@ export const notifyUserOfApprovedListing = async (user: EmailRecipient, business
   });
 };
 
+export const notifyUserOfListingRevision = async (
+  user: EmailRecipient,
+  listing: { id: string; businessName: string; revisionReason: string },
+) => {
+  return sendTemplatedNotification('listingRevisionOwner', user, {
+    userName: user.name || 'there',
+    userEmail: user.email || '',
+    businessName: listing.businessName,
+    revisionReason: listing.revisionReason || 'Please review the requested updates in your business listing.',
+    editListingUrl: `${SITE_URL}/business/listings/${listing.id}/edit`,
+  });
+};
+
 export const notifyAdminsOfSubmittedListing = async (
   admins: EmailRecipient[],
   listing: {

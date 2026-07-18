@@ -63,6 +63,7 @@ interface IntegrationSettings {
     upgradeApprovedUser: EmailTemplateConfig;
     listingSubmittedAdmin: EmailTemplateConfig;
     listingApprovedOwner: EmailTemplateConfig;
+    listingRevisionOwner: EmailTemplateConfig;
     inquiryReceivedOwner: EmailTemplateConfig;
     inquiryReplyUser: EmailTemplateConfig;
   };
@@ -85,7 +86,7 @@ const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
   upgradeApprovedUser: {
     enabled: true,
     subject: 'Your LocalPages.ph account is now a Business account',
-    body: 'Hi {{userName}},\n\nYour account upgrade request has been approved. You can now create and manage business listings on LocalPages.ph.\n\nGo to your business dashboard: {{businessDashboardUrl}}',
+    body: 'Hi {{userName}},\n\nGood news. Your LocalPages.ph account upgrade request has been approved.\n\nYour account now has Business access, which means you can create, submit, and manage business listings on LocalPages.ph.\n\nGo to your business dashboard: {{businessDashboardUrl}}\n\nThank you,\nThe LocalPages.ph Team',
   },
   listingSubmittedAdmin: {
     enabled: true,
@@ -96,6 +97,11 @@ const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
     enabled: true,
     subject: 'Your listing is approved: {{businessName}}',
     body: 'Hi {{userName}},\n\n{{businessName}} has been approved and is now visible on LocalPages.ph.\n\nView listing: {{businessUrl}}',
+  },
+  listingRevisionOwner: {
+    enabled: true,
+    subject: 'Action needed for your LocalPages.ph listing: {{businessName}}',
+    body: 'Hi {{userName}},\n\nThank you for submitting {{businessName}} to LocalPages.ph.\n\nOur review team needs a few updates before the listing can be approved and published.\n\nRevision notes:\n{{revisionReason}}\n\nPlease update your listing here: {{editListingUrl}}\n\nOnce you resubmit the listing, our team will review it again as soon as possible.\n\nThank you,\nThe LocalPages.ph Team',
   },
   inquiryReceivedOwner: {
     enabled: true,
@@ -169,6 +175,12 @@ const EMAIL_TEMPLATE_META: {
     title: 'Listing Approved to Owner',
     description: 'Sent to the business owner when a listing is approved.',
     variables: ['userName', 'userEmail', 'businessName', 'businessUrl'],
+  },
+  {
+    key: 'listingRevisionOwner',
+    title: 'Revision Requested to Owner',
+    description: 'Sent to the business owner when an admin requests listing revisions.',
+    variables: ['userName', 'userEmail', 'businessName', 'revisionReason', 'editListingUrl'],
   },
   {
     key: 'listingSubmittedAdmin',

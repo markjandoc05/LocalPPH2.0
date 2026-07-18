@@ -80,7 +80,7 @@ export const requestBusinessRevision = async (
     moderatorNotes: note,
     adminUserId,
   });
-  return result.data.business_update;
+  return result.data;
 };
 
 export const suspendBusiness = async (
@@ -121,7 +121,7 @@ export const updateUserRole = async (
     id,
     role: nextRole,
   });
-  return result.data.user_update;
+  return result.data;
 };
 
 export const deleteUserAccount = async (id: string) => {

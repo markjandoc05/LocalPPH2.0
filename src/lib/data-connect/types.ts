@@ -24,7 +24,7 @@ export interface DataProvider {
   updateUserRole(variables: {
     id: string;
     role: string;
-  }): Promise<{ data: { user_update: string } }>;
+  }): Promise<{ data: { user_update: string; upgradeEmailNotification?: any } }>;
   deleteUserAccount(variables: {
     id: string;
   }): Promise<{ data: { user_delete: string; deletedBusinesses: number } }>;
@@ -135,7 +135,7 @@ export interface DataProvider {
     status: BusinessStatus;
     moderatorNotes?: string;
     adminUserId?: string;
-  }): Promise<{ data: { business_update: string; approvalEmailNotification?: any } }>;
+  }): Promise<{ data: { business_update: string; approvalEmailNotification?: any; revisionEmailNotification?: any } }>;
 
   // Public operations
   searchApprovedBusinesses(variables: {

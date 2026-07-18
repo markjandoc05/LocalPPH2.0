@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { createUser, getUserById, updateUser } from '../data-connect';
@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profileComplete, setProfileComplete] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const loadUserProfile = async (firebaseUser: User) => {
+  const loadUserProfile = useCallback(async (firebaseUser: User) => {
     const fallbackRole = firebaseUser.email === 'markjandoc@gmail.com' ? ROLES.ADMIN : ROLES.SUBSCRIBER;
 
     try {
@@ -95,7 +95,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setRole(fallbackRole);
       setProfileComplete(false);
     }
-  };
+  }, []);
 
   const refreshUserProfile = async () => {
     if (!auth.currentUser) return;
@@ -118,7 +118,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [loadUserProfile]);
+
+  useEffect(() => {
+    const refreshActiveSession = () => {
+      if (!auth.currentUser) return;
+      void loadUserProfile(auth.currentUser);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshActiveSession();
+      }
+    };
+
+    window.addEventListener('focus', refreshActiveSession);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', refreshActiveSession);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loadUserProfile]);
 
   return (
     <AuthContext.Provider value={{ user, userData, role, profileComplete, loading, refreshUserProfile }}>

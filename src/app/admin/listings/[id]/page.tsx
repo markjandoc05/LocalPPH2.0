@@ -91,7 +91,19 @@ export default function ReviewListingPage() {
       } else if (actionType === 'REJECT') {
         await rejectBusiness(id, user.uid, reason);
       } else if (actionType === 'REVISION') {
-        await requestBusinessRevision(id, user.uid, reason);
+        const result = await requestBusinessRevision(id, user.uid, reason);
+        const emailResult = result?.revisionEmailNotification;
+        if (emailResult?.sent) {
+          setActionNotice({
+            type: 'success',
+            message: `Revision requested. Email was accepted by SMTP${emailResult.messageId ? ` (${emailResult.messageId})` : ''}.`,
+          });
+        } else {
+          setActionNotice({
+            type: 'warning',
+            message: `Revision requested, but email was not sent${emailResult?.message ? `: ${emailResult.message}` : emailResult?.reason ? `: ${emailResult.reason}` : '.'}`,
+          });
+        }
       } else if (actionType === 'SUSPEND') {
         await suspendBusiness(id, user.uid, reason);
       }

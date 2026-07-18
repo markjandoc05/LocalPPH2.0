@@ -26,6 +26,7 @@ import {
   notifyInquirySenderOfReply,
   notifyUserOfAccountUpgrade,
   notifyUserOfApprovedListing,
+  notifyUserOfListingRevision,
 } from "@/lib/email/notifications";
 
 const businessInquiryCategory = 'BUSINESS_INQUIRY';
@@ -537,12 +538,26 @@ export const databaseProvider: DataProvider = {
         lastName: users.lastName,
       });
 
+    let upgradeEmailNotification: unknown = null;
+
     if (res[0]?.id && nextRole === 'BUSINESS') {
-      await sendNotificationSafely(() => notifyUserOfAccountUpgrade(toEmailRecipient(res[0])));
+      const upgradeRecipient = toEmailRecipient(res[0]);
+      if (upgradeRecipient.email) {
+        upgradeEmailNotification = await sendNotificationSafely(() => notifyUserOfAccountUpgrade(upgradeRecipient));
+      } else {
+        upgradeEmailNotification = {
+          sent: false,
+          reason: 'missing_user_email',
+          message: 'User registered email was not found.',
+        };
+      }
     }
 
     return {
-      data: { user_update: res[0]?.id || variables.id },
+      data: {
+        user_update: res[0]?.id || variables.id,
+        upgradeEmailNotification,
+      },
     };
   },
 
@@ -1399,27 +1414,30 @@ export const databaseProvider: DataProvider = {
     });
 
     const isFirstApproval = variables.status === 'APPROVED' && businessBeforeUpdate?.status !== 'APPROVED';
-    let approvalRecipient: ReturnType<typeof toEmailRecipient> | null = null;
+    const isRevisionRequest = variables.status === 'REVISION_REQUESTED';
+    let ownerRecipient: ReturnType<typeof toEmailRecipient> | null = null;
 
-    if (isFirstApproval) {
+    if (isFirstApproval || isRevisionRequest) {
       const owner = businessBeforeUpdate?.owner || (
         businessBeforeUpdate?.ownerId
           ? await db.query.users.findFirst({ where: eq(users.id, businessBeforeUpdate.ownerId) })
           : null
       );
-      approvalRecipient = toEmailRecipient(owner);
+      ownerRecipient = toEmailRecipient(owner);
 
-      if (!approvalRecipient.email) {
-        console.warn('Listing approval email skipped: business owner registered email was not found.', {
+      if (!ownerRecipient.email) {
+        console.warn('Listing owner email notification skipped: business owner registered email was not found.', {
           businessId: variables.id,
           ownerId: businessBeforeUpdate?.ownerId,
+          status: variables.status,
         });
-        approvalRecipient = null;
+        ownerRecipient = null;
       } else {
-        console.info('Listing approval email will be sent to registered owner email.', {
+        console.info('Listing owner email notification will be sent to registered owner email.', {
           businessId: variables.id,
           ownerId: businessBeforeUpdate?.ownerId,
-          ownerEmail: approvalRecipient.email,
+          ownerEmail: ownerRecipient.email,
+          status: variables.status,
         });
       }
     }
@@ -1434,17 +1452,34 @@ export const databaseProvider: DataProvider = {
       .returning({ id: businesses.id });
 
     let approvalEmailNotification: unknown = null;
+    let revisionEmailNotification: unknown = null;
 
-    if (res[0]?.id && isFirstApproval && approvalRecipient) {
+    if (res[0]?.id && isFirstApproval && ownerRecipient) {
       approvalEmailNotification = await sendNotificationSafely(async () => {
         return notifyUserOfApprovedListing(
-          approvalRecipient,
+          ownerRecipient,
           businessBeforeUpdate?.name || 'Your business listing',
           businessBeforeUpdate?.slug,
         );
       });
-    } else if (res[0]?.id && isFirstApproval && !approvalRecipient) {
+    } else if (res[0]?.id && isFirstApproval && !ownerRecipient) {
       approvalEmailNotification = {
+        sent: false,
+        reason: 'missing_owner_email',
+        message: 'Business owner registered email was not found.',
+      };
+    }
+
+    if (res[0]?.id && isRevisionRequest && ownerRecipient) {
+      revisionEmailNotification = await sendNotificationSafely(async () => {
+        return notifyUserOfListingRevision(ownerRecipient, {
+          id: variables.id,
+          businessName: businessBeforeUpdate?.name || 'Your business listing',
+          revisionReason: variables.moderatorNotes || 'Please review the requested updates in your business listing.',
+        });
+      });
+    } else if (res[0]?.id && isRevisionRequest && !ownerRecipient) {
+      revisionEmailNotification = {
         sent: false,
         reason: 'missing_owner_email',
         message: 'Business owner registered email was not found.',
@@ -1455,6 +1490,7 @@ export const databaseProvider: DataProvider = {
       data: {
         business_update: res[0]?.id || variables.id,
         approvalEmailNotification,
+        revisionEmailNotification,
       },
     };
   },

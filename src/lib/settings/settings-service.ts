@@ -34,6 +34,7 @@ export interface IntegrationSettings {
     upgradeApprovedUser: EmailTemplateConfig;
     listingSubmittedAdmin: EmailTemplateConfig;
     listingApprovedOwner: EmailTemplateConfig;
+    listingRevisionOwner: EmailTemplateConfig;
     inquiryReceivedOwner: EmailTemplateConfig;
     inquiryReplyUser: EmailTemplateConfig;
   };
@@ -64,9 +65,14 @@ export const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
     body: [
       'Hi {{userName}},',
       '',
-      'Your account upgrade request has been approved. You can now create and manage business listings on LocalPages.ph.',
+      'Good news. Your LocalPages.ph account upgrade request has been approved.',
+      '',
+      'Your account now has Business access, which means you can create, submit, and manage business listings on LocalPages.ph.',
       '',
       'Go to your business dashboard: {{businessDashboardUrl}}',
+      '',
+      'Thank you,',
+      'The LocalPages.ph Team',
     ].join('\n'),
   },
   listingSubmittedAdmin: {
@@ -93,6 +99,27 @@ export const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
       '{{businessName}} has been approved and is now visible on LocalPages.ph.',
       '',
       'View listing: {{businessUrl}}',
+    ].join('\n'),
+  },
+  listingRevisionOwner: {
+    enabled: true,
+    subject: 'Action needed for your LocalPages.ph listing: {{businessName}}',
+    body: [
+      'Hi {{userName}},',
+      '',
+      'Thank you for submitting {{businessName}} to LocalPages.ph.',
+      '',
+      'Our review team needs a few updates before the listing can be approved and published.',
+      '',
+      'Revision notes:',
+      '{{revisionReason}}',
+      '',
+      'Please update your listing here: {{editListingUrl}}',
+      '',
+      'Once you resubmit the listing, our team will review it again as soon as possible.',
+      '',
+      'Thank you,',
+      'The LocalPages.ph Team',
     ].join('\n'),
   },
   inquiryReceivedOwner: {

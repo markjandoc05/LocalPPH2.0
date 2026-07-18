@@ -105,6 +105,8 @@ export default function AdminUserTable({
   const [actionError, setActionError] = useState('');
   const [roleActionLoading, setRoleActionLoading] = useState(false);
   const [roleActionError, setRoleActionError] = useState('');
+  const [roleActionNotice, setRoleActionNotice] = useState<{ type: 'success' | 'warning'; message: string } | null>(null);
+  const [resolvedUpgradeRequestIds, setResolvedUpgradeRequestIds] = useState<Set<string>>(() => new Set());
 
   // Fetch full details when a user is selected
   useEffect(() => {
@@ -143,6 +145,7 @@ export default function AdminUserTable({
 
     upgradeRequests.forEach((request) => {
       if (!request.userId || request.category !== 'ACCOUNT_UPGRADE') return;
+      if (resolvedUpgradeRequestIds.has(request.id)) return;
       if (['RESOLVED', 'CLOSED'].includes(request.status)) return;
 
       const existing = pending.get(request.userId);
@@ -152,7 +155,7 @@ export default function AdminUserTable({
     });
 
     return pending;
-  }, [upgradeRequests]);
+  }, [upgradeRequests, resolvedUpgradeRequestIds]);
 
   const selectedUpgradeRequest = selectedUser ? pendingUpgradeByUserId.get(selectedUser.id) : null;
 
@@ -161,6 +164,7 @@ export default function AdminUserTable({
     setFullUserData(null);
     setUserBusinesses([]);
     setRoleActionError('');
+    setRoleActionNotice(null);
     setIsOpen(true);
   };
 
@@ -170,6 +174,7 @@ export default function AdminUserTable({
     setFullUserData(null);
     setUserBusinesses([]);
     setRoleActionError('');
+    setRoleActionNotice(null);
   };
 
   const handleApproveBusinessUpgrade = async () => {
@@ -178,7 +183,8 @@ export default function AdminUserTable({
     try {
       setRoleActionLoading(true);
       setRoleActionError('');
-      await updateUserRole(selectedUser.id, 'BUSINESS');
+      setRoleActionNotice(null);
+      const result = await updateUserRole(selectedUser.id, 'BUSINESS');
       await updateSupportTicket({
         id: selectedUpgradeRequest.id,
         status: 'RESOLVED',
@@ -188,8 +194,21 @@ export default function AdminUserTable({
       setSelectedUser((previous) => previous ? { ...previous, role: 'BUSINESS' } : previous);
       setFullUserData((previous: any) => previous ? { ...previous, role: 'BUSINESS' } : previous);
       setUserBusinesses([]);
+      setResolvedUpgradeRequestIds((previous) => new Set(previous).add(selectedUpgradeRequest.id));
       onUserRoleChange?.(selectedUser.id, 'BUSINESS');
       onUpgradeRequestResolved?.(selectedUpgradeRequest.id);
+      const emailResult = result?.upgradeEmailNotification;
+      if (emailResult?.sent) {
+        setRoleActionNotice({
+          type: 'success',
+          message: `Account upgraded to Business. Email notification was accepted by SMTP${emailResult.messageId ? ` (${emailResult.messageId})` : ''}.`,
+        });
+      } else {
+        setRoleActionNotice({
+          type: 'warning',
+          message: `Account upgraded to Business, but email was not sent${emailResult?.message ? `: ${emailResult.message}` : emailResult?.reason ? `: ${emailResult.reason}` : '.'}`,
+        });
+      }
     } catch (err: any) {
       setRoleActionError(err?.message || 'Failed to approve account upgrade request.');
     } finally {
@@ -697,11 +716,21 @@ export default function AdminUserTable({
                 <Badge variant={fullUserData.emailVerified ? 'success' : 'warning'}>
                   {fullUserData.emailVerified ? 'Email Verified' : 'Unverified'}
                 </Badge>
-              </div>
-            </div>
+	              </div>
+	            </div>
 
-            {selectedUpgradeRequest && (
-              <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4">
+	            {roleActionNotice && (
+	              <div className={`rounded-xl border p-3 text-xs font-semibold ${
+	                roleActionNotice.type === 'success'
+	                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+	                  : 'border-amber-200 bg-amber-50 text-amber-800'
+	              }`}>
+	                {roleActionNotice.message}
+	              </div>
+	            )}
+
+	            {selectedUpgradeRequest && (
+	              <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h4 className="flex items-center gap-2 text-sm font-bold text-slate-900">
