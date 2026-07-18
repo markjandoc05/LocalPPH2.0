@@ -21,6 +21,7 @@ import { BusinessListing } from "@/types/business";
 import { formatAppDateTime } from "@/lib/time";
 import {
   notifyAdminsOfUpgradeRequest,
+  notifyAdminsOfSubmittedListing,
   notifyBusinessOwnerOfInquiry,
   notifyInquirySenderOfReply,
   notifyUserOfAccountUpgrade,
@@ -1316,6 +1317,16 @@ export const databaseProvider: DataProvider = {
   },
 
   async submitBusiness(variables) {
+    const businessBeforeSubmit = await db.query.businesses.findFirst({
+      where: eq(businesses.id, variables.id),
+      with: {
+        owner: true,
+        category: true,
+        city: true,
+        province: true,
+      },
+    });
+
     const res = await db.update(businesses)
       .set({
         status: 'PENDING',
@@ -1323,6 +1334,24 @@ export const databaseProvider: DataProvider = {
       })
       .where(eq(businesses.id, variables.id))
       .returning({ id: businesses.id });
+
+    if (res[0]?.id && businessBeforeSubmit?.status !== 'PENDING') {
+      await sendNotificationSafely(async () => {
+        const admins = await getAdminEmailRecipients();
+        const location = [businessBeforeSubmit?.city?.name, businessBeforeSubmit?.province?.name]
+          .filter(Boolean)
+          .join(', ');
+
+        await notifyAdminsOfSubmittedListing(admins, {
+          id: res[0].id,
+          businessName: businessBeforeSubmit?.name || 'New business listing',
+          ownerName: getUserDisplayName(businessBeforeSubmit?.owner),
+          ownerEmail: businessBeforeSubmit?.owner?.email,
+          categoryName: businessBeforeSubmit?.category?.name,
+          location,
+        });
+      });
+    }
     
     return {
       data: { business_update: res[0]?.id || variables.id },

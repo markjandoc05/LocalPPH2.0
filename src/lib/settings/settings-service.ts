@@ -22,6 +22,7 @@ export interface IntegrationSettings {
   emailTemplates: {
     upgradeRequestAdmin: EmailTemplateConfig;
     upgradeApprovedUser: EmailTemplateConfig;
+    listingSubmittedAdmin: EmailTemplateConfig;
     listingApprovedOwner: EmailTemplateConfig;
     inquiryReceivedOwner: EmailTemplateConfig;
     inquiryReplyUser: EmailTemplateConfig;
@@ -56,6 +57,21 @@ export const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
       'Your account upgrade request has been approved. You can now create and manage business listings on LocalPages.ph.',
       '',
       'Go to your business dashboard: {{businessDashboardUrl}}',
+    ].join('\n'),
+  },
+  listingSubmittedAdmin: {
+    enabled: true,
+    subject: 'New business listing submitted: {{businessName}}',
+    body: [
+      'A business listing was submitted for admin review on LocalPages.ph.',
+      '',
+      'Business: {{businessName}}',
+      'Owner: {{ownerName}}',
+      'Owner email: {{ownerEmail}}',
+      'Category: {{categoryName}}',
+      'Location: {{location}}',
+      '',
+      'Review the listing: {{adminListingUrl}}',
     ].join('\n'),
   },
   listingApprovedOwner: {

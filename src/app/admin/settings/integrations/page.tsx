@@ -51,6 +51,7 @@ interface IntegrationSettings {
   emailTemplates: {
     upgradeRequestAdmin: EmailTemplateConfig;
     upgradeApprovedUser: EmailTemplateConfig;
+    listingSubmittedAdmin: EmailTemplateConfig;
     listingApprovedOwner: EmailTemplateConfig;
     inquiryReceivedOwner: EmailTemplateConfig;
     inquiryReplyUser: EmailTemplateConfig;
@@ -75,6 +76,11 @@ const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
     enabled: true,
     subject: 'Your LocalPages.ph account is now a Business account',
     body: 'Hi {{userName}},\n\nYour account upgrade request has been approved. You can now create and manage business listings on LocalPages.ph.\n\nGo to your business dashboard: {{businessDashboardUrl}}',
+  },
+  listingSubmittedAdmin: {
+    enabled: true,
+    subject: 'New business listing submitted: {{businessName}}',
+    body: 'A business listing was submitted for admin review on LocalPages.ph.\n\nBusiness: {{businessName}}\nOwner: {{ownerName}}\nOwner email: {{ownerEmail}}\nCategory: {{categoryName}}\nLocation: {{location}}\n\nReview the listing: {{adminListingUrl}}',
   },
   listingApprovedOwner: {
     enabled: true,
@@ -130,6 +136,12 @@ const EMAIL_TEMPLATE_META: {
     title: 'Listing Approved to Owner',
     description: 'Sent to the business owner when a listing is approved.',
     variables: ['userName', 'userEmail', 'businessName', 'businessUrl'],
+  },
+  {
+    key: 'listingSubmittedAdmin',
+    title: 'Listing Submitted to Admins',
+    description: 'Sent to admins and moderators when a business listing is submitted for review.',
+    variables: ['businessName', 'ownerName', 'ownerEmail', 'categoryName', 'location', 'adminListingUrl'],
   },
   {
     key: 'inquiryReceivedOwner',

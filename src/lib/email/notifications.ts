@@ -159,6 +159,27 @@ export const notifyUserOfApprovedListing = async (user: EmailRecipient, business
   });
 };
 
+export const notifyAdminsOfSubmittedListing = async (
+  admins: EmailRecipient[],
+  listing: {
+    id: string;
+    businessName: string;
+    ownerName?: string | null;
+    ownerEmail?: string | null;
+    categoryName?: string | null;
+    location?: string | null;
+  },
+) => {
+  await sendTemplatedNotification('listingSubmittedAdmin', admins, {
+    businessName: listing.businessName,
+    ownerName: listing.ownerName || listing.ownerEmail || 'Business owner',
+    ownerEmail: listing.ownerEmail || 'Not provided',
+    categoryName: listing.categoryName || 'Not provided',
+    location: listing.location || 'Not provided',
+    adminListingUrl: `${SITE_URL}/admin/listings/${listing.id}`,
+  });
+};
+
 export const notifyBusinessOwnerOfInquiry = async (
   owner: EmailRecipient,
   inquiry: {
