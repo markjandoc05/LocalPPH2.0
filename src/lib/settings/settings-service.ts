@@ -19,6 +19,16 @@ export interface IntegrationSettings {
   robots: { enabled: boolean; url: string; status: string; lastChecked?: string };
   openGraph: { enabled: boolean; title: string; description: string; imageUrl: string; lastChecked?: string };
   favicon: { enabled: boolean; url: string; lastChecked?: string };
+  smtp: {
+    enabled: boolean;
+    host: string;
+    port: string;
+    secure: boolean;
+    user: string;
+    password: string;
+    from: string;
+    rejectUnauthorized: boolean;
+  };
   emailTemplates: {
     upgradeRequestAdmin: EmailTemplateConfig;
     upgradeApprovedUser: EmailTemplateConfig;
@@ -129,12 +139,26 @@ const DEFAULT_SETTINGS: IntegrationSettings = {
   robots: { enabled: true, url: "/robots.txt", status: "Allowed" },
   openGraph: { enabled: true, title: "LocalPages PH", description: "Discover trusted local businesses in the Philippines", imageUrl: "" },
   favicon: { enabled: true, url: "/favicon.ico" },
+  smtp: {
+    enabled: false,
+    host: "smtp.hostinger.com",
+    port: "465",
+    secure: true,
+    user: "",
+    password: "",
+    from: "support@localpages.ph",
+    rejectUnauthorized: true,
+  },
   emailTemplates: DEFAULT_EMAIL_TEMPLATES,
 };
 
 const mergeSettings = (settings?: Partial<IntegrationSettings>): IntegrationSettings => ({
   ...DEFAULT_SETTINGS,
   ...(settings || {}),
+  smtp: {
+    ...DEFAULT_SETTINGS.smtp,
+    ...(settings?.smtp || {}),
+  },
   emailTemplates: {
     ...DEFAULT_EMAIL_TEMPLATES,
     ...(settings?.emailTemplates || {}),

@@ -98,8 +98,14 @@ const sendNotificationSafely = async (sender: () => Promise<unknown>) => {
     ) {
       console.warn('Email notification was not sent:', result);
     }
+    return result;
   } catch (error) {
     console.error('Email notification hook failed:', error);
+    return {
+      sent: false,
+      reason: 'notification_hook_failed',
+      message: error instanceof Error ? error.message : String(error || 'Email notification failed.'),
+    };
   }
 };
 
@@ -1427,19 +1433,28 @@ export const databaseProvider: DataProvider = {
       .where(eq(businesses.id, variables.id))
       .returning({ id: businesses.id });
 
+    let approvalEmailNotification: unknown = null;
+
     if (res[0]?.id && isFirstApproval && approvalRecipient) {
-      await sendNotificationSafely(async () => {
+      approvalEmailNotification = await sendNotificationSafely(async () => {
         return notifyUserOfApprovedListing(
           approvalRecipient,
           businessBeforeUpdate?.name || 'Your business listing',
           businessBeforeUpdate?.slug,
         );
       });
+    } else if (res[0]?.id && isFirstApproval && !approvalRecipient) {
+      approvalEmailNotification = {
+        sent: false,
+        reason: 'missing_owner_email',
+        message: 'Business owner registered email was not found.',
+      };
     }
     
     return {
       data: {
         business_update: res[0]?.id || variables.id,
+        approvalEmailNotification,
       },
     };
   },

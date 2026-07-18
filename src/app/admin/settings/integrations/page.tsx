@@ -48,6 +48,16 @@ interface IntegrationSettings {
   robots: IntegrationService & { url: string; status: string };
   openGraph: IntegrationService & { title: string; description: string; imageUrl: string };
   favicon: IntegrationService & { url: string };
+  smtp: IntegrationService & {
+    host: string;
+    port: string;
+    secure: boolean;
+    user: string;
+    password: string;
+    from: string;
+    rejectUnauthorized: boolean;
+    hasPassword?: boolean;
+  };
   emailTemplates: {
     upgradeRequestAdmin: EmailTemplateConfig;
     upgradeApprovedUser: EmailTemplateConfig;
@@ -64,7 +74,7 @@ interface EmailTemplateConfig {
   body: string;
 }
 
-type StandardIntegrationKey = Exclude<keyof IntegrationSettings, 'emailTemplates'>;
+type StandardIntegrationKey = Exclude<keyof IntegrationSettings, 'emailTemplates' | 'smtp'>;
 
 const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
   upgradeRequestAdmin: {
@@ -110,8 +120,31 @@ const DEFAULT_SETTINGS: IntegrationSettings = {
   robots: { enabled: true, url: "/robots.txt", status: "Allowed" },
   openGraph: { enabled: true, title: "LocalPages PH", description: "Discover trusted local businesses in the Philippines", imageUrl: "" },
   favicon: { enabled: true, url: "/favicon.ico" },
+  smtp: {
+    enabled: false,
+    host: "smtp.hostinger.com",
+    port: "465",
+    secure: true,
+    user: "",
+    password: "",
+    from: "support@localpages.ph",
+    rejectUnauthorized: true,
+  },
   emailTemplates: DEFAULT_EMAIL_TEMPLATES,
 };
+
+const mergeSettings = (settings?: Partial<IntegrationSettings>): IntegrationSettings => ({
+  ...DEFAULT_SETTINGS,
+  ...(settings || {}),
+  smtp: {
+    ...DEFAULT_SETTINGS.smtp,
+    ...(settings?.smtp || {}),
+  },
+  emailTemplates: {
+    ...DEFAULT_EMAIL_TEMPLATES,
+    ...(settings?.emailTemplates || {}),
+  },
+});
 
 const EMAIL_TEMPLATE_META: {
   key: keyof IntegrationSettings['emailTemplates'];
@@ -163,6 +196,7 @@ export default function IntegrationsSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
   const [testingService, setTestingService] = useState<string | null>(null);
+  const [testingEmail, setTestingEmail] = useState(false);
   const [testResults, setTestResults] = useState<{ [key: string]: { success: boolean; message: string } }>({});
   const [activeTab, setActiveTab] = useState<'all' | 'analytics' | 'seo' | 'user_experience' | 'email'>('all');
   const [reloadKey, setReloadKey] = useState(0);
@@ -186,7 +220,7 @@ export default function IntegrationsSettingsPage() {
           }
 
           const data = await res.json();
-          setSettings(data);
+          setSettings(mergeSettings(data));
         } catch (err: any) {
           console.error("Error loading settings:", err);
           setSaveStatus({ type: 'error', message: 'Could not load site integration settings. Please make sure database is initialized.' });
@@ -218,6 +252,16 @@ export default function IntegrationsSettingsPage() {
     }));
   };
 
+  const handleSmtpChange = (field: keyof IntegrationSettings['smtp'], value: string | boolean) => {
+    setSettings(prev => ({
+      ...prev,
+      smtp: {
+        ...prev.smtp,
+        [field]: value,
+      },
+    }));
+  };
+
   const handleEmailTemplateChange = (
     template: keyof IntegrationSettings['emailTemplates'],
     field: keyof EmailTemplateConfig,
@@ -245,28 +289,37 @@ export default function IntegrationsSettingsPage() {
     }));
   };
 
+  const saveSettingsToServer = async () => {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) {
+      throw new Error('You must be authenticated to perform this action.');
+    }
+
+    const res = await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(settings)
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to save settings');
+    }
+
+    if (data.settings) {
+      setSettings(mergeSettings(data.settings));
+    }
+
+    return data;
+  };
+
   const handleSave = async (serviceToSave?: keyof IntegrationSettings) => {
     setSaveStatus({ type: null, message: '' });
     try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) {
-        setSaveStatus({ type: 'error', message: 'You must be authenticated to perform this action.' });
-        return;
-      }
-
-      const res = await fetch('/api/admin/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(settings)
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to save settings');
-      }
+      await saveSettingsToServer();
 
       setSaveStatus({ 
         type: 'success', 
@@ -282,6 +335,46 @@ export default function IntegrationsSettingsPage() {
     } catch (err: any) {
       console.error("Error saving settings:", err);
       setSaveStatus({ type: 'error', message: err.message || 'Error occurred while saving settings.' });
+    }
+  };
+
+  const sendSmtpTestEmail = async () => {
+    setTestingEmail(true);
+    setSaveStatus({ type: null, message: '' });
+    try {
+      await saveSettingsToServer();
+
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        setSaveStatus({ type: 'error', message: 'You must be authenticated to perform this action.' });
+        return;
+      }
+
+      const res = await fetch('/api/admin/email-test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        const missing = Array.isArray(data.diagnostics?.missing) && data.diagnostics.missing.length > 0
+          ? ` Missing: ${data.diagnostics.missing.join(', ')}.`
+          : '';
+        throw new Error(`${data.message || data.reason || data.error || 'SMTP test email was not accepted.'}${missing}`);
+      }
+
+      setSaveStatus({
+        type: 'success',
+        message: `Settings saved. SMTP test email accepted for ${data.recipient}${data.messageId ? ` (${data.messageId})` : ''}.`,
+      });
+    } catch (err: any) {
+      console.error("SMTP test email failed:", err);
+      setSaveStatus({ type: 'error', message: err.message || 'SMTP test email failed.' });
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -435,7 +528,8 @@ export default function IntegrationsSettingsPage() {
       case 'robots': return "Robots.txt";
       case 'openGraph': return "Open Graph (SEO Metadata)";
       case 'favicon': return "Favicon Setup";
-      case 'emailTemplates': return "Email Templates";
+      case 'smtp': return "SMTP Sender";
+      case 'emailTemplates': return "Email Notifications";
       default: return String(service);
     }
   };
@@ -596,81 +690,165 @@ export default function IntegrationsSettingsPage() {
                       {getServiceStatus('emailTemplates').text}
                     </Badge>
                     <Button
-                      variant="outline"
-                      onClick={() => handleSave('emailTemplates')}
-                      className="h-8 text-[11px] px-3 font-semibold text-slate-700 hover:bg-slate-50"
+                      variant="secondary"
+                      onClick={sendSmtpTestEmail}
+                      isLoading={testingEmail}
+                      className="h-8 text-[11px] px-3 font-semibold"
                     >
-                      Save Templates
+                      Send Test Email
                     </Button>
+	                    <Button
+	                      variant="outline"
+	                      onClick={() => handleSave('emailTemplates')}
+	                      className="h-8 text-[11px] px-3 font-semibold text-slate-700 hover:bg-slate-50"
+	                    >
+	                      Save Email Settings
+	                    </Button>
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
-                  Use placeholders exactly as shown, like <span className="font-mono font-semibold">{'{{businessName}}'}</span>. They will be replaced automatically when the email is sent.
-                </div>
+                <details open className="rounded-xl border border-slate-200 bg-white">
+                  <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-slate-900">
+                    SMTP Sender Settings
+                  </summary>
+                  <div className="border-t border-slate-100 p-4 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <label className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                        <input
+                          type="checkbox"
+                          checked={settings.smtp.enabled}
+                          onChange={(e) => handleSmtpChange('enabled', e.target.checked)}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        Enable in-app SMTP settings
+                      </label>
+                      <span className="text-xs text-slate-500">Used when Dokploy env SMTP values are missing.</span>
+                    </div>
 
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  {EMAIL_TEMPLATE_META.map((templateMeta) => {
-                    const template = settings.emailTemplates[templateMeta.key];
-                    return (
-                      <div key={templateMeta.key} className="border border-slate-200 rounded-lg p-4 space-y-3 bg-white">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h4 className="font-bold text-slate-900 text-sm">{templateMeta.title}</h4>
-                            <p className="text-xs text-slate-500 mt-1">{templateMeta.description}</p>
-                          </div>
-                          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 whitespace-nowrap">
-                            <input
-                              type="checkbox"
-                              checked={template.enabled}
-                              onChange={(e) => handleEmailTemplateChange(templateMeta.key, 'enabled', e.target.checked)}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
-                            />
-                            Enabled
-                          </label>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="block text-xs font-semibold text-slate-700">Subject</label>
-                          <Input
-                            value={template.subject}
-                            onChange={(e) => handleEmailTemplateChange(templateMeta.key, 'subject', e.target.value)}
-                            className="text-xs"
-                            placeholder="Email subject"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="block text-xs font-semibold text-slate-700">Message</label>
-                          <Textarea
-                            value={template.body}
-                            onChange={(e) => handleEmailTemplateChange(templateMeta.key, 'body', e.target.value)}
-                            rows={8}
-                            className="text-xs font-mono leading-relaxed"
-                            placeholder="Email message"
-                          />
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-100 pt-3">
-                          <div className="flex flex-wrap gap-1.5">
-                            {templateMeta.variables.map(variable => (
-                              <span key={variable} className="rounded bg-slate-100 px-2 py-1 text-[10px] font-mono text-slate-700">
-                                {`{{${variable}}}`}
-                              </span>
-                            ))}
-                          </div>
-                          <Button
-                            variant="secondary"
-                            onClick={() => resetEmailTemplate(templateMeta.key)}
-                            className="h-8 text-[11px] px-3 font-semibold"
-                          >
-                            Reset
-                          </Button>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="block text-xs font-semibold text-slate-700">SMTP Host</label>
+                        <Input value={settings.smtp.host} onChange={(e) => handleSmtpChange('host', e.target.value)} placeholder="smtp.hostinger.com" />
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="space-y-2">
+                        <label className="block text-xs font-semibold text-slate-700">SMTP Port</label>
+                        <Input value={settings.smtp.port} onChange={(e) => handleSmtpChange('port', e.target.value)} placeholder="465" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-xs font-semibold text-slate-700">SMTP Username</label>
+                        <Input value={settings.smtp.user} onChange={(e) => handleSmtpChange('user', e.target.value)} placeholder="support@localpages.ph" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-xs font-semibold text-slate-700">SMTP Password</label>
+                        <Input
+                          type="password"
+                          value={settings.smtp.password}
+                          onChange={(e) => handleSmtpChange('password', e.target.value)}
+                          placeholder={settings.smtp.hasPassword ? 'Saved. Leave blank to keep current password.' : 'Mailbox password'}
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="block text-xs font-semibold text-slate-700">Sender Email</label>
+                        <Input value={settings.smtp.from} onChange={(e) => handleSmtpChange('from', e.target.value)} placeholder="support@localpages.ph" />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-4 border-t border-slate-100 pt-4">
+                      <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={settings.smtp.secure}
+                          onChange={(e) => handleSmtpChange('secure', e.target.checked)}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        SSL / secure connection
+                      </label>
+                      <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={settings.smtp.rejectUnauthorized}
+                          onChange={(e) => handleSmtpChange('rejectUnauthorized', e.target.checked)}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        Verify SMTP TLS certificate
+                      </label>
+                    </div>
+                  </div>
+                </details>
+
+                <details className="rounded-xl border border-slate-200 bg-white">
+                  <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-slate-900">
+                    Email Notification Templates
+                  </summary>
+                  <div className="border-t border-slate-100 p-4 space-y-4">
+                    <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
+                      Use placeholders exactly as shown, like <span className="font-mono font-semibold">{'{{businessName}}'}</span>. They will be replaced automatically when the email is sent.
+                    </div>
+
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                      {EMAIL_TEMPLATE_META.map((templateMeta) => {
+                        const template = settings.emailTemplates[templateMeta.key];
+                        return (
+                          <div key={templateMeta.key} className="border border-slate-200 rounded-lg p-4 space-y-3 bg-white">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <h4 className="font-bold text-slate-900 text-sm">{templateMeta.title}</h4>
+                                <p className="text-xs text-slate-500 mt-1">{templateMeta.description}</p>
+                              </div>
+                              <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 whitespace-nowrap">
+                                <input
+                                  type="checkbox"
+                                  checked={template.enabled}
+                                  onChange={(e) => handleEmailTemplateChange(templateMeta.key, 'enabled', e.target.checked)}
+                                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                                />
+                                Enabled
+                              </label>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block text-xs font-semibold text-slate-700">Subject</label>
+                              <Input
+                                value={template.subject}
+                                onChange={(e) => handleEmailTemplateChange(templateMeta.key, 'subject', e.target.value)}
+                                className="text-xs"
+                                placeholder="Email subject"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block text-xs font-semibold text-slate-700">Message</label>
+                              <Textarea
+                                value={template.body}
+                                onChange={(e) => handleEmailTemplateChange(templateMeta.key, 'body', e.target.value)}
+                                rows={8}
+                                className="text-xs font-mono leading-relaxed"
+                                placeholder="Email message"
+                              />
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-100 pt-3">
+                              <div className="flex flex-wrap gap-1.5">
+                                {templateMeta.variables.map(variable => (
+                                  <span key={variable} className="rounded bg-slate-100 px-2 py-1 text-[10px] font-mono text-slate-700">
+                                    {`{{${variable}}}`}
+                                  </span>
+                                ))}
+                              </div>
+                              <Button
+                                variant="secondary"
+                                onClick={() => resetEmailTemplate(templateMeta.key)}
+                                className="h-8 text-[11px] px-3 font-semibold"
+                              >
+                                Reset
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </details>
               </Card>
             )}
             

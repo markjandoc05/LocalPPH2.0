@@ -22,24 +22,98 @@ type EmailNotificationResult = {
   reason?: string;
   message?: string;
   messageId?: string;
+  diagnostics?: SmtpDiagnostics;
 };
 
 let transporter: Transporter | null = null;
+let transporterConfigKey = '';
 
-const getSmtpConfig = () => {
-  const host = process.env.SMTP_HOST || process.env.EMAIL_SERVER_HOST;
-  const port = Number(process.env.SMTP_PORT || process.env.EMAIL_SERVER_PORT || 587);
-  const user = process.env.SMTP_USER || process.env.EMAIL_SERVER_USER || process.env.MAIL_USER;
-  const pass = process.env.SMTP_PASSWORD || process.env.SMTP_PASS || process.env.EMAIL_SERVER_PASSWORD || process.env.MAIL_PASSWORD;
-  const from = process.env.SMTP_FROM || process.env.EMAIL_FROM || user;
-  const secureEnv = process.env.SMTP_SECURE?.toLowerCase();
+const smtpEnvCandidates = {
+  host: ['SMTP_HOST', 'EMAIL_SERVER_HOST', 'MAIL_HOST', 'HOSTINGER_SMTP_HOST'],
+  port: ['SMTP_PORT', 'EMAIL_SERVER_PORT', 'MAIL_PORT', 'HOSTINGER_SMTP_PORT'],
+  user: ['SMTP_USER', 'SMTP_USERNAME', 'EMAIL_SERVER_USER', 'MAIL_USER', 'MAIL_USERNAME', 'HOSTINGER_SMTP_USER'],
+  pass: ['SMTP_PASSWORD', 'SMTP_PASS', 'EMAIL_SERVER_PASSWORD', 'MAIL_PASSWORD', 'MAIL_PASS', 'HOSTINGER_SMTP_PASSWORD'],
+  from: ['SMTP_FROM', 'EMAIL_FROM', 'MAIL_FROM', 'HOSTINGER_SMTP_FROM'],
+  secure: ['SMTP_SECURE', 'EMAIL_SERVER_SECURE', 'MAIL_SECURE', 'HOSTINGER_SMTP_SECURE'],
+};
+
+type SmtpField = keyof typeof smtpEnvCandidates;
+type SmtpDiagnostics = {
+  configured: boolean;
+  missing: SmtpField[];
+  present: Record<SmtpField, boolean>;
+  acceptedEnvNames: typeof smtpEnvCandidates;
+};
+
+const getEnvValue = (names: readonly string[]) => {
+  for (const name of names) {
+    const value = process.env[name];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return undefined;
+};
+
+const getSmtpConfig = async () => {
+  const host = getEnvValue(smtpEnvCandidates.host);
+  const port = Number(getEnvValue(smtpEnvCandidates.port) || 587);
+  const user = getEnvValue(smtpEnvCandidates.user);
+  const pass = getEnvValue(smtpEnvCandidates.pass);
+  const from = getEnvValue(smtpEnvCandidates.from) || user;
+  const secureEnv = getEnvValue(smtpEnvCandidates.secure)?.toLowerCase();
   const secure = secureEnv ? secureEnv === 'true' || secureEnv === '1' : port === 465;
 
-  if (!host || !user || !pass || !from) {
-    return null;
+  if (host && user && pass && from) {
+    return { host, port, user, pass, from, secure, rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false' };
   }
 
-  return { host, port, user, pass, from, secure };
+  try {
+    const settings = await getSettings();
+    const smtp = settings.smtp;
+    if (smtp?.enabled && smtp.host && smtp.user && smtp.password && (smtp.from || smtp.user)) {
+      const settingsPort = Number(smtp.port || 587);
+      return {
+        host: smtp.host.trim(),
+        port: settingsPort,
+        user: smtp.user.trim(),
+        pass: smtp.password,
+        from: (smtp.from || smtp.user).trim(),
+        secure: Boolean(smtp.secure),
+        rejectUnauthorized: smtp.rejectUnauthorized !== false,
+      };
+    }
+  } catch (error) {
+    console.error('Failed to load SMTP settings:', error);
+  }
+
+  return null;
+};
+
+export const getSmtpDiagnostics = async (): Promise<SmtpDiagnostics> => {
+  let settingsSmtp: any = null;
+  try {
+    settingsSmtp = (await getSettings()).smtp;
+  } catch {
+    settingsSmtp = null;
+  }
+
+  const present = {
+    host: Boolean(getEnvValue(smtpEnvCandidates.host) || (settingsSmtp?.enabled && settingsSmtp?.host)),
+    port: Boolean(getEnvValue(smtpEnvCandidates.port) || (settingsSmtp?.enabled && settingsSmtp?.port)),
+    user: Boolean(getEnvValue(smtpEnvCandidates.user) || (settingsSmtp?.enabled && settingsSmtp?.user)),
+    pass: Boolean(getEnvValue(smtpEnvCandidates.pass) || (settingsSmtp?.enabled && settingsSmtp?.password)),
+    from: Boolean(getEnvValue(smtpEnvCandidates.from) || getEnvValue(smtpEnvCandidates.user) || (settingsSmtp?.enabled && (settingsSmtp?.from || settingsSmtp?.user))),
+    secure: Boolean(getEnvValue(smtpEnvCandidates.secure) || (settingsSmtp?.enabled && settingsSmtp?.secure !== undefined)),
+  };
+  const missing = (['host', 'user', 'pass', 'from'] as SmtpField[]).filter((field) => !present[field]);
+
+  return {
+    configured: missing.length === 0,
+    missing,
+    present,
+    acceptedEnvNames: smtpEnvCandidates,
+  };
 };
 
 const getEmailErrorMessage = (error: unknown) => {
@@ -61,11 +135,19 @@ const textToHtml = (text: string) =>
     .replace(/'/g, '&#39;')
     .replace(/\n/g, '<br />');
 
-const getTransporter = () => {
-  if (transporter) return transporter;
-
-  const config = getSmtpConfig();
+const getTransporter = async () => {
+  const config = await getSmtpConfig();
   if (!config) return null;
+
+  const configKey = JSON.stringify({
+    host: config.host,
+    port: config.port,
+    user: config.user,
+    from: config.from,
+    secure: config.secure,
+    rejectUnauthorized: config.rejectUnauthorized,
+  });
+  if (transporter && transporterConfigKey === configKey) return transporter;
 
   transporter = nodemailer.createTransport({
     host: config.host,
@@ -75,17 +157,18 @@ const getTransporter = () => {
       user: config.user,
       pass: config.pass,
     },
-    tls: process.env.SMTP_TLS_REJECT_UNAUTHORIZED === 'false'
+    tls: config.rejectUnauthorized === false
       ? { rejectUnauthorized: false }
       : undefined,
   });
+  transporterConfigKey = configKey;
 
   return transporter;
 };
 
 export const sendEmailNotification = async ({ to, subject, text, html }: SendEmailInput): Promise<EmailNotificationResult> => {
-  const mailer = getTransporter();
-  const config = getSmtpConfig();
+  const mailer = await getTransporter();
+  const config = await getSmtpConfig();
   const recipients = (Array.isArray(to) ? to : [to])
     .map(formatRecipient)
     .filter(Boolean) as string[];
@@ -95,8 +178,16 @@ export const sendEmailNotification = async ({ to, subject, text, html }: SendEma
   }
 
   if (!mailer || !config) {
-    console.warn('Email notification skipped: SMTP environment variables are not configured.');
-    return { sent: false, reason: 'missing_smtp_config' };
+    const diagnostics = await getSmtpDiagnostics();
+    console.warn('Email notification skipped: SMTP environment variables are not configured.', diagnostics);
+    return {
+      sent: false,
+      reason: 'missing_smtp_config',
+      message: diagnostics.missing.length > 0
+        ? `Missing SMTP field(s): ${diagnostics.missing.join(', ')}.`
+        : 'SMTP environment variables are not configured.',
+      diagnostics,
+    };
   }
 
   const options: SendMailOptions = {
@@ -156,12 +247,16 @@ const getEmailTemplate = async (key: TemplateKey) => {
 };
 
 export const verifyEmailNotificationReady = async (key: TemplateKey): Promise<EmailNotificationResult> => {
-  const config = getSmtpConfig();
+  const config = await getSmtpConfig();
   if (!config) {
+    const diagnostics = await getSmtpDiagnostics();
     return {
       sent: false,
       reason: 'missing_smtp_config',
-      message: 'SMTP is not configured for application email notifications.',
+      message: diagnostics.missing.length > 0
+        ? `Missing SMTP field(s): ${diagnostics.missing.join(', ')}.`
+        : 'SMTP is not configured for application email notifications.',
+      diagnostics,
     };
   }
 
@@ -174,7 +269,7 @@ export const verifyEmailNotificationReady = async (key: TemplateKey): Promise<Em
     };
   }
 
-  const mailer = getTransporter();
+  const mailer = await getTransporter();
   if (!mailer) {
     return {
       sent: false,

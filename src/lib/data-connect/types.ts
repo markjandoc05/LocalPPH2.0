@@ -135,7 +135,7 @@ export interface DataProvider {
     status: BusinessStatus;
     moderatorNotes?: string;
     adminUserId?: string;
-  }): Promise<{ data: { business_update: string } }>;
+  }): Promise<{ data: { business_update: string; approvalEmailNotification?: any } }>;
 
   // Public operations
   searchApprovedBusinesses(variables: {

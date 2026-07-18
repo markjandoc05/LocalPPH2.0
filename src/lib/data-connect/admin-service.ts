@@ -52,7 +52,7 @@ export const approveBusiness = async (id: string, adminUserId: string) => {
     status: "APPROVED",
     adminUserId,
   });
-  return result.data.business_update;
+  return result.data;
 };
 
 export const rejectBusiness = async (

@@ -32,6 +32,7 @@ export default function ReviewListingPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
+  const [actionNotice, setActionNotice] = useState<{ type: 'success' | 'warning'; message: string } | null>(null);
   
   const [modalOpen, setModalOpen] = useState(false);
   const [actionType, setActionType] = useState<'APPROVE' | 'REJECT' | 'REVISION' | 'SUSPEND' | null>(null);
@@ -63,6 +64,7 @@ export default function ReviewListingPage() {
     setActionType(type);
     setModalOpen(true);
     setActionError('');
+    setActionNotice(null);
   };
 
   const handleConfirmAction = async (reason: string) => {
@@ -70,9 +72,22 @@ export default function ReviewListingPage() {
     
     setIsSubmitting(true);
     setActionError('');
+    setActionNotice(null);
     try {
       if (actionType === 'APPROVE') {
-        await approveBusiness(id, user.uid);
+        const result = await approveBusiness(id, user.uid);
+        const emailResult = result?.approvalEmailNotification;
+        if (emailResult?.sent) {
+          setActionNotice({
+            type: 'success',
+            message: `Listing approved. Approval email was accepted by SMTP${emailResult.messageId ? ` (${emailResult.messageId})` : ''}.`,
+          });
+        } else {
+          setActionNotice({
+            type: 'warning',
+            message: `Listing approved, but approval email was not sent${emailResult?.message ? `: ${emailResult.message}` : emailResult?.reason ? `: ${emailResult.reason}` : '.'}`,
+          });
+        }
       } else if (actionType === 'REJECT') {
         await rejectBusiness(id, user.uid, reason);
       } else if (actionType === 'REVISION') {
@@ -172,6 +187,16 @@ export default function ReviewListingPage() {
       {actionError && (
         <div className="mb-6">
           <ErrorState title="Action Failed" message={actionError} />
+        </div>
+      )}
+
+      {actionNotice && (
+        <div className={`mb-6 rounded-xl border p-4 text-sm ${
+          actionNotice.type === 'success'
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+            : 'border-amber-200 bg-amber-50 text-amber-800'
+        }`}>
+          {actionNotice.message}
         </div>
       )}
 

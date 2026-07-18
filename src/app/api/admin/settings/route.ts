@@ -4,6 +4,17 @@ import { adminAuth } from "@/lib/firebase-admin";
 import { databaseProvider } from "@/lib/data-connect/database-provider";
 import { isAdmin } from "@/lib/auth/roles";
 
+const SMTP_PASSWORD_PLACEHOLDER = "********";
+
+const redactSettings = (settings: any) => ({
+  ...settings,
+  smtp: settings?.smtp ? {
+    ...settings.smtp,
+    password: settings.smtp.password ? SMTP_PASSWORD_PLACEHOLDER : "",
+    hasPassword: Boolean(settings.smtp.password),
+  } : settings?.smtp,
+});
+
 export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get("Authorization");
@@ -29,7 +40,7 @@ export async function GET(req: NextRequest) {
     }
 
     const settings = await getSettings();
-    return NextResponse.json(settings);
+    return NextResponse.json(redactSettings(settings));
   } catch (error: any) {
     console.error("GET admin settings error:", error);
     return NextResponse.json({ error: error.message || "Failed to fetch settings" }, { status: 500 });
@@ -61,8 +72,20 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    await saveSettings(body);
-    return NextResponse.json({ success: true, settings: body });
+    const currentSettings = await getSettings();
+    const nextSettings = {
+      ...body,
+      smtp: {
+        ...body.smtp,
+        password:
+          body.smtp?.password && body.smtp.password !== SMTP_PASSWORD_PLACEHOLDER
+            ? body.smtp.password
+            : currentSettings.smtp?.password || "",
+      },
+    };
+
+    await saveSettings(nextSettings);
+    return NextResponse.json({ success: true, settings: redactSettings(nextSettings) });
   } catch (error: any) {
     console.error("POST admin settings error:", error);
     return NextResponse.json({ error: error.message || "Failed to save settings" }, { status: 500 });
