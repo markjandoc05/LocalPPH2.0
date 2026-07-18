@@ -95,6 +95,7 @@ export default function EmailMarketingPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState('2');
   const [sending, setSending] = useState(false);
+  const [sendingRecipientId, setSendingRecipientId] = useState('');
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const loadMarketingData = async () => {
@@ -197,6 +198,55 @@ export default function EmailMarketingPage() {
       setStatus({ type: 'error', message: error.message || 'Failed to upload campaign image.' });
     } finally {
       setUploadingImage(false);
+    }
+  };
+
+  const getStatusClassName = (recipientStatus: string) => {
+    switch (recipientStatus) {
+      case 'SENT':
+        return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100';
+      case 'FAILED':
+        return 'bg-red-50 text-red-700 ring-1 ring-red-100';
+      case 'PENDING':
+        return 'bg-amber-50 text-amber-700 ring-1 ring-amber-100';
+      default:
+        return 'bg-slate-100 text-slate-700 ring-1 ring-slate-200';
+    }
+  };
+
+  const handleSendRecipient = async (campaignId: string, recipientId: string, email: string) => {
+    setStatus(null);
+    setSendingRecipientId(recipientId);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error('You must be authenticated to send this email.');
+      }
+
+      const res = await fetch('/api/admin/email-marketing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: 'sendRecipient',
+          campaignId,
+          recipientId,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || data.message || `Email could not be sent to ${email}.`);
+      }
+
+      setStatus({ type: 'success', message: `Email sent to ${email}.` });
+    } catch (error: any) {
+      setStatus({ type: 'error', message: error.message || `Email could not be sent to ${email}.` });
+    } finally {
+      setSendingRecipientId('');
+      await loadMarketingData();
     }
   };
 
@@ -560,6 +610,7 @@ export default function EmailMarketingPage() {
                 const openRate = campaign.sentCount > 0
                   ? Math.round((campaign.openedCount / campaign.sentCount) * 100)
                   : 0;
+                const pendingCount = campaign.pendingCount || 0;
 
                 return (
                   <details key={campaign.id} className="rounded-xl border border-slate-200 bg-white">
@@ -567,14 +618,17 @@ export default function EmailMarketingPage() {
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div className="min-w-0">
                           <h3 className="truncate text-sm font-bold text-slate-900">{campaign.subject}</h3>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {campaign.createdAt ? new Date(campaign.createdAt).toLocaleString() : 'Date not set'} · {campaign.status}
-                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                            <span>{campaign.createdAt ? new Date(campaign.createdAt).toLocaleString() : 'Date not set'}</span>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${getStatusClassName(campaign.status)}`}>
+                              {campaign.status.replace('_', ' ')}
+                            </span>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
                           <span className="rounded-lg bg-slate-50 px-3 py-2 font-semibold text-slate-700">Total: {campaign.totalRecipients}</span>
                           <span className="rounded-lg bg-emerald-50 px-3 py-2 font-semibold text-emerald-700">Sent: {campaign.sentCount}</span>
-                          <span className="rounded-lg bg-amber-50 px-3 py-2 font-semibold text-amber-700">Pending: {campaign.pendingCount || 0}</span>
+                          <span className="rounded-lg bg-amber-50 px-3 py-2 font-semibold text-amber-700">Pending: {pendingCount}</span>
                           <span className="rounded-lg bg-red-50 px-3 py-2 font-semibold text-red-700">Failed: {campaign.failedCount}</span>
                           <span className="rounded-lg bg-blue-50 px-3 py-2 font-semibold text-blue-700">Opened: {campaign.openedCount} ({openRate}%)</span>
                         </div>
@@ -582,7 +636,7 @@ export default function EmailMarketingPage() {
                     </summary>
                     <div className="border-t border-slate-100 p-4">
                       <div className="overflow-x-auto">
-                        <table className="w-full min-w-[760px] text-left text-xs">
+                        <table className="w-full min-w-[900px] text-left text-xs">
                           <thead>
                             <tr className="border-b border-slate-100 text-slate-500">
                               <th className="py-2 pr-3 font-bold">Recipient</th>
@@ -591,23 +645,49 @@ export default function EmailMarketingPage() {
                               <th className="py-2 pr-3 font-bold">Sent</th>
                               <th className="py-2 pr-3 font-bold">Opens</th>
                               <th className="py-2 pr-3 font-bold">Last opened</th>
+                              <th className="py-2 pr-3 text-right font-bold">Action</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {campaign.recipients.map((recipient) => (
-                              <tr key={recipient.id} className="border-b border-slate-50 last:border-b-0">
-                                <td className="py-2 pr-3">
-                                  <span className="block font-semibold text-slate-900">{recipient.name || recipient.email}</span>
-                                  <span className="block text-slate-500">{recipient.email}</span>
-                                  {recipient.errorMessage && <span className="mt-1 block text-red-600">{recipient.errorMessage}</span>}
-                                </td>
-                                <td className="py-2 pr-3 font-semibold text-slate-700">{recipient.role || 'N/A'}</td>
-                                <td className="py-2 pr-3 font-semibold text-slate-700">{recipient.status}</td>
-                                <td className="py-2 pr-3 text-slate-600">{recipient.sentAt ? new Date(recipient.sentAt).toLocaleString() : 'Not sent'}</td>
-                                <td className="py-2 pr-3 font-semibold text-slate-700">{recipient.openCount}</td>
-                                <td className="py-2 pr-3 text-slate-600">{recipient.lastOpenedAt ? new Date(recipient.lastOpenedAt).toLocaleString() : 'Not opened'}</td>
-                              </tr>
-                            ))}
+                            {campaign.recipients.map((recipient) => {
+                              const canSendRecipient = recipient.status === 'PENDING' || recipient.status === 'FAILED';
+
+                              return (
+                                <tr key={recipient.id} className="border-b border-slate-50 last:border-b-0 hover:bg-slate-50/70">
+                                  <td className="py-3 pr-3">
+                                    <span className="block font-semibold text-slate-900">{recipient.name || recipient.email}</span>
+                                    <span className="block text-slate-500">{recipient.email}</span>
+                                    {recipient.errorMessage && <span className="mt-1 block max-w-xl text-red-600">{recipient.errorMessage}</span>}
+                                  </td>
+                                  <td className="py-3 pr-3 font-semibold text-slate-700">{recipient.role || 'N/A'}</td>
+                                  <td className="py-3 pr-3">
+                                    <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold ${getStatusClassName(recipient.status)}`}>
+                                      {recipient.status}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 pr-3 text-slate-600">{recipient.sentAt ? new Date(recipient.sentAt).toLocaleString() : 'Not sent'}</td>
+                                  <td className="py-3 pr-3 font-semibold text-slate-700">{recipient.openCount}</td>
+                                  <td className="py-3 pr-3 text-slate-600">{recipient.lastOpenedAt ? new Date(recipient.lastOpenedAt).toLocaleString() : 'Not opened'}</td>
+                                  <td className="py-3 pr-3 text-right">
+                                    {canSendRecipient ? (
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        disabled={Boolean(sendingRecipientId)}
+                                        isLoading={sendingRecipientId === recipient.id}
+                                        onClick={() => handleSendRecipient(campaign.id, recipient.id, recipient.email)}
+                                      >
+                                        <LucideSend className="mr-1.5 h-3.5 w-3.5" />
+                                        {recipient.status === 'FAILED' ? 'Retry' : 'Send'}
+                                      </Button>
+                                    ) : (
+                                      <span className="text-xs font-semibold text-slate-400">Done</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>

@@ -171,6 +171,90 @@ const getCampaignReportsSafely = async () => {
   }
 };
 
+const updateCampaignSummary = async (campaignId: string) => {
+  const campaignRecipients = await db
+    .select()
+    .from(emailCampaignRecipients)
+    .where(eq(emailCampaignRecipients.campaignId, campaignId));
+  const sentCount = campaignRecipients.filter((recipient) => recipient.status === "SENT").length;
+  const failedCount = campaignRecipients.filter((recipient) => recipient.status === "FAILED").length;
+  const pendingCount = campaignRecipients.filter((recipient) => recipient.status === "PENDING").length;
+
+  await db.update(emailCampaigns)
+    .set({
+      status: getDerivedCampaignStatus(sentCount, failedCount, pendingCount),
+      sentCount,
+      failedCount,
+      updatedAt: new Date(),
+    })
+    .where(eq(emailCampaigns.id, campaignId));
+
+  return { sentCount, failedCount, pendingCount };
+};
+
+const sendExistingCampaignRecipient = async (campaignId: string, recipientId: string) => {
+  const campaign = await db.query.emailCampaigns.findFirst({
+    where: eq(emailCampaigns.id, campaignId),
+  });
+
+  if (!campaign) {
+    return NextResponse.json({ error: "Campaign was not found." }, { status: 404 });
+  }
+
+  const recipient = await db.query.emailCampaignRecipients.findFirst({
+    where: eq(emailCampaignRecipients.id, recipientId),
+  });
+
+  if (!recipient || recipient.campaignId !== campaign.id) {
+    return NextResponse.json({ error: "Campaign recipient was not found." }, { status: 404 });
+  }
+
+  if (recipient.status === "SENT") {
+    return NextResponse.json({ error: "This recipient has already been sent." }, { status: 400 });
+  }
+
+  const recipientName = recipient.name || recipient.email;
+  const templateValues = getRecipientTemplateValues({
+    firstName: recipientName?.split(/\s+/)[0] || "there",
+    lastName: "",
+    name: recipientName,
+    email: recipient.email,
+    role: recipient.role || "",
+  });
+  const personalizedSubject = renderPersonalizedTemplate(campaign.subject, templateValues);
+  const personalizedMessage = renderPersonalizedTemplate(campaign.body, templateValues);
+  const trackingUrl = `${SITE_URL}/api/email/open/${recipient.id}.gif`;
+  const result = await sendEmailNotification({
+    to: { email: recipient.email, name: recipient.name },
+    subject: personalizedSubject,
+    text: personalizedMessage,
+    html: renderCampaignHtml(personalizedMessage, trackingUrl),
+    from: campaign.fromEmail,
+    replyTo: campaign.replyToEmail,
+  });
+
+  await db.update(emailCampaignRecipients)
+    .set({
+      status: result.sent ? "SENT" : "FAILED",
+      smtpMessageId: result.messageId || null,
+      errorMessage: result.sent ? null : result.message || result.reason || "Email was not accepted by SMTP.",
+      sentAt: result.sent ? new Date() : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(emailCampaignRecipients.id, recipient.id));
+
+  const summary = await updateCampaignSummary(campaign.id);
+
+  return NextResponse.json({
+    success: result.sent,
+    sent: result.sent,
+    recipientId: recipient.id,
+    email: recipient.email,
+    message: result.sent ? "Email sent." : result.message || result.reason || "Email failed.",
+    summary,
+  }, { status: result.sent ? 200 : 400 });
+};
+
 const requireAdmin = async (req: NextRequest) => {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -221,6 +305,17 @@ export async function POST(req: NextRequest) {
     if (authResult.error) return authResult.error;
 
     const body = await req.json();
+    if (body.action === "sendRecipient") {
+      const campaignId = String(body.campaignId || "").trim();
+      const recipientId = String(body.recipientId || "").trim();
+
+      if (!campaignId || !recipientId) {
+        return NextResponse.json({ error: "Campaign ID and recipient ID are required." }, { status: 400 });
+      }
+
+      return await sendExistingCampaignRecipient(campaignId, recipientId);
+    }
+
     const roles = parseRoles(body.roles);
     const userIds = parseUserIds(body.userIds);
     const subject = String(body.subject || "").trim();
@@ -350,18 +445,7 @@ export async function POST(req: NextRequest) {
         messageId: result.messageId,
       });
 
-      const currentSent = results.filter((currentResult) => currentResult.sent).length;
-      const currentFailed = results.length - currentSent;
-      const currentPending = recipientRows.length - results.length;
-
-      await db.update(emailCampaigns)
-        .set({
-          status: getDerivedCampaignStatus(currentSent, currentFailed, currentPending),
-          sentCount: currentSent,
-          failedCount: currentFailed,
-          updatedAt: new Date(),
-        })
-        .where(eq(emailCampaigns.id, campaign.id));
+      await updateCampaignSummary(campaign.id);
 
       if (intervalSeconds > 0 && index < recipients.length - 1) {
         await wait(intervalSeconds * 1000);
@@ -371,14 +455,7 @@ export async function POST(req: NextRequest) {
     const sent = results.filter((result) => result.sent).length;
     const failed = results.length - sent;
 
-    await db.update(emailCampaigns)
-      .set({
-        status: failed > 0 ? "PARTIAL" : "SENT",
-        sentCount: sent,
-        failedCount: failed,
-        updatedAt: new Date(),
-      })
-      .where(eq(emailCampaigns.id, campaign.id));
+    await updateCampaignSummary(campaign.id);
 
     return NextResponse.json({
       success: sent > 0,
