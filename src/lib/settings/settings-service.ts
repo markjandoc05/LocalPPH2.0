@@ -19,7 +19,88 @@ export interface IntegrationSettings {
   robots: { enabled: boolean; url: string; status: string; lastChecked?: string };
   openGraph: { enabled: boolean; title: string; description: string; imageUrl: string; lastChecked?: string };
   favicon: { enabled: boolean; url: string; lastChecked?: string };
+  emailTemplates: {
+    upgradeRequestAdmin: EmailTemplateConfig;
+    upgradeApprovedUser: EmailTemplateConfig;
+    listingApprovedOwner: EmailTemplateConfig;
+    inquiryReceivedOwner: EmailTemplateConfig;
+    inquiryReplyUser: EmailTemplateConfig;
+  };
 }
+
+export interface EmailTemplateConfig {
+  enabled: boolean;
+  subject: string;
+  body: string;
+}
+
+export const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
+  upgradeRequestAdmin: {
+    enabled: true,
+    subject: 'New LocalPages.ph account upgrade request',
+    body: [
+      'A user requested to upgrade their LocalPages.ph account to Business.',
+      '',
+      'Requester: {{requesterName}}',
+      'Email: {{requesterEmail}}',
+      '',
+      'Review the request: {{adminUsersUrl}}',
+    ].join('\n'),
+  },
+  upgradeApprovedUser: {
+    enabled: true,
+    subject: 'Your LocalPages.ph account is now a Business account',
+    body: [
+      'Hi {{userName}},',
+      '',
+      'Your account upgrade request has been approved. You can now create and manage business listings on LocalPages.ph.',
+      '',
+      'Go to your business dashboard: {{businessDashboardUrl}}',
+    ].join('\n'),
+  },
+  listingApprovedOwner: {
+    enabled: true,
+    subject: 'Your listing is approved: {{businessName}}',
+    body: [
+      'Hi {{userName}},',
+      '',
+      '{{businessName}} has been approved and is now visible on LocalPages.ph.',
+      '',
+      'View listing: {{businessUrl}}',
+    ].join('\n'),
+  },
+  inquiryReceivedOwner: {
+    enabled: true,
+    subject: 'New inquiry for {{businessName}}: {{inquirySubject}}',
+    body: [
+      'Hi {{ownerName}},',
+      '',
+      'You received a new inquiry for {{businessName}}.',
+      '',
+      'From: {{senderName}}',
+      'Email: {{senderEmail}}',
+      'Contact number: {{senderContactNumber}}',
+      'Subject: {{inquirySubject}}',
+      '',
+      '{{message}}',
+      '',
+      'Open your inquiry inbox: {{businessInboxUrl}}',
+    ].join('\n'),
+  },
+  inquiryReplyUser: {
+    enabled: true,
+    subject: 'New reply from {{businessName}}: {{inquirySubject}}',
+    body: [
+      'Hi {{userName}},',
+      '',
+      '{{businessName}} replied to your inquiry.',
+      '',
+      '{{message}}',
+      '',
+      'Open My Inquiries: {{myInquiriesUrl}}',
+    ].join('\n'),
+  },
+};
 
 const DEFAULT_SETTINGS: IntegrationSettings = {
   googleAnalytics: { enabled: false, measurementId: "" },
@@ -31,8 +112,18 @@ const DEFAULT_SETTINGS: IntegrationSettings = {
   sitemap: { enabled: true, url: "/sitemap.xml", autoGenerate: true },
   robots: { enabled: true, url: "/robots.txt", status: "Allowed" },
   openGraph: { enabled: true, title: "LocalPages PH", description: "Discover trusted local businesses in the Philippines", imageUrl: "" },
-  favicon: { enabled: true, url: "/favicon.ico" }
+  favicon: { enabled: true, url: "/favicon.ico" },
+  emailTemplates: DEFAULT_EMAIL_TEMPLATES,
 };
+
+const mergeSettings = (settings?: Partial<IntegrationSettings>): IntegrationSettings => ({
+  ...DEFAULT_SETTINGS,
+  ...(settings || {}),
+  emailTemplates: {
+    ...DEFAULT_EMAIL_TEMPLATES,
+    ...(settings?.emailTemplates || {}),
+  },
+});
 
 export async function getSettings(): Promise<IntegrationSettings> {
   // Real Database mode
@@ -41,7 +132,7 @@ export async function getSettings(): Promise<IntegrationSettings> {
       where: eq(siteSettings.key, "integrations"),
     });
     if (record) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(record.value) };
+      return mergeSettings(JSON.parse(record.value));
     }
   } catch (error) {
     console.error("Failed to fetch settings from DB, returning defaults:", error);

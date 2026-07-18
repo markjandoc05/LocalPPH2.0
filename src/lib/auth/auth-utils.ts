@@ -11,6 +11,7 @@ import {
   unlink,
   updatePassword,
   updateProfile,
+  type ActionCodeSettings,
   type User
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
@@ -26,13 +27,21 @@ export const EMAIL_LOGIN_GOOGLE_ACCOUNT_MESSAGE =
 export const GOOGLE_LINK_EMAIL_MISMATCH_MESSAGE =
   'Please choose the same Google email address as your current LocalPages account.';
 
-const getEmailActionSettings = () => {
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://localpages.ph';
+
+const getEmailActionSettings = (path = '/profile'): ActionCodeSettings | undefined => {
   if (typeof window === 'undefined') return undefined;
 
+  const origin = window.location.origin || SITE_URL;
+
   return {
-    url: `${window.location.origin}/profile`,
+    url: `${origin}${path}`,
     handleCodeInApp: false,
   };
+};
+
+const shouldRetryWithoutActionSettings = (error: any) => {
+  return error?.code === 'auth/unauthorized-continue-uri' || error?.code === 'auth/invalid-continue-uri';
 };
 
 export const getAuthEmailErrorMessage = (error: any, fallback: string) => {
@@ -324,7 +333,13 @@ export const resetPassword = async (email: string) => {
     if (!normalizedEmail) {
       throw new Error('A registered email address is required before sending a password reset link.');
     }
-    await sendPasswordResetEmail(auth, normalizedEmail, getEmailActionSettings());
+
+    try {
+      await sendPasswordResetEmail(auth, normalizedEmail, getEmailActionSettings('/auth/login'));
+    } catch (error: any) {
+      if (!shouldRetryWithoutActionSettings(error)) throw error;
+      await sendPasswordResetEmail(auth, normalizedEmail);
+    }
   } catch (error) {
     console.error("Error sending password reset email:", error);
     throw error;
@@ -342,7 +357,12 @@ export const sendVerificationEmail = async (targetUser: User | null = auth.curre
       return { alreadyVerified: true };
     }
 
-    await sendEmailVerification(targetUser, getEmailActionSettings());
+    try {
+      await sendEmailVerification(targetUser, getEmailActionSettings('/profile'));
+    } catch (error: any) {
+      if (!shouldRetryWithoutActionSettings(error)) throw error;
+      await sendEmailVerification(targetUser);
+    }
     return { alreadyVerified: false };
   } catch (error) {
     console.error("Error sending verification email:", error);

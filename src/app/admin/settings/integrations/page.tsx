@@ -26,7 +26,8 @@ import {
   LucideSave, 
   LucideRefreshCw, 
   LucideCheckCircle, 
-  LucideXCircle
+  LucideXCircle,
+  LucideMail
 } from 'lucide-react';
 
 interface IntegrationService {
@@ -47,7 +48,50 @@ interface IntegrationSettings {
   robots: IntegrationService & { url: string; status: string };
   openGraph: IntegrationService & { title: string; description: string; imageUrl: string };
   favicon: IntegrationService & { url: string };
+  emailTemplates: {
+    upgradeRequestAdmin: EmailTemplateConfig;
+    upgradeApprovedUser: EmailTemplateConfig;
+    listingApprovedOwner: EmailTemplateConfig;
+    inquiryReceivedOwner: EmailTemplateConfig;
+    inquiryReplyUser: EmailTemplateConfig;
+  };
 }
+
+interface EmailTemplateConfig {
+  enabled: boolean;
+  subject: string;
+  body: string;
+}
+
+type StandardIntegrationKey = Exclude<keyof IntegrationSettings, 'emailTemplates'>;
+
+const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
+  upgradeRequestAdmin: {
+    enabled: true,
+    subject: 'New LocalPages.ph account upgrade request',
+    body: 'A user requested to upgrade their LocalPages.ph account to Business.\n\nRequester: {{requesterName}}\nEmail: {{requesterEmail}}\n\nReview the request: {{adminUsersUrl}}',
+  },
+  upgradeApprovedUser: {
+    enabled: true,
+    subject: 'Your LocalPages.ph account is now a Business account',
+    body: 'Hi {{userName}},\n\nYour account upgrade request has been approved. You can now create and manage business listings on LocalPages.ph.\n\nGo to your business dashboard: {{businessDashboardUrl}}',
+  },
+  listingApprovedOwner: {
+    enabled: true,
+    subject: 'Your listing is approved: {{businessName}}',
+    body: 'Hi {{userName}},\n\n{{businessName}} has been approved and is now visible on LocalPages.ph.\n\nView listing: {{businessUrl}}',
+  },
+  inquiryReceivedOwner: {
+    enabled: true,
+    subject: 'New inquiry for {{businessName}}: {{inquirySubject}}',
+    body: 'Hi {{ownerName}},\n\nYou received a new inquiry for {{businessName}}.\n\nFrom: {{senderName}}\nEmail: {{senderEmail}}\nContact number: {{senderContactNumber}}\nSubject: {{inquirySubject}}\n\n{{message}}\n\nOpen your inquiry inbox: {{businessInboxUrl}}',
+  },
+  inquiryReplyUser: {
+    enabled: true,
+    subject: 'New reply from {{businessName}}: {{inquirySubject}}',
+    body: 'Hi {{userName}},\n\n{{businessName}} replied to your inquiry.\n\n{{message}}\n\nOpen My Inquiries: {{myInquiriesUrl}}',
+  },
+};
 
 const DEFAULT_SETTINGS: IntegrationSettings = {
   googleAnalytics: { enabled: false, measurementId: "" },
@@ -59,8 +103,47 @@ const DEFAULT_SETTINGS: IntegrationSettings = {
   sitemap: { enabled: true, url: "/sitemap.xml", autoGenerate: true },
   robots: { enabled: true, url: "/robots.txt", status: "Allowed" },
   openGraph: { enabled: true, title: "LocalPages PH", description: "Discover trusted local businesses in the Philippines", imageUrl: "" },
-  favicon: { enabled: true, url: "/favicon.ico" }
+  favicon: { enabled: true, url: "/favicon.ico" },
+  emailTemplates: DEFAULT_EMAIL_TEMPLATES,
 };
+
+const EMAIL_TEMPLATE_META: {
+  key: keyof IntegrationSettings['emailTemplates'];
+  title: string;
+  description: string;
+  variables: string[];
+}[] = [
+  {
+    key: 'upgradeRequestAdmin',
+    title: 'Upgrade Request to Admins',
+    description: 'Sent to admins and moderators when a subscriber requests Business access.',
+    variables: ['requesterName', 'requesterEmail', 'adminUsersUrl'],
+  },
+  {
+    key: 'upgradeApprovedUser',
+    title: 'Upgrade Approved to User',
+    description: 'Sent to a user after their account is upgraded to Business.',
+    variables: ['userName', 'userEmail', 'businessDashboardUrl'],
+  },
+  {
+    key: 'listingApprovedOwner',
+    title: 'Listing Approved to Owner',
+    description: 'Sent to the business owner when a listing is approved.',
+    variables: ['userName', 'userEmail', 'businessName', 'businessUrl'],
+  },
+  {
+    key: 'inquiryReceivedOwner',
+    title: 'New Inquiry to Business Owner',
+    description: 'Sent to the business owner when a registered user sends an inquiry.',
+    variables: ['ownerName', 'ownerEmail', 'businessName', 'senderName', 'senderEmail', 'senderContactNumber', 'inquirySubject', 'message', 'businessInboxUrl'],
+  },
+  {
+    key: 'inquiryReplyUser',
+    title: 'Inquiry Reply Notification',
+    description: 'Sent when the other party replies to an inquiry conversation.',
+    variables: ['userName', 'userEmail', 'businessName', 'inquirySubject', 'message', 'myInquiriesUrl'],
+  },
+];
 
 export default function IntegrationsSettingsPage() {
   const { user, role, loading: authLoading } = useAuth();
@@ -69,7 +152,7 @@ export default function IntegrationsSettingsPage() {
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
   const [testingService, setTestingService] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<{ [key: string]: { success: boolean; message: string } }>({});
-  const [activeTab, setActiveTab] = useState<'all' | 'analytics' | 'seo' | 'user_experience'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'analytics' | 'seo' | 'user_experience' | 'email'>('all');
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -103,7 +186,7 @@ export default function IntegrationsSettingsPage() {
     }
   }, [user, role, reloadKey]);
 
-  const handleToggle = (service: keyof IntegrationSettings) => {
+  const handleToggle = (service: StandardIntegrationKey) => {
     setSettings(prev => ({
       ...prev,
       [service]: {
@@ -113,13 +196,40 @@ export default function IntegrationsSettingsPage() {
     }));
   };
 
-  const handleInputChange = (service: keyof IntegrationSettings, field: string, value: any) => {
+  const handleInputChange = (service: StandardIntegrationKey, field: string, value: any) => {
     setSettings(prev => ({
       ...prev,
       [service]: {
         ...prev[service],
         [field]: value
       }
+    }));
+  };
+
+  const handleEmailTemplateChange = (
+    template: keyof IntegrationSettings['emailTemplates'],
+    field: keyof EmailTemplateConfig,
+    value: string | boolean,
+  ) => {
+    setSettings(prev => ({
+      ...prev,
+      emailTemplates: {
+        ...prev.emailTemplates,
+        [template]: {
+          ...prev.emailTemplates[template],
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const resetEmailTemplate = (template: keyof IntegrationSettings['emailTemplates']) => {
+    setSettings(prev => ({
+      ...prev,
+      emailTemplates: {
+        ...prev.emailTemplates,
+        [template]: DEFAULT_EMAIL_TEMPLATES[template],
+      },
     }));
   };
 
@@ -163,7 +273,7 @@ export default function IntegrationsSettingsPage() {
     }
   };
 
-  const runVerificationTest = async (service: keyof IntegrationSettings) => {
+  const runVerificationTest = async (service: StandardIntegrationKey) => {
     setTestingService(service);
     // Simulate slight network latency
     await new Promise(resolve => setTimeout(resolve, 800));
@@ -313,12 +423,21 @@ export default function IntegrationsSettingsPage() {
       case 'robots': return "Robots.txt";
       case 'openGraph': return "Open Graph (SEO Metadata)";
       case 'favicon': return "Favicon Setup";
+      case 'emailTemplates': return "Email Templates";
       default: return String(service);
     }
   };
 
   const getServiceStatus = (serviceKey: keyof IntegrationSettings) => {
-    const config = settings[serviceKey];
+    if (serviceKey === 'emailTemplates') {
+      const templates = settings.emailTemplates;
+      const hasRequiredFields = Object.values(templates).every(template => template.subject?.trim() && template.body?.trim());
+      return hasRequiredFields
+        ? { text: "Ready", variant: "success" as const }
+        : { text: "Needs Setup", variant: "warning" as const };
+    }
+
+    const config = settings[serviceKey] as IntegrationService & Record<string, any>;
     if (!config.enabled) {
       return { text: "Disabled", variant: "default" as const };
     }
@@ -421,7 +540,8 @@ export default function IntegrationsSettingsPage() {
             { id: 'all', label: 'All Settings' },
             { id: 'analytics', label: 'Analytics & Pixels' },
             { id: 'seo', label: 'SEO & Site Crawlers' },
-            { id: 'user_experience', label: 'User Experience' }
+            { id: 'user_experience', label: 'User Experience' },
+            { id: 'email', label: 'Email Templates' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -445,6 +565,102 @@ export default function IntegrationsSettingsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {(activeTab === 'all' || activeTab === 'email') && (
+              <Card className="p-6 border-slate-200 shadow-sm lg:col-span-2 space-y-5">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                      <LucideMail className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-sm">Email Notification Templates</h3>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Customize subjects and messages for account upgrades, listing approvals, and inquiry notifications.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getServiceStatus('emailTemplates').variant}>
+                      {getServiceStatus('emailTemplates').text}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSave('emailTemplates')}
+                      className="h-8 text-[11px] px-3 font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Save Templates
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-900">
+                  Use placeholders exactly as shown, like <span className="font-mono font-semibold">{'{{businessName}}'}</span>. They will be replaced automatically when the email is sent.
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  {EMAIL_TEMPLATE_META.map((templateMeta) => {
+                    const template = settings.emailTemplates[templateMeta.key];
+                    return (
+                      <div key={templateMeta.key} className="border border-slate-200 rounded-lg p-4 space-y-3 bg-white">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h4 className="font-bold text-slate-900 text-sm">{templateMeta.title}</h4>
+                            <p className="text-xs text-slate-500 mt-1">{templateMeta.description}</p>
+                          </div>
+                          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              checked={template.enabled}
+                              onChange={(e) => handleEmailTemplateChange(templateMeta.key, 'enabled', e.target.checked)}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                            />
+                            Enabled
+                          </label>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="block text-xs font-semibold text-slate-700">Subject</label>
+                          <Input
+                            value={template.subject}
+                            onChange={(e) => handleEmailTemplateChange(templateMeta.key, 'subject', e.target.value)}
+                            className="text-xs"
+                            placeholder="Email subject"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="block text-xs font-semibold text-slate-700">Message</label>
+                          <Textarea
+                            value={template.body}
+                            onChange={(e) => handleEmailTemplateChange(templateMeta.key, 'body', e.target.value)}
+                            rows={8}
+                            className="text-xs font-mono leading-relaxed"
+                            placeholder="Email message"
+                          />
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-100 pt-3">
+                          <div className="flex flex-wrap gap-1.5">
+                            {templateMeta.variables.map(variable => (
+                              <span key={variable} className="rounded bg-slate-100 px-2 py-1 text-[10px] font-mono text-slate-700">
+                                {`{{${variable}}}`}
+                              </span>
+                            ))}
+                          </div>
+                          <Button
+                            variant="secondary"
+                            onClick={() => resetEmailTemplate(templateMeta.key)}
+                            className="h-8 text-[11px] px-3 font-semibold"
+                          >
+                            Reset
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
             
             {/* GOOGLE ANALYTICS 4 */}
             {(activeTab === 'all' || activeTab === 'analytics') && (

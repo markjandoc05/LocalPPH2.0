@@ -19,6 +19,13 @@ import {
 import { eq, and, or, ilike, sql, desc, asc, inArray } from "drizzle-orm";
 import { BusinessListing } from "@/types/business";
 import { formatAppDateTime } from "@/lib/time";
+import {
+  notifyAdminsOfUpgradeRequest,
+  notifyBusinessOwnerOfInquiry,
+  notifyInquirySenderOfReply,
+  notifyUserOfAccountUpgrade,
+  notifyUserOfApprovedListing,
+} from "@/lib/email/notifications";
 
 const businessInquiryCategory = 'BUSINESS_INQUIRY';
 const businessInquiryPrefix = 'LOCALPAGES_BUSINESS_INQUIRY::';
@@ -57,6 +64,35 @@ const parseBusinessInquiryThread = (response?: string | null) => {
 
 const serializeBusinessInquiryThread = (messages: any[]) =>
   `${businessInquiryThreadPrefix}${JSON.stringify(messages)}`;
+
+const getUserDisplayName = (user?: any | null) => {
+  if (!user) return '';
+  return user.displayName || [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || '';
+};
+
+const toEmailRecipient = (user?: any | null) => ({
+  email: user?.email || null,
+  name: getUserDisplayName(user) || null,
+});
+
+const getAdminEmailRecipients = async () => {
+  const admins = await db.query.users.findMany({
+    where: and(
+      inArray(users.role, ['ADMIN', 'MODERATOR']),
+      eq(users.accountStatus, 'ACTIVE'),
+    ),
+  });
+
+  return admins.map(toEmailRecipient).filter((recipient) => recipient.email);
+};
+
+const sendNotificationSafely = async (sender: () => Promise<unknown>) => {
+  try {
+    await sender();
+  } catch (error) {
+    console.error('Email notification hook failed:', error);
+  }
+};
 
 const getBusinessInquiryTime = (value?: string | Date | null) => {
   if (!value) return 0;
@@ -478,7 +514,17 @@ export const databaseProvider: DataProvider = {
         updatedAt: new Date(),
       })
       .where(eq(users.id, variables.id))
-      .returning({ id: users.id });
+      .returning({
+        id: users.id,
+        email: users.email,
+        displayName: users.displayName,
+        firstName: users.firstName,
+        lastName: users.lastName,
+      });
+
+    if (res[0]?.id && nextRole === 'BUSINESS') {
+      await sendNotificationSafely(() => notifyUserOfAccountUpgrade(toEmailRecipient(res[0])));
+    }
 
     return {
       data: { user_update: res[0]?.id || variables.id },
@@ -587,7 +633,37 @@ export const databaseProvider: DataProvider = {
       throw error;
     }
 
-    return { data: { support_ticket_insert: res[0].id } };
+    const ticketId = res[0].id;
+
+    if (category === 'ACCOUNT_UPGRADE') {
+      await sendNotificationSafely(async () => {
+        const [requester, admins] = await Promise.all([
+          db.query.users.findFirst({ where: eq(users.id, variables.userId) }),
+          getAdminEmailRecipients(),
+        ]);
+
+        await notifyAdminsOfUpgradeRequest(admins, toEmailRecipient(requester));
+      });
+    }
+
+    if (category === businessInquiryCategory) {
+      await sendNotificationSafely(async () => {
+        const inquiry = parseBusinessInquiryMessage(message);
+        if (!inquiry?.ownerId) return;
+
+        const owner = await db.query.users.findFirst({ where: eq(users.id, inquiry.ownerId) });
+        await notifyBusinessOwnerOfInquiry(toEmailRecipient(owner), {
+          businessName: inquiry.businessName || subject,
+          senderName: inquiry.senderName,
+          senderEmail: inquiry.senderEmail,
+          senderContactNumber: inquiry.senderContactNumber,
+          subject: inquiry.subject || subject,
+          message: inquiry.message || '',
+        });
+      });
+    }
+
+    return { data: { support_ticket_insert: ticketId } };
   },
 
   async getMySupportTickets(variables) {
@@ -725,6 +801,15 @@ export const databaseProvider: DataProvider = {
       })
       .where(eq(supportTickets.id, variables.id))
       .returning({ id: supportTickets.id });
+
+    await sendNotificationSafely(async () => {
+      const sender = await db.query.users.findFirst({ where: eq(users.id, ticket.userId) });
+      await notifyInquirySenderOfReply(toEmailRecipient(sender), {
+        businessName: inquiry.businessName,
+        subject: inquiry.subject,
+        message: response,
+      });
+    });
 
     return { data: { inquiry_update: res[0]?.id || variables.id } };
   },
@@ -933,6 +1018,21 @@ export const databaseProvider: DataProvider = {
       })
       .where(eq(supportTickets.id, variables.id))
       .returning({ id: supportTickets.id });
+
+    const inquiry = formatBusinessInquiry(ticket);
+    if (inquiry?.ownerId) {
+      await sendNotificationSafely(async () => {
+        const owner = await db.query.users.findFirst({ where: eq(users.id, inquiry.ownerId) });
+        await notifyBusinessOwnerOfInquiry(toEmailRecipient(owner), {
+          businessName: inquiry.businessName,
+          senderName: inquiry.senderName,
+          senderEmail: inquiry.senderEmail,
+          senderContactNumber: inquiry.senderContactNumber,
+          subject: inquiry.subject,
+          message: response,
+        });
+      });
+    }
 
     return { data: { inquiry_update: res[0]?.id || variables.id } };
   },
@@ -1248,6 +1348,13 @@ export const databaseProvider: DataProvider = {
   },
 
   async updateBusinessStatus(variables) {
+    const businessBeforeUpdate = await db.query.businesses.findFirst({
+      where: eq(businesses.id, variables.id),
+      with: {
+        owner: true,
+      },
+    });
+
     const res = await db.update(businesses)
       .set({
         status: variables.status,
@@ -1256,6 +1363,16 @@ export const databaseProvider: DataProvider = {
       })
       .where(eq(businesses.id, variables.id))
       .returning({ id: businesses.id });
+
+    if (res[0]?.id && variables.status === 'APPROVED' && businessBeforeUpdate?.status !== 'APPROVED') {
+      await sendNotificationSafely(() =>
+        notifyUserOfApprovedListing(
+          toEmailRecipient(businessBeforeUpdate?.owner),
+          businessBeforeUpdate?.name || 'Your business listing',
+          businessBeforeUpdate?.slug,
+        ),
+      );
+    }
     
     return {
       data: {
