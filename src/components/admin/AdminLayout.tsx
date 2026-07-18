@@ -19,10 +19,11 @@ import {
   LucideUpload,
   LucideMessageSquare,
   LucideArchiveRestore,
-  LucideInbox
+  LucideInbox,
+  LucideMail
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { canAccessAdmin } from "@/lib/auth/roles";
+import { canAccessAdmin, isAdmin } from "@/lib/auth/roles";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/Button";
 
@@ -84,6 +85,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: LucideMessageSquare,
       exact: false,
     },
+    ...(isAdmin(role) ? [{
+      name: "Email Marketing",
+      href: "/admin/email-marketing",
+      icon: LucideMail,
+      exact: false,
+    }] : []),
     {
       name: "Inquiries",
       href: "/inquiries",

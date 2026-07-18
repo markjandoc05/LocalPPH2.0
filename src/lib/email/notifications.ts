@@ -13,6 +13,8 @@ type SendEmailInput = {
   subject: string;
   text: string;
   html?: string;
+  from?: string;
+  replyTo?: string;
 };
 
 type TemplateKey = keyof typeof DEFAULT_EMAIL_TEMPLATES;
@@ -166,7 +168,7 @@ const getTransporter = async () => {
   return transporter;
 };
 
-export const sendEmailNotification = async ({ to, subject, text, html }: SendEmailInput): Promise<EmailNotificationResult> => {
+export const sendEmailNotification = async ({ to, subject, text, html, from, replyTo }: SendEmailInput): Promise<EmailNotificationResult> => {
   const mailer = await getTransporter();
   const config = await getSmtpConfig();
   const recipients = (Array.isArray(to) ? to : [to])
@@ -191,7 +193,7 @@ export const sendEmailNotification = async ({ to, subject, text, html }: SendEma
   }
 
   const options: SendMailOptions = {
-    from: config.from,
+    from: from || config.from,
     envelope: {
       from: config.user,
       to: recipients,
@@ -200,6 +202,7 @@ export const sendEmailNotification = async ({ to, subject, text, html }: SendEma
     subject,
     text,
     html: html || textToHtml(text),
+    replyTo,
   };
 
   try {

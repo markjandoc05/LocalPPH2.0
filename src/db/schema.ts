@@ -185,10 +185,55 @@ export const supportTickets = pgTable('support_tickets', {
   createdAtIdx: index('support_tickets_created_at_idx').on(table.createdAt),
 }));
 
+export const emailCampaigns = pgTable('email_campaigns', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  subject: text('subject').notNull(),
+  body: text('body').notNull(),
+  targetRoles: text('target_roles'),
+  targetUserIds: text('target_user_ids'),
+  fromEmail: text('from_email').default('support@localpages.ph').notNull(),
+  replyToEmail: text('reply_to_email').default('support@localpages.ph').notNull(),
+  intervalSeconds: integer('interval_seconds').default(0).notNull(),
+  status: text('status').default('SENDING').notNull(),
+  totalRecipients: integer('total_recipients').default(0).notNull(),
+  sentCount: integer('sent_count').default(0).notNull(),
+  failedCount: integer('failed_count').default(0).notNull(),
+  openedCount: integer('opened_count').default(0).notNull(),
+  createdById: text('created_by_id').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  createdAtIdx: index('email_campaigns_created_at_idx').on(table.createdAt),
+  statusIdx: index('email_campaigns_status_idx').on(table.status),
+}));
+
+export const emailCampaignRecipients = pgTable('email_campaign_recipients', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  campaignId: uuid('campaign_id').references(() => emailCampaigns.id, { onDelete: 'cascade' }).notNull(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  email: text('email').notNull(),
+  name: text('name'),
+  role: text('role'),
+  status: text('status').default('PENDING').notNull(),
+  smtpMessageId: text('smtp_message_id'),
+  errorMessage: text('error_message'),
+  sentAt: timestamp('sent_at'),
+  firstOpenedAt: timestamp('first_opened_at'),
+  lastOpenedAt: timestamp('last_opened_at'),
+  openCount: integer('open_count').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  campaignIdIdx: index('email_campaign_recipients_campaign_id_idx').on(table.campaignId),
+  userIdIdx: index('email_campaign_recipients_user_id_idx').on(table.userId),
+  emailIdx: index('email_campaign_recipients_email_idx').on(table.email),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   businesses: many(businesses),
   supportTickets: many(supportTickets),
+  emailCampaignRecipients: many(emailCampaignRecipients),
 }));
 
 export const businessesRelations = relations(businesses, ({ one, many }) => ({
@@ -234,6 +279,25 @@ export const supportTicketsRelations = relations(supportTickets, ({ one }) => ({
   }),
   respondedBy: one(users, {
     fields: [supportTickets.respondedById],
+    references: [users.id],
+  }),
+}));
+
+export const emailCampaignsRelations = relations(emailCampaigns, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [emailCampaigns.createdById],
+    references: [users.id],
+  }),
+  recipients: many(emailCampaignRecipients),
+}));
+
+export const emailCampaignRecipientsRelations = relations(emailCampaignRecipients, ({ one }) => ({
+  campaign: one(emailCampaigns, {
+    fields: [emailCampaignRecipients.campaignId],
+    references: [emailCampaigns.id],
+  }),
+  user: one(users, {
+    fields: [emailCampaignRecipients.userId],
     references: [users.id],
   }),
 }));
