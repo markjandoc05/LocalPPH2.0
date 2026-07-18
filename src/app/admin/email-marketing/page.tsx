@@ -60,6 +60,7 @@ type CampaignReport = {
   sentCount: number;
   failedCount: number;
   openedCount: number;
+  pendingCount?: number;
   createdAt: string;
   recipients: Array<{
     id: string;
@@ -570,9 +571,10 @@ export default function EmailMarketingPage() {
                             {campaign.createdAt ? new Date(campaign.createdAt).toLocaleString() : 'Date not set'} · {campaign.status}
                           </p>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                        <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
                           <span className="rounded-lg bg-slate-50 px-3 py-2 font-semibold text-slate-700">Total: {campaign.totalRecipients}</span>
                           <span className="rounded-lg bg-emerald-50 px-3 py-2 font-semibold text-emerald-700">Sent: {campaign.sentCount}</span>
+                          <span className="rounded-lg bg-amber-50 px-3 py-2 font-semibold text-amber-700">Pending: {campaign.pendingCount || 0}</span>
                           <span className="rounded-lg bg-red-50 px-3 py-2 font-semibold text-red-700">Failed: {campaign.failedCount}</span>
                           <span className="rounded-lg bg-blue-50 px-3 py-2 font-semibold text-blue-700">Opened: {campaign.openedCount} ({openRate}%)</span>
                         </div>

@@ -14,6 +14,14 @@ const allowedRoles = new Set(["ADMIN", "MODERATOR", "BUSINESS", "SUBSCRIBER"]);
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const getDerivedCampaignStatus = (sent: number, failed: number, pending: number) => {
+  if (pending > 0 && (sent > 0 || failed > 0)) return "IN_PROGRESS";
+  if (pending > 0) return "SENDING";
+  if (failed > 0 && sent > 0) return "PARTIAL";
+  if (failed > 0) return "FAILED";
+  return "SENT";
+};
+
 const isMissingEmailCampaignTablesError = (error: any) => {
   const message = String(error?.message || error || "").toLowerCase();
   return message.includes("email_campaigns") || message.includes("email_campaign_recipients");
@@ -113,11 +121,20 @@ const getCampaignReports = async () => {
 
   return campaigns.map((campaign) => {
     const campaignRecipients = recipients.filter((recipient) => recipient.campaignId === campaign.id);
+    const sentCount = campaignRecipients.filter((recipient) => recipient.status === "SENT").length;
+    const failedCount = campaignRecipients.filter((recipient) => recipient.status === "FAILED").length;
+    const pendingCount = campaignRecipients.filter((recipient) => recipient.status === "PENDING").length;
     const openedRecipients = campaignRecipients.filter((recipient) => recipient.openCount > 0).length;
+    const totalRecipients = campaignRecipients.length || campaign.totalRecipients;
 
     return {
       ...campaign,
+      status: getDerivedCampaignStatus(sentCount, failedCount, pendingCount),
+      totalRecipients,
+      sentCount,
+      failedCount,
       openedCount: openedRecipients,
+      pendingCount,
       recipients: campaignRecipients.map((recipient) => ({
         id: recipient.id,
         email: recipient.email,
@@ -332,6 +349,19 @@ export async function POST(req: NextRequest) {
         message: result.message,
         messageId: result.messageId,
       });
+
+      const currentSent = results.filter((currentResult) => currentResult.sent).length;
+      const currentFailed = results.length - currentSent;
+      const currentPending = recipientRows.length - results.length;
+
+      await db.update(emailCampaigns)
+        .set({
+          status: getDerivedCampaignStatus(currentSent, currentFailed, currentPending),
+          sentCount: currentSent,
+          failedCount: currentFailed,
+          updatedAt: new Date(),
+        })
+        .where(eq(emailCampaigns.id, campaign.id));
 
       if (intervalSeconds > 0 && index < recipients.length - 1) {
         await wait(intervalSeconds * 1000);
