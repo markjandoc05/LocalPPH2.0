@@ -84,7 +84,7 @@ const emptyToUndefined = (value: unknown) => {
 };
 
 const SeoFieldTip = ({ children }: { children: React.ReactNode }) => (
-  <p className="mt-1 text-xs leading-5 text-slate-500">{children}</p>
+  <p className="mt-1 text-xs italic leading-5 text-slate-500">{children}</p>
 );
 
 export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: BusinessFormProps) {
@@ -490,7 +490,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
           <p className="text-xs text-blue-700 mt-0.5">
             Submit your business for review. Once approved, it will appear in LocalPages.ph. You can also save your progress as a draft at any time.
           </p>
-          <p className="text-xs text-blue-700 mt-2">
+          <p className="text-xs italic text-blue-700 mt-2">
             SEO tip: complete every relevant field with accurate business details, location terms, products, services, and real photos. This helps Google, AI search tools, and customers understand what your business offers.
           </p>
         </div>

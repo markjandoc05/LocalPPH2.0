@@ -17,14 +17,20 @@ type SendEmailInput = {
 
 type TemplateKey = keyof typeof DEFAULT_EMAIL_TEMPLATES;
 type TemplateValues = Record<string, string | number | null | undefined>;
+type EmailNotificationResult = {
+  sent: boolean;
+  reason?: string;
+  message?: string;
+  messageId?: string;
+};
 
 let transporter: Transporter | null = null;
 
 const getSmtpConfig = () => {
   const host = process.env.SMTP_HOST || process.env.EMAIL_SERVER_HOST;
   const port = Number(process.env.SMTP_PORT || process.env.EMAIL_SERVER_PORT || 587);
-  const user = process.env.SMTP_USER || process.env.EMAIL_SERVER_USER;
-  const pass = process.env.SMTP_PASSWORD || process.env.EMAIL_SERVER_PASSWORD;
+  const user = process.env.SMTP_USER || process.env.EMAIL_SERVER_USER || process.env.MAIL_USER;
+  const pass = process.env.SMTP_PASSWORD || process.env.SMTP_PASS || process.env.EMAIL_SERVER_PASSWORD || process.env.MAIL_PASSWORD;
   const from = process.env.SMTP_FROM || process.env.EMAIL_FROM || user;
   const secureEnv = process.env.SMTP_SECURE?.toLowerCase();
   const secure = secureEnv ? secureEnv === 'true' || secureEnv === '1' : port === 465;
@@ -34,6 +40,11 @@ const getSmtpConfig = () => {
   }
 
   return { host, port, user, pass, from, secure };
+};
+
+const getEmailErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  return String(error || 'Unknown SMTP error');
 };
 
 const formatRecipient = (recipient: EmailRecipient) => {
@@ -69,7 +80,7 @@ const getTransporter = () => {
   return transporter;
 };
 
-export const sendEmailNotification = async ({ to, subject, text, html }: SendEmailInput) => {
+export const sendEmailNotification = async ({ to, subject, text, html }: SendEmailInput): Promise<EmailNotificationResult> => {
   const mailer = getTransporter();
   const config = getSmtpConfig();
   const recipients = (Array.isArray(to) ? to : [to])
@@ -87,6 +98,10 @@ export const sendEmailNotification = async ({ to, subject, text, html }: SendEma
 
   const options: SendMailOptions = {
     from: config.from,
+    envelope: {
+      from: config.user,
+      to: recipients,
+    },
     to: recipients,
     subject,
     text,
@@ -94,11 +109,30 @@ export const sendEmailNotification = async ({ to, subject, text, html }: SendEma
   };
 
   try {
-    await mailer.sendMail(options);
-    return { sent: true };
+    const info = await mailer.sendMail(options);
+    const accepted = Array.isArray(info.accepted) ? info.accepted.map(String) : [];
+    const rejected = Array.isArray(info.rejected) ? info.rejected.map(String) : [];
+
+    if (accepted.length === 0) {
+      return {
+        sent: false,
+        reason: 'recipient_not_accepted',
+        message: rejected.length > 0
+          ? `SMTP rejected recipient(s): ${rejected.join(', ')}`
+          : 'SMTP did not accept any recipients.',
+      };
+    }
+
+    console.info('Email notification accepted by SMTP.', {
+      accepted,
+      rejected,
+      messageId: info.messageId,
+    });
+
+    return { sent: true, messageId: info.messageId };
   } catch (error) {
     console.error('Email notification failed:', error);
-    return { sent: false, reason: 'send_failed' };
+    return { sent: false, reason: 'send_failed', message: getEmailErrorMessage(error) };
   }
 };
 
@@ -118,11 +152,59 @@ const getEmailTemplate = async (key: TemplateKey) => {
   }
 };
 
+export const verifyEmailNotificationReady = async (key: TemplateKey): Promise<EmailNotificationResult> => {
+  const config = getSmtpConfig();
+  if (!config) {
+    return {
+      sent: false,
+      reason: 'missing_smtp_config',
+      message: 'SMTP is not configured for application email notifications.',
+    };
+  }
+
+  const template = await getEmailTemplate(key);
+  if (!template.enabled) {
+    return {
+      sent: false,
+      reason: 'template_disabled',
+      message: 'The required email notification template is disabled.',
+    };
+  }
+
+  const mailer = getTransporter();
+  if (!mailer) {
+    return {
+      sent: false,
+      reason: 'missing_smtp_transport',
+      message: 'SMTP transport could not be created.',
+    };
+  }
+
+  try {
+    await mailer.verify();
+    return { sent: true };
+  } catch (error) {
+    console.error('SMTP verification failed:', error);
+    return {
+      sent: false,
+      reason: 'smtp_verification_failed',
+      message: getEmailErrorMessage(error),
+    };
+  }
+};
+
+export const requireEmailNotificationSent = (result: EmailNotificationResult, action: string) => {
+  if (result.sent) return;
+
+  const reason = result.message || result.reason || 'Email notification was not sent.';
+  throw new Error(`${action}: ${reason}`);
+};
+
 const sendTemplatedNotification = async (
   key: TemplateKey,
   to: EmailRecipient | EmailRecipient[],
   values: TemplateValues,
-) => {
+): Promise<EmailNotificationResult> => {
   const template = await getEmailTemplate(key);
   if (!template.enabled) {
     return { sent: false, reason: 'template_disabled' };

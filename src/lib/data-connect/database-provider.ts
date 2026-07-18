@@ -24,8 +24,10 @@ import {
   notifyAdminsOfSubmittedListing,
   notifyBusinessOwnerOfInquiry,
   notifyInquirySenderOfReply,
+  requireEmailNotificationSent,
   notifyUserOfAccountUpgrade,
   notifyUserOfApprovedListing,
+  verifyEmailNotificationReady,
 } from "@/lib/email/notifications";
 
 const businessInquiryCategory = 'BUSINESS_INQUIRY';
@@ -1392,39 +1394,46 @@ export const databaseProvider: DataProvider = {
       },
     });
 
-    const res = await db.update(businesses)
-      .set({
-        status: variables.status,
-        moderatorNotes: variables.moderatorNotes,
-        updatedAt: new Date(),
-      })
-      .where(eq(businesses.id, variables.id))
-      .returning({ id: businesses.id });
+    const isFirstApproval = variables.status === 'APPROVED' && businessBeforeUpdate?.status !== 'APPROVED';
+    let approvalRecipient: ReturnType<typeof toEmailRecipient> | null = null;
 
-    if (res[0]?.id && variables.status === 'APPROVED' && businessBeforeUpdate?.status !== 'APPROVED') {
-      await sendNotificationSafely(async () => {
-        const owner = businessBeforeUpdate?.owner || (
-          businessBeforeUpdate?.ownerId
-            ? await db.query.users.findFirst({ where: eq(users.id, businessBeforeUpdate.ownerId) })
-            : null
-        );
-        const recipient = toEmailRecipient(owner);
+    if (isFirstApproval) {
+      const owner = businessBeforeUpdate?.owner || (
+        businessBeforeUpdate?.ownerId
+          ? await db.query.users.findFirst({ where: eq(users.id, businessBeforeUpdate.ownerId) })
+          : null
+      );
+      approvalRecipient = toEmailRecipient(owner);
 
-        if (!recipient.email) {
-          console.warn('Listing approval email skipped: business owner email was not found.', {
-            businessId: res[0].id,
-            ownerId: businessBeforeUpdate?.ownerId,
-          });
-          return { sent: false, reason: 'missing_owner_email' };
-        }
+      if (!approvalRecipient.email) {
+        throw new Error("Cannot approve listing until the business owner has a registered email address.");
+      }
 
-        return notifyUserOfApprovedListing(
-          recipient,
+      const readiness = await verifyEmailNotificationReady('listingApprovedOwner');
+      requireEmailNotificationSent(readiness, "Cannot approve listing because the approval email is not ready");
+    }
+
+    const res = await db.transaction(async (tx) => {
+      const updated = await tx.update(businesses)
+        .set({
+          status: variables.status,
+          moderatorNotes: variables.moderatorNotes,
+          updatedAt: new Date(),
+        })
+        .where(eq(businesses.id, variables.id))
+        .returning({ id: businesses.id });
+
+      if (updated[0]?.id && isFirstApproval && approvalRecipient) {
+        const notificationResult = await notifyUserOfApprovedListing(
+          approvalRecipient,
           businessBeforeUpdate?.name || 'Your business listing',
           businessBeforeUpdate?.slug,
         );
-      });
-    }
+        requireEmailNotificationSent(notificationResult, "Listing approval email was not sent");
+      }
+
+      return updated;
+    });
     
     return {
       data: {
