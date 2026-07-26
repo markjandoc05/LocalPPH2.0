@@ -10,6 +10,7 @@
     "build": "SKIP_DB_DURING_BUILD=true next build && mkdir -p .next/standalone/public && cp -r public/. .next/standalone/public/ 2>/dev/null || true && mkdir -p .next/standalone/.next/static && cp -r .next/static/. .next/standalone/.next/static/ 2>/dev/null || true",
     "start": "node .next/standalone/server.js",
     "lint": "eslint",
+    "test:api-permissions": "node --import tsx --test src/lib/auth/data-api-policy.test.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:import": "tsx src/db/import.ts",
     "db:dev:migrate": "drizzle-kit migrate --config=src/db/drizzle.config.ts",

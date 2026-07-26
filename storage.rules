@@ -1,16 +1,127 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Public media (logo, cover, gallery images, documents)
-    match /businesses/{businessId}/{category}/{fileName} {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(ownerId) {
+      return isSignedIn() && request.auth.uid == ownerId;
+    }
+
+    function isReviewer() {
+      return isSignedIn() && (
+        request.auth.token.admin == true
+        || request.auth.token.role == 'ADMIN'
+        || request.auth.token.role == 'MODERATOR'
+      );
+    }
+
+    function isValidOwnerId(ownerId) {
+      return ownerId.size() > 0
+        && ownerId.size() <= 128
+        && ownerId.matches('^[a-zA-Z0-9_-]+$');
+    }
+
+    function isValidBusinessId(businessId) {
+      return businessId.matches('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$');
+    }
+
+    function isValidFileName(fileName) {
+      return fileName.matches('^[a-zA-Z0-9][a-zA-Z0-9._-]{0,199}$');
+    }
+
+    function hasExpectedMetadata(ownerId, businessId, category) {
+      return request.resource.metadata.ownerId == ownerId
+        && request.resource.metadata.businessId == businessId
+        && request.resource.metadata.category == category;
+    }
+
+    function isValidImage() {
+      return request.resource.contentType in [
+        'image/jpeg',
+        'image/png',
+        'image/webp'
+      ];
+    }
+
+    function isValidDocument() {
+      return request.resource.contentType in [
+        'application/pdf',
+        'image/jpeg',
+        'image/png'
+      ];
+    }
+
+    function isValidWriteContext(ownerId, businessId, category, fileName) {
+      return isOwner(ownerId)
+        && isValidOwnerId(ownerId)
+        && isValidBusinessId(businessId)
+        && isValidFileName(fileName)
+        && (
+          request.resource == null
+          || hasExpectedMetadata(ownerId, businessId, category)
+        );
+    }
+
+    match /businesses/{ownerId}/{businessId}/logo/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null
-                    && category in ['logo', 'cover', 'gallery', 'documents']
-                    && request.resource.size <= (category == 'documents' ? 10 * 1024 * 1024 : 1 * 1024 * 1024)
-                    && (
-                      request.resource.contentType.matches('image/.*')
-                      || (category == 'documents' && request.resource.contentType == 'application/pdf')
-                    );
+      allow write: if isValidWriteContext(ownerId, businessId, 'logo', fileName)
+        && (
+          request.resource == null
+          || (
+            request.resource.size > 0
+            && request.resource.size <= 1 * 1024 * 1024
+            && isValidImage()
+          )
+        );
+    }
+
+    match /businesses/{ownerId}/{businessId}/cover/{fileName} {
+      allow read: if true;
+      allow write: if isValidWriteContext(ownerId, businessId, 'cover', fileName)
+        && (
+          request.resource == null
+          || (
+            request.resource.size > 0
+            && request.resource.size <= 1 * 1024 * 1024
+            && isValidImage()
+          )
+        );
+    }
+
+    match /businesses/{ownerId}/{businessId}/gallery/{fileName} {
+      allow read: if true;
+      allow write: if isValidWriteContext(ownerId, businessId, 'gallery', fileName)
+        && (
+          request.resource == null
+          || (
+            request.resource.size > 0
+            && request.resource.size <= 1 * 1024 * 1024
+            && isValidImage()
+          )
+        );
+    }
+
+    match /businesses/{ownerId}/{businessId}/documents/{fileName} {
+      allow read: if isOwner(ownerId) || isReviewer();
+      allow write: if isValidWriteContext(ownerId, businessId, 'documents', fileName)
+        && (
+          request.resource == null
+          || (
+            request.resource.size > 0
+            && request.resource.size <= 10 * 1024 * 1024
+            && isValidDocument()
+          )
+        );
+    }
+
+    // Existing objects remain available, but all new writes must use the
+    // UID-bound path above. Legacy verification documents require sign-in.
+    match /businesses/{businessId}/{category}/{fileName} {
+      allow read: if category in ['logo', 'cover', 'gallery']
+        || (category == 'documents' && isSignedIn());
+      allow write: if false;
     }
   }
 }

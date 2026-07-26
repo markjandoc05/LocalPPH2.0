@@ -1,95 +1,64 @@
-# Firebase Storage Security Plan
+# Firebase Storage Security
 
-## Overview
-This document outlines the planned security rules and folder structure for Firebase Storage as we transition from mock uploads to a real backend. The primary goal is to allow business owners to manage their own media while exposing approved assets publicly and keeping sensitive verification documents private.
+## Implemented path model
 
-## Folder Structure
-All business-related media will be stored under the `businesses/` directory, keyed by the unique `businessId`.
+New business uploads use an authenticated, UID-bound object path:
 
-\`\`\`text
-businesses/{businessId}/
-  ├── logo/            # Publicly readable (when business is approved)
-  ├── cover/           # Publicly readable (when business is approved)
-  ├── gallery/         # Publicly readable (when business is approved)
-  └── documents/       # STRICTLY PRIVATE. Readable only by owner and admins.
-\`\`\`
+```text
+businesses/{firebaseUid}/{businessId}/
+  logo/{fileName}
+  cover/{fileName}
+  gallery/{fileName}
+  documents/{fileName}
+```
 
-## Media Types and Validation Rules
+The Firebase UID in the path must match `request.auth.uid`. The application
+server separately checks the PostgreSQL business owner before issuing the
+upload path. New-listing uploads are supported before the database row exists
+because the client-generated business UUID is preserved when the draft is
+created.
 
-| Type | Path | Allowed Extensions | Max Size |
-|---|---|---|---|
-| Logo | `/logo/` | JPG, PNG, WEBP | 2 MB |
-| Cover Image | `/cover/` | JPG, PNG, WEBP | 5 MB |
-| Gallery Image | `/gallery/` | JPG, PNG, WEBP | 5 MB |
-| Document | `/documents/` | PDF, JPG, PNG | 10 MB |
+Legacy objects under `businesses/{businessId}/{category}/{fileName}` remain
+readable for compatibility, but Firebase rejects all client writes to those
+paths.
 
-*Note: Client-side validation is currently implemented in `src/lib/validation/media.ts`. These exact limits will be mirrored in the Firebase Storage security rules.*
+## Enforced validation
 
-## Proposed Firebase Storage Security Rules
+| Category | Read access | Write access | Accepted types | Maximum size |
+|---|---|---|---|---|
+| Logo | Public | Owner | JPEG, PNG, WEBP | 1 MB |
+| Cover | Public | Owner | JPEG, PNG, WEBP | 1 MB |
+| Gallery | Public | Owner | JPEG, PNG, WEBP | 1 MB |
+| Documents | Owner or reviewer claim | Owner | PDF, JPEG, PNG | 10 MB |
 
-\`\`\`javascript
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    
-    // Helper Functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    function isOwner(businessId) {
-      // In a real implementation, you would need a way to verify ownership.
-      // E.g., custom claims, or verifying the request.auth.uid matches the business owner ID
-      // via Firestore lookup (if using a linked database structure).
-      return isSignedIn() && request.auth.uid != null;
-    }
-    function isAdmin() {
-      return isSignedIn() && request.auth.token.role in ['ADMIN', 'MODERATOR'];
-    }
-    
-    function isImage() {
-      return request.resource.contentType.matches('image/jpeg|image/png|image/webp');
-    }
-    function isDocument() {
-      return request.resource.contentType.matches('application/pdf|image/jpeg|image/png');
-    }
-    function sizeLimit(mb) {
-      return request.resource.size <= mb * 1024 * 1024;
-    }
+Every new object must also include custom metadata matching its path:
 
-    match /businesses/{businessId} {
-      // Logos
-      match /logo/{fileName} {
-        allow read: if true; // Publicly visible
-        allow write: if isOwner(businessId) && isImage() && sizeLimit(2);
-        allow delete: if isOwner(businessId) || isAdmin();
-      }
-      
-      // Covers
-      match /cover/{fileName} {
-        allow read: if true;
-        allow write: if isOwner(businessId) && isImage() && sizeLimit(5);
-        allow delete: if isOwner(businessId) || isAdmin();
-      }
+- `ownerId`
+- `businessId`
+- `category`
 
-      // Gallery
-      match /gallery/{fileName} {
-        allow read: if true;
-        allow write: if isOwner(businessId) && isImage() && sizeLimit(5);
-        allow delete: if isOwner(businessId) || isAdmin();
-      }
+File names are generated with a UUID and sanitized original name. Direct
+client deletes are limited to the UID-bound owner path. The server-side delete
+endpoint supports both current and legacy paths and rechecks PostgreSQL
+ownership before using the Firebase Admin SDK.
 
-      // Documents (Private)
-      match /documents/{fileName} {
-        allow read: if isOwner(businessId) || isAdmin();
-        allow write: if isOwner(businessId) && isDocument() && sizeLimit(10);
-        allow delete: if isOwner(businessId) || isAdmin();
-      }
-    }
-  }
-}
-\`\`\`
+## Reviewer access
 
-## Future Enhancements
-1. **Malware Scanning:** Implement a Cloud Function that triggers on file upload to scan documents for malware/viruses before allowing admins to download them.
-2. **Image Optimization:** Implement a Cloud Function (or Firebase Extension) to automatically resize uploaded gallery and cover images and convert them to WebP format to reduce bandwidth costs.
-3. **Firestore Integration:** When a file is uploaded, a Cloud Function should sync the storage URL back into the corresponding Business document in Firestore/Data Connect to keep the database state in sync with the storage bucket.
+Document rules recognize either an `admin: true` custom claim or a `role`
+claim of `ADMIN` or `MODERATOR`. PostgreSQL remains the current role source of
+truth, so Firebase custom-claim synchronization is still required before
+reviewers can rely on direct Firebase SDK reads of private documents.
+
+Existing tokenized Firebase download URLs should be treated as legacy
+capability URLs. A future migration should replace verification-document
+download tokens with short-lived, server-authorized URLs.
+
+## Validation
+
+Use a non-deploying Firebase CLI dry run:
+
+```bash
+firebase deploy --only storage --dry-run
+```
+
+For behavioral rule tests, install Java and run the Firebase Storage emulator.

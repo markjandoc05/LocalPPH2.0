@@ -161,9 +161,6 @@ export const loginWithGoogle = async (role: string = ROLES.SUBSCRIBER) => {
     const user = userCredential.user;
     
     let userRole = role;
-    if (user.email === 'markjandoc@gmail.com') {
-      userRole = ROLES.ADMIN;
-    }
     
     try {
       // Check if user exists in DB
@@ -185,7 +182,7 @@ export const loginWithGoogle = async (role: string = ROLES.SUBSCRIBER) => {
           await firebaseSignOut(auth);
           throw new Error(accountStatus === 'BANNED' ? BANNED_ACCOUNT_MESSAGE : BLOCKED_ACCOUNT_MESSAGE);
         }
-        userRole = user.email === 'markjandoc@gmail.com' ? ROLES.ADMIN : userData.data.user.role;
+        userRole = userData.data.user.role;
         if (!userData.data.user.emailVerified) {
           await updateUser({
             id: user.uid,

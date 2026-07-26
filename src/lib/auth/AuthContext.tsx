@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const loadUserProfile = useCallback(async (firebaseUser: User) => {
-    const fallbackRole = firebaseUser.email === 'markjandoc@gmail.com' ? ROLES.ADMIN : ROLES.SUBSCRIBER;
+    const fallbackRole = ROLES.SUBSCRIBER;
 
     try {
       const response = await getUserById({ id: firebaseUser.uid });
@@ -82,9 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      const nextRole = firebaseUser.email === 'markjandoc@gmail.com'
-        ? ROLES.ADMIN
-        : normalizeRole(dbUser?.role || fallbackRole);
+      const nextRole = normalizeRole(dbUser?.role || fallbackRole);
 
       setUserData(dbUser);
       setRole(nextRole);

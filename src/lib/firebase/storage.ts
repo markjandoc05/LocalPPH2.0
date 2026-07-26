@@ -1,6 +1,14 @@
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage, auth } from './config';
 import { MediaUploadResult } from '@/types/media';
+
+type UploadPermission = {
+  allowed: true;
+  uploadPath: string;
+  ownerId: string;
+  businessId: string;
+  category: string;
+};
 
 const requestPermission = async (businessId: string, category: string) => {
   const user = auth.currentUser;
@@ -18,7 +26,18 @@ const requestPermission = async (businessId: string, category: string) => {
     const data = await res.json();
     throw new Error(data.error || 'You do not have permission to upload files for this business.');
   }
-  return await res.json();
+  return await res.json() as UploadPermission;
+};
+
+const sanitizeFileName = (fileName: string) => {
+  const sanitized = fileName
+    .normalize('NFKD')
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^[_\-.]+/, '')
+    .slice(0, 120);
+
+  return sanitized || 'upload';
 };
 
 const uploadFile = async (
@@ -33,12 +52,12 @@ const uploadFile = async (
 
   try {
     await auth.currentUser.getIdToken(true);
-  } catch (error) {
+  } catch {
     throw new Error('Upload failed. Please make sure you are logged in and try again.');
   }
 
-  const { uploadPath } = await requestPermission(businessId, category);
-  const path = `${uploadPath}${Date.now()}_${file.name}`;
+  const permission = await requestPermission(businessId, category);
+  const path = `${permission.uploadPath}${crypto.randomUUID()}_${sanitizeFileName(file.name)}`;
   
   // Check if storage is initialized
   const isMockOrUnconfigured = !storage;
@@ -56,7 +75,14 @@ const uploadFile = async (
   }
 
   const storageRef = ref(storage, path);
-  const uploadTask = uploadBytesResumable(storageRef, file);
+  const uploadTask = uploadBytesResumable(storageRef, file, {
+    contentType: file.type,
+    customMetadata: {
+      ownerId: permission.ownerId,
+      businessId: permission.businessId,
+      category: permission.category,
+    },
+  });
 
   return new Promise((resolve, reject) => {
     uploadTask.on(
