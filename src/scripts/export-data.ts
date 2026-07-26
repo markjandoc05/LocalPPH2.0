@@ -21,7 +21,7 @@ async function exportPostgres() {
   };
 
   const exportData: Record<string, any[]> = {};
-  const outputDir = path.join(process.cwd(), "public", "exports");
+  const outputDir = path.join(process.cwd(), "private", "exports");
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
@@ -69,7 +69,7 @@ async function exportFirestore() {
     const collections = Object.keys(firebaseBlueprint.firestore || {});
     console.log(`Firestore collections defined in blueprint using DB "${config.firestoreDatabaseId || "default"}":`, collections);
     
-    const outputDir = path.join(process.cwd(), "public", "exports", "firestore");
+    const outputDir = path.join(process.cwd(), "private", "exports", "firestore");
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
@@ -99,7 +99,7 @@ async function exportFirestore() {
       }
     }
     
-    const allFirestorePath = path.join(process.cwd(), "public", "exports", "all_firestore.json");
+    const allFirestorePath = path.join(process.cwd(), "private", "exports", "all_firestore.json");
     fs.writeFileSync(allFirestorePath, JSON.stringify(firestoreData, null, 2));
     console.log(`Successfully saved all Firestore collections to ${allFirestorePath}`);
   } catch (err: any) {

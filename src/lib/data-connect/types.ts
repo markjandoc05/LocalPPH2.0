@@ -171,6 +171,6 @@ export interface DataProvider {
   upsertRegion(variables: { name: string; slug: string }): Promise<{ data: { region_upsert: string } }>;
   upsertProvince(variables: { name: string; slug: string; regionId: string }): Promise<{ data: { province_upsert: string } }>;
   upsertCity(variables: { name: string; slug: string; provinceId: string }): Promise<{ data: { city_upsert: string } }>;
-  upsertCategory(variables: { name: string; slug: string }): Promise<{ data: { category_upsert: string } }>;
+  upsertCategory(variables: { name: string; slug: string; description?: string }): Promise<{ data: { category_upsert: string } }>;
   upsertSubcategory(variables: { name: string; slug: string; categoryId: string }): Promise<{ data: { subcategory_upsert: string } }>;
 }

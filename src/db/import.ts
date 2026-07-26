@@ -20,7 +20,7 @@ async function main() {
   console.log("       STARTING DATABASE IMPORT          ");
   console.log("=========================================\n");
 
-  const exportsDir = path.join(process.cwd(), "public", "exports");
+  const exportsDir = path.join(process.cwd(), "private", "exports");
   const cliArg = process.argv[2];
   const allTablesPath = cliArg
     ? path.resolve(process.cwd(), cliArg)

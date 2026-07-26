@@ -53,7 +53,8 @@ export const seedMetadata = async (): Promise<SeedingResult> => {
     for (const cat of categories) {
       const catRes = await provider.upsertCategory({ 
         name: cat.name, 
-        slug: cat.slug 
+        slug: cat.slug,
+        description: cat.description,
       });
       const categoryId = catRes.data.category_upsert;
       

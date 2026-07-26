@@ -63,21 +63,19 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
   const subcategories = await getSubcategoriesByCategory(category.id);
   const regions = await getAllRegions();
 
-  const page = pageStr ? parseInt(pageStr, 10) : 1;
-  const limit = limitStr ? parseInt(limitStr, 10) : 9;
+  const parsedPage = pageStr ? parseInt(pageStr, 10) : 1;
+  const parsedLimit = limitStr ? parseInt(limitStr, 10) : 9;
+  const page = Number.isFinite(parsedPage) ? Math.max(parsedPage, 1) : 1;
+  const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 50) : 9;
 
   // Fetch approved businesses
-  const listingsResult = await getApprovedBusinessesByCategory(category.id, { page, limit });
-  
-  // If region filter is applied, filter results (for rich filtering experience)
-  let businesses = listingsResult.businesses;
-  let total = listingsResult.total;
-  
-  if (selectedRegionSlug) {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedRegionSlug);
-    businesses = businesses.filter((b) => isUuid ? b.regionId === selectedRegionSlug : b.regionSlug === selectedRegionSlug);
-    total = businesses.length; // Approximate total for filtered set
-  }
+  const listingsResult = await getApprovedBusinessesByCategory(
+    category.slug,
+    { page, limit },
+    selectedRegionSlug,
+  );
+  const businesses = listingsResult.businesses;
+  const total = listingsResult.total;
 
   const totalPages = Math.ceil(total / limit);
 
@@ -156,7 +154,7 @@ export default async function CategoryDetailPage({ params, searchParams }: PageP
             <div className="bg-white rounded-xl border border-slate-100 p-6 shadow-sm mb-6 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
               <div>
                 <h2 className="text-xl font-sans font-bold text-[#0C0C1C]">
-                  Verified Listings
+                  Approved Listings
                 </h2>
                 <p className="text-xs text-slate-400 font-mono mt-1">
                   Showing {businesses.length} of {total} approved businesses

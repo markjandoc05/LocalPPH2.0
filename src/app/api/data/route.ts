@@ -8,10 +8,12 @@ import {
 } from '@/lib/auth/data-api-policy';
 import { isAdmin, isAdminOrModerator, normalizeRole, ROLES } from '@/lib/auth/roles';
 import { databaseProvider } from '@/lib/data-connect/database-provider';
+import { consumeRateLimit, getRequestClientIp } from '@/lib/server/rate-limit';
 
 type Variables = Record<string, any>;
 
 const ACTIVE_ACCOUNT_STATUS = 'ACTIVE';
+const MAX_REQUEST_BODY_BYTES = 512 * 1024;
 const SELF_MANAGED_ROLES = new Set<string>([ROLES.SUBSCRIBER, ROLES.BUSINESS]);
 const REVIEW_STATUSES = new Set([
   'APPROVED',
@@ -391,6 +393,29 @@ const invokeAllowedMethod = async ({
 };
 
 export async function POST(req: NextRequest) {
+  const rateLimit = consumeRateLimit(
+    `authenticated-data:${getRequestClientIp(req)}`,
+    180,
+    60_000,
+  );
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again shortly.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimit.retryAfterSeconds),
+          'Cache-Control': 'no-store',
+        },
+      },
+    );
+  }
+
+  const contentLength = Number(req.headers.get('content-length') || 0);
+  if (contentLength > MAX_REQUEST_BODY_BYTES) {
+    return jsonError('Request body is too large.', 413);
+  }
+
   const authHeader = req.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return jsonError('Unauthorized.', 401);
@@ -411,7 +436,11 @@ export async function POST(req: NextRequest) {
 
   let requestBody: Variables;
   try {
-    requestBody = asVariables(await req.json());
+    const rawBody = await req.text();
+    if (new TextEncoder().encode(rawBody).byteLength > MAX_REQUEST_BODY_BYTES) {
+      return jsonError('Request body is too large.', 413);
+    }
+    requestBody = asVariables(JSON.parse(rawBody));
   } catch {
     return jsonError('Invalid JSON request body.', 400);
   }
@@ -459,7 +488,11 @@ export async function POST(req: NextRequest) {
       existingUser: user,
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json(result, {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    });
   } catch (error) {
     if (error instanceof ApiRequestError) {
       return jsonError(error.message, error.status);

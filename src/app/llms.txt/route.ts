@@ -1,5 +1,6 @@
 import { SITE_NAME, SITE_URL } from '@/lib/seo/metadata';
 import { provider } from '@/lib/data-connect/provider';
+import { getFullDesc } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,13 +38,17 @@ export async function GET() {
       .filter((business: any) => business.slug && business.status === 'APPROVED')
       .forEach((business: any) => {
         const location = [business.cityName, business.provinceName, business.regionName].filter(Boolean).join(', ');
+        const category = [
+          business.categoryName,
+          business.subcategoryName === 'Not assigned' ? '' : business.subcategoryName,
+        ].filter(Boolean).join(' / ');
         lines.push('');
         lines.push(`### ${clean(business.name)}`);
         lines.push(`- URL: ${SITE_URL}/business/${business.slug}`);
         [
-          line('Category', [business.categoryName, business.subcategoryName].filter(Boolean).join(' / ')),
+          line('Category', category),
           line('Location', location),
-          line('Description', business.description),
+          line('Description', getFullDesc(business.description)),
           line('Products', business.products),
           line('Services', business.services),
           line('Business hours', business.businessHours),

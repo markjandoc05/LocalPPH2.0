@@ -16,9 +16,14 @@ import {
   backupSnapshots,
   backupSchedules,
 } from "../../db/schema";
-import { eq, and, or, ilike, sql, desc, asc, inArray } from "drizzle-orm";
+import { eq, and, or, ilike, sql, desc, asc, inArray, notInArray } from "drizzle-orm";
 import { BusinessListing } from "@/types/business";
 import { formatAppDateTime } from "@/lib/time";
+import { sanitizePublicBusinessPayload } from "./public-business-payload";
+import {
+  getCategorySlugsForSearch,
+  legacyCategorySlugs,
+} from "./seed/categories";
 import {
   notifyAdminsOfUpgradeRequest,
   notifyAdminsOfSubmittedListing,
@@ -229,6 +234,11 @@ const formatBusinessRow = (b: any): BusinessListing => {
     updatedAt: b.updatedAt instanceof Date ? b.updatedAt.toISOString() : (b.updatedAt || new Date().toISOString()),
   } as unknown as BusinessListing;
 };
+
+const formatPublicBusinessRow = (business: any) =>
+  sanitizePublicBusinessPayload(
+    formatBusinessRow(business) as unknown as Record<string, unknown>,
+  ) as unknown as BusinessListing;
 
 const allowedBusinessWriteColumns = [
   'id', 'ownerId', 'categoryId', 'subcategoryId', 'regionId', 'provinceId', 'cityId', 'barangayId',
@@ -640,10 +650,52 @@ export const databaseProvider: DataProvider = {
   async createSupportTicket(variables) {
     const category = variables.category?.trim();
     const subject = variables.subject?.trim();
-    const message = variables.message?.trim();
+    let message = variables.message?.trim();
 
     if (!category || !subject || !message) {
       throw new Error("Category, subject, and message are required.");
+    }
+    if (category.length > 50 || subject.length > 200 || message.length > 10_000) {
+      throw new Error("Support request exceeds the allowed length.");
+    }
+
+    let businessInquiryOwner: any | null = null;
+    let businessInquiryDetails: any | null = null;
+
+    if (category === businessInquiryCategory) {
+      const submittedInquiry = parseBusinessInquiryMessage(message);
+      if (!submittedInquiry?.businessId || !submittedInquiry?.message) {
+        throw new Error("A valid business inquiry is required.");
+      }
+
+      const [business, sender] = await Promise.all([
+        db.query.businesses.findFirst({
+          where: and(
+            eq(businesses.id, submittedInquiry.businessId),
+            eq(businesses.status, 'APPROVED'),
+          ),
+          with: { owner: true },
+        }),
+        db.query.users.findFirst({ where: eq(users.id, variables.userId) }),
+      ]);
+
+      if (!business?.ownerId) {
+        throw new Error("This business is not available for inquiries.");
+      }
+
+      businessInquiryOwner = business.owner;
+      businessInquiryDetails = {
+        businessId: business.id,
+        businessName: business.name,
+        businessSlug: business.slug,
+        ownerId: business.ownerId,
+        senderName: getUserDisplayName(sender) || 'Registered user',
+        senderEmail: sender?.email || '',
+        senderContactNumber: String(submittedInquiry.senderContactNumber || '').trim().slice(0, 50),
+        subject: subject.slice(0, 200),
+        message: String(submittedInquiry.message).trim().slice(0, 5000),
+      };
+      message = `${businessInquiryPrefix}${JSON.stringify(businessInquiryDetails)}`;
     }
 
     let res;
@@ -678,17 +730,15 @@ export const databaseProvider: DataProvider = {
 
     if (category === businessInquiryCategory) {
       await sendNotificationSafely(async () => {
-        const inquiry = parseBusinessInquiryMessage(message);
-        if (!inquiry?.ownerId) return;
+        if (!businessInquiryDetails) return;
 
-        const owner = await db.query.users.findFirst({ where: eq(users.id, inquiry.ownerId) });
-        await notifyBusinessOwnerOfInquiry(toEmailRecipient(owner), {
-          businessName: inquiry.businessName || subject,
-          senderName: inquiry.senderName,
-          senderEmail: inquiry.senderEmail,
-          senderContactNumber: inquiry.senderContactNumber,
-          subject: inquiry.subject || subject,
-          message: inquiry.message || '',
+        await notifyBusinessOwnerOfInquiry(toEmailRecipient(businessInquiryOwner), {
+          businessName: businessInquiryDetails.businessName || subject,
+          senderName: businessInquiryDetails.senderName,
+          senderEmail: businessInquiryDetails.senderEmail,
+          senderContactNumber: businessInquiryDetails.senderContactNumber,
+          subject: businessInquiryDetails.subject || subject,
+          message: businessInquiryDetails.message || '',
         });
       });
     }
@@ -1496,8 +1546,9 @@ export const databaseProvider: DataProvider = {
   },
 
   async searchApprovedBusinesses(variables) {
-    const limit = variables.limit || 20;
-    const page = variables.page || 1;
+    const requestedLimit = Number.isFinite(variables.limit) ? Number(variables.limit) : 20;
+    const limit = requestedLimit === 0 ? 0 : Math.min(Math.max(Math.trunc(requestedLimit), 1), 100);
+    const page = Math.max(Math.trunc(Number(variables.page) || 1), 1);
     const offset = (page - 1) * limit;
     
     const baseWhere = [eq(businesses.status, 'APPROVED')];
@@ -1506,9 +1557,20 @@ export const databaseProvider: DataProvider = {
 
     if (variables.categoryId) {
       if (uuidRegex.test(variables.categoryId)) {
-        baseWhere.push(eq(businesses.categoryId, variables.categoryId));
+        const selectedCategory = await db.query.categories.findFirst({
+          columns: { slug: true },
+          where: eq(categories.id, variables.categoryId),
+        });
+        baseWhere.push(
+          selectedCategory
+            ? inArray(categories.slug, getCategorySlugsForSearch(selectedCategory.slug))
+            : eq(businesses.categoryId, variables.categoryId),
+        );
       } else {
-        baseWhere.push(or(eq(categories.slug, variables.categoryId), eq(subcategories.slug, variables.categoryId)) as any);
+        baseWhere.push(or(
+          inArray(categories.slug, getCategorySlugsForSearch(variables.categoryId)),
+          eq(subcategories.slug, variables.categoryId),
+        ) as any);
       }
     }
     if (variables.regionId) {
@@ -1572,26 +1634,40 @@ export const databaseProvider: DataProvider = {
       orderByList = [asc(businesses.name), desc(businesses.createdAt)];
     }
 
-    const businessIds = searchFilters.length > 0
-      ? await query.where(and(...searchFilters)).orderBy(...orderByList)
-      : await query.orderBy(...orderByList);
-    const ids = businessIds.map(b => b.id);
+    const whereClause = and(...searchFilters);
+    const totalRows = await db.select({
+      total: sql<number>`count(*)::int`,
+    })
+    .from(businesses)
+    .leftJoin(categories, eq(businesses.categoryId, categories.id))
+    .leftJoin(subcategories, eq(businesses.subcategoryId, subcategories.id))
+    .leftJoin(regions, eq(businesses.regionId, regions.id))
+    .leftJoin(provinces, eq(businesses.provinceId, provinces.id))
+    .leftJoin(cities, eq(businesses.cityId, cities.id))
+    .where(whereClause);
+    const total = Number(totalRows[0]?.total || 0);
 
-    if (ids.length === 0) {
+    if (total === 0 || limit === 0) {
       return {
         data: {
           businesses: [],
-          total: 0,
+          total,
         },
       };
     }
 
-    const paginatedIds = ids.slice(offset, offset + limit);
+    const businessIds = await query
+      .where(whereClause)
+      .orderBy(...orderByList)
+      .limit(limit)
+      .offset(offset);
+    const paginatedIds = businessIds.map((business) => business.id);
+
     if (paginatedIds.length === 0) {
       return {
         data: {
           businesses: [],
-          total: ids.length,
+          total,
         },
       };
     }
@@ -1609,12 +1685,12 @@ export const databaseProvider: DataProvider = {
       }
     });
     
-    const formatted = res.map(formatBusinessRow);
+    const formatted = res.map(formatPublicBusinessRow);
 
     return {
       data: {
         businesses: formatted,
-        total: ids.length,
+        total,
       },
     };
   },
@@ -1679,7 +1755,7 @@ export const databaseProvider: DataProvider = {
     });
     
     if (!res) return { data: { business: null } };
-    return { data: { business: formatBusinessRow(res) } };
+    return { data: { business: formatPublicBusinessRow(res) } };
   },
 
   async getFeaturedApprovedBusinesses() {
@@ -1699,7 +1775,7 @@ export const databaseProvider: DataProvider = {
       }
     });
     
-    const formatted = res.map(formatBusinessRow);
+    const formatted = res.map(formatPublicBusinessRow);
     return { data: { businesses: formatted } };
   },
 
@@ -1718,68 +1794,86 @@ export const databaseProvider: DataProvider = {
       }
     });
     
-    const formatted = res.map(formatBusinessRow);
+    const formatted = res.map(formatPublicBusinessRow);
     return { data: { businesses: formatted } };
   },
 
   // Metadata operations
   async getRegions() {
-    const res = await db.query.regions.findMany();
+    const res = await db.query.regions.findMany({
+      where: eq(regions.status, true),
+      orderBy: [asc(regions.name)],
+    });
     return { data: { regions: res } };
   },
   async getProvinces(variables) {
-    let where;
+    const filters = [eq(provinces.status, true)];
     if (variables?.regionId) {
       if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(variables.regionId)) {
-        where = eq(provinces.regionId, variables.regionId);
+        filters.push(eq(provinces.regionId, variables.regionId));
       } else {
         const r = await db.query.regions.findFirst({ where: eq(regions.slug, variables.regionId) });
         if (r) {
-          where = eq(provinces.regionId, r.id);
+          filters.push(eq(provinces.regionId, r.id));
         } else {
           return { data: { provinces: [] } };
         }
       }
     }
-    const res = await db.query.provinces.findMany({ where });
+    const res = await db.query.provinces.findMany({
+      where: and(...filters),
+      orderBy: [asc(provinces.name)],
+    });
     return { data: { provinces: res } };
   },
   async getCities(variables) {
-    let where;
+    const filters = [eq(cities.status, true)];
     if (variables?.provinceId) {
       if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(variables.provinceId)) {
-        where = eq(cities.provinceId, variables.provinceId);
+        filters.push(eq(cities.provinceId, variables.provinceId));
       } else {
         const p = await db.query.provinces.findFirst({ where: eq(provinces.slug, variables.provinceId) });
         if (p) {
-          where = eq(cities.provinceId, p.id);
+          filters.push(eq(cities.provinceId, p.id));
         } else {
           return { data: { cities: [] } };
         }
       }
     }
-    const res = await db.query.cities.findMany({ where });
+    const res = await db.query.cities.findMany({
+      where: and(...filters),
+      orderBy: [asc(cities.name)],
+    });
     return { data: { cities: res } };
   },
   async getCategories() {
-    const res = await db.query.categories.findMany();
+    const res = await db.query.categories.findMany({
+      where: and(
+        eq(categories.status, true),
+        notInArray(categories.slug, legacyCategorySlugs),
+      ),
+      orderBy: [asc(categories.name)],
+    });
     return { data: { categories: res } };
   },
   async getSubcategories(variables) {
-    let where;
+    const filters = [eq(subcategories.status, true)];
     if (variables?.categoryId) {
       if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(variables.categoryId)) {
-        where = eq(subcategories.categoryId, variables.categoryId);
+        filters.push(eq(subcategories.categoryId, variables.categoryId));
       } else {
         const c = await db.query.categories.findFirst({ where: eq(categories.slug, variables.categoryId) });
         if (c) {
-          where = eq(subcategories.categoryId, c.id);
+          filters.push(eq(subcategories.categoryId, c.id));
         } else {
           return { data: { subcategories: [] } };
         }
       }
     }
-    const res = await db.query.subcategories.findMany({ where });
+    const res = await db.query.subcategories.findMany({
+      where: and(...filters),
+      orderBy: [asc(subcategories.name)],
+    });
     return { data: { subcategories: res } };
   },
 
@@ -1829,10 +1923,15 @@ export const databaseProvider: DataProvider = {
       .values({
         name: variables.name,
         slug: variables.slug,
+        description: variables.description,
       })
       .onConflictDoUpdate({
         target: categories.slug,
-        set: { name: variables.name }
+        set: {
+          name: variables.name,
+          description: variables.description,
+          status: true,
+        }
       })
       .returning({ id: categories.id });
     return { data: { category_upsert: res[0].id } };
@@ -1846,7 +1945,11 @@ export const databaseProvider: DataProvider = {
       })
       .onConflictDoUpdate({
         target: subcategories.slug,
-        set: { name: variables.name, categoryId: variables.categoryId }
+        set: {
+          name: variables.name,
+          categoryId: variables.categoryId,
+          status: true,
+        }
       })
       .returning({ id: subcategories.id });
     return { data: { subcategory_upsert: res[0].id } };

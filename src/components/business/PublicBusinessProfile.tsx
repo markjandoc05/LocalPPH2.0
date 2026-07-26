@@ -290,13 +290,6 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
 
     const senderName = user.displayName || user.email || 'Registered user';
     const senderEmail = user.email || '';
-    const ownerId = business.ownerId;
-
-    if (!ownerId) {
-      setContactError('This business is not ready to receive inquiries yet.');
-      return;
-    }
-
     setContactSending(true);
     setContactError('');
 
@@ -309,7 +302,6 @@ export default function PublicBusinessProfile({ business }: PublicBusinessProfil
           businessId: business.id,
           businessName: business.name,
           businessSlug: business.slug,
-          ownerId,
           senderName,
           senderEmail,
           subject: contactSubject.trim(),

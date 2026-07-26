@@ -1,6 +1,13 @@
 import { db } from "./index";
-import { regions, provinces, cities, categories } from "./schema";
+import {
+  regions,
+  provinces,
+  cities,
+  categories as categoryTable,
+  subcategories as subcategoryTable,
+} from "./schema";
 import { eq } from "drizzle-orm";
+import { categories as categoryData } from "../lib/data-connect/seed/categories";
 
 async function seed() {
   console.log("🌱 Starting intelligent database seed...");
@@ -81,22 +88,54 @@ async function seed() {
 
     // 4. Seed Categories
     console.log("Processing categories...");
-    const categoryData = [
-      { name: "Food & Beverage", slug: "food-beverage" },
-      { name: "Retail", slug: "retail" },
-      { name: "Services", slug: "services" },
-      { name: "Health & Wellness", slug: "health-wellness" },
-    ];
-
     for (const cat of categoryData) {
       const existing = await db.query.categories.findFirst({
-        where: eq(categories.slug, cat.slug)
+        where: eq(categoryTable.slug, cat.slug)
       });
+      let categoryId: string;
+
       if (existing) {
+        categoryId = existing.id;
+        await db.update(categoryTable)
+          .set({
+            name: cat.name,
+            description: cat.description,
+            status: true,
+          })
+          .where(eq(categoryTable.id, existing.id));
         console.log(`- Category "${cat.name}" already exists.`);
       } else {
-        await db.insert(categories).values(cat);
+        const [inserted] = await db.insert(categoryTable)
+          .values({
+            name: cat.name,
+            slug: cat.slug,
+            description: cat.description,
+          })
+          .returning({ id: categoryTable.id });
+        categoryId = inserted.id;
         console.log(`+ Inserted category "${cat.name}".`);
+      }
+
+      for (const subcategory of cat.subcategories) {
+        const existingSubcategory = await db.query.subcategories.findFirst({
+          where: eq(subcategoryTable.slug, subcategory.slug),
+        });
+
+        if (existingSubcategory) {
+          await db.update(subcategoryTable)
+            .set({
+              name: subcategory.name,
+              categoryId,
+              status: true,
+            })
+            .where(eq(subcategoryTable.id, existingSubcategory.id));
+        } else {
+          await db.insert(subcategoryTable).values({
+            categoryId,
+            name: subcategory.name,
+            slug: subcategory.slug,
+          });
+        }
       }
     }
 

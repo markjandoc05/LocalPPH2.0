@@ -1,7 +1,0 @@
-[
-  {
-    "key": "integrations",
-    "value": "{\"googleAnalytics\":{\"enabled\":true,\"measurementId\":\"G-0LH1PNB7BN\",\"lastChecked\":\"7/5/2026, 1:11:34 PM\"},\"searchConsole\":{\"enabled\":false,\"verificationTag\":\"\"},\"tagManager\":{\"enabled\":false,\"containerId\":\"\"},\"clarity\":{\"enabled\":false,\"projectId\":\"\"},\"metaPixel\":{\"enabled\":false,\"pixelId\":\"\"},\"cookieConsent\":{\"enabled\":true,\"message\":\"We use cookies to improve your experience on our site.\",\"privacyPolicyUrl\":\"/privacy\",\"lastChecked\":\"7/5/2026, 1:12:34 PM\"},\"sitemap\":{\"enabled\":true,\"url\":\"/sitemap.xml\",\"autoGenerate\":true,\"lastChecked\":\"7/5/2026, 1:12:20 PM\"},\"robots\":{\"enabled\":true,\"url\":\"/robots.txt\",\"status\":\"Allowed\",\"lastChecked\":\"7/5/2026, 1:12:29 PM\"},\"openGraph\":{\"enabled\":true,\"title\":\"LocalPages PH\",\"description\":\"Discover trusted local businesses in the Philippines.\",\"imageUrl\":\"\",\"lastChecked\":\"7/5/2026, 1:13:36 PM\"},\"favicon\":{\"enabled\":true,\"url\":\"/favicon.ico\",\"lastChecked\":\"7/5/2026, 1:12:42 PM\"}}",
-    "updatedAt": "2026-07-05T05:43:31.884Z"
-  }
-]

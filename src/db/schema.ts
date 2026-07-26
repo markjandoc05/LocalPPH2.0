@@ -146,7 +146,16 @@ export const businesses = pgTable('businesses', {
   
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  ownerCreatedAtIdx: index('businesses_owner_created_at_idx').on(table.ownerId, table.createdAt),
+  statusCreatedAtIdx: index('businesses_status_created_at_idx').on(table.status, table.createdAt),
+  categoryStatusCreatedAtIdx: index('businesses_category_status_created_at_idx').on(table.categoryId, table.status, table.createdAt),
+  subcategoryStatusIdx: index('businesses_subcategory_status_idx').on(table.subcategoryId, table.status),
+  regionStatusIdx: index('businesses_region_status_idx').on(table.regionId, table.status),
+  provinceStatusIdx: index('businesses_province_status_idx').on(table.provinceId, table.status),
+  cityStatusIdx: index('businesses_city_status_idx').on(table.cityId, table.status),
+  featuredStatusCreatedAtIdx: index('businesses_featured_status_created_at_idx').on(table.isFeatured, table.status, table.createdAt),
+}));
 
 export const businessPhotos = pgTable('business_photos', {
   id: uuid('id').defaultRandom().primaryKey(),

@@ -19,6 +19,7 @@
 
 # production
 /build
+/private/exports/
 
 # misc
 .DS_Store

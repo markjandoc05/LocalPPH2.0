@@ -7,11 +7,17 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "SKIP_DB_DURING_BUILD=true next build && mkdir -p .next/standalone/public && cp -r public/. .next/standalone/public/ 2>/dev/null || true && mkdir -p .next/standalone/.next/static && cp -r .next/static/. .next/standalone/.next/static/ 2>/dev/null || true",
+    "prebuild": "npm run security:check-public-assets",
+    "build": "SKIP_DB_DURING_BUILD=true next build",
+    "postbuild": "node scripts/copy-standalone-assets.mjs",
     "start": "node .next/standalone/server.js",
     "lint": "eslint",
+    "test": "node --import tsx --test src/lib/auth/data-api-policy.test.ts src/lib/data-connect/public-business-payload.test.ts src/lib/server/rate-limit.test.ts",
     "test:api-permissions": "node --import tsx --test src/lib/auth/data-api-policy.test.ts",
+    "security:check-public-assets": "node scripts/security/check-public-assets.mjs",
     "db:seed": "tsx src/db/seed.ts",
+    "db:taxonomy:audit": "tsx src/db/migrate-taxonomy.ts",
+    "db:taxonomy:apply": "tsx src/db/migrate-taxonomy.ts --apply",
     "db:import": "tsx src/db/import.ts",
     "db:dev:migrate": "drizzle-kit migrate --config=src/db/drizzle.config.ts",
     "db:dev:seed": "tsx src/db/seed.ts",
@@ -22,10 +28,10 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
-    "firebase": "^12.15.0",
-    "firebase-admin": "^14.1.0",
+    "firebase": "^12.16.0",
+    "firebase-admin": "^14.2.0",
     "lucide-react": "^1.21.0",
-    "next": "16.2.9",
+    "next": "^16.2.12",
     "nodemailer": "^9.0.3",
     "papaparse": "^5.5.4",
     "pg": "^8.22.0",
@@ -34,6 +40,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@next/env": "^16.2.12",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",
@@ -43,9 +50,19 @@
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "16.2.9",
+    "eslint-config-next": "^16.2.12",
     "tailwindcss": "^4",
     "tsx": "^4.22.5",
     "typescript": "^5"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.23",
+      "sharp": "0.35.3"
+    },
+    "@google-cloud/storage": {
+      "fast-xml-parser": "5.10.1"
+    },
+    "protobufjs": "7.6.5"
   }
 }

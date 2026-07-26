@@ -39,25 +39,33 @@ export interface DirectoryCity {
 }
 
 export const getAllCategories = async (): Promise<DirectoryCategory[]> => {
-  const result = await provider.getCategories();
+  const [result, subcategoriesResult] = await Promise.all([
+    provider.getCategories(),
+    provider.getSubcategories(),
+  ]);
   const categoriesList = result.data.categories || [];
-  
-  // Calculate subcategories count
-  const categoriesWithCount = await Promise.all(
-    categoriesList.map(async (cat: { id: string; name: string; slug: string }) => {
-      const subsRes = await provider.getSubcategories({ categoryId: cat.id });
-      const subs = subsRes.data.subcategories || [];
-      return {
-        id: cat.id,
-        name: cat.name,
-        slug: cat.slug,
-        description: `${cat.name} businesses, services, and shops.`,
-        subcategoryCount: subs.length,
-      };
-    })
-  );
-  
-  return categoriesWithCount;
+  const subcategoriesList = subcategoriesResult.data.subcategories || [];
+  const subcategoryCounts = new Map<string, number>();
+
+  for (const subcategory of subcategoriesList) {
+    subcategoryCounts.set(
+      subcategory.categoryId,
+      (subcategoryCounts.get(subcategory.categoryId) || 0) + 1,
+    );
+  }
+
+  return categoriesList.map((category: {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+  }) => ({
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    description: category.description || `${category.name} businesses, services, and shops.`,
+    subcategoryCount: subcategoryCounts.get(category.id) || 0,
+  }));
 };
 
 export const getCategoryBySlug = async (slug: string): Promise<DirectoryCategory | null> => {
@@ -71,24 +79,27 @@ export const getSubcategoriesByCategory = async (categoryId: string): Promise<Di
 };
 
 export const getAllRegions = async (): Promise<DirectoryRegion[]> => {
-  const result = await provider.getRegions();
+  const [result, provincesResult] = await Promise.all([
+    provider.getRegions(),
+    provider.getProvinces(),
+  ]);
   const regionsList = result.data.regions || [];
-  
-  // Statically compute province count from seed info or dynamically query
-  const regionsWithCount = await Promise.all(
-    regionsList.map(async (reg: { id: string; name: string; slug: string }) => {
-      const provRes = await provider.getProvinces({ regionId: reg.id });
-      const provs = provRes.data.provinces || [];
-      return {
-        id: reg.id,
-        name: reg.name,
-        slug: reg.slug,
-        provinceCount: provs.length,
-      };
-    })
-  );
-  
-  return regionsWithCount;
+  const provincesList = provincesResult.data.provinces || [];
+  const provinceCounts = new Map<string, number>();
+
+  for (const province of provincesList) {
+    provinceCounts.set(
+      province.regionId,
+      (provinceCounts.get(province.regionId) || 0) + 1,
+    );
+  }
+
+  return regionsList.map((region: { id: string; name: string; slug: string }) => ({
+    id: region.id,
+    name: region.name,
+    slug: region.slug,
+    provinceCount: provinceCounts.get(region.id) || 0,
+  }));
 };
 
 export const getRegionBySlug = async (slug: string): Promise<DirectoryRegion | null> => {
@@ -97,24 +108,33 @@ export const getRegionBySlug = async (slug: string): Promise<DirectoryRegion | n
 };
 
 export const getProvincesByRegion = async (regionId: string): Promise<DirectoryProvince[]> => {
-  const result = await provider.getProvinces({ regionId });
+  const [result, citiesResult] = await Promise.all([
+    provider.getProvinces({ regionId }),
+    provider.getCities(),
+  ]);
   const provincesList = result.data.provinces || [];
-  
-  const provincesWithCount = await Promise.all(
-    provincesList.map(async (p: { id: string; regionId: string; name: string; slug: string }) => {
-      const cityRes = await provider.getCities({ provinceId: p.id });
-      const cities = cityRes.data.cities || [];
-      return {
-        id: p.id,
-        regionId: p.regionId,
-        name: p.name,
-        slug: p.slug,
-        cityCount: cities.length,
-      };
-    })
-  );
-  
-  return provincesWithCount;
+  const citiesList = citiesResult.data.cities || [];
+  const cityCounts = new Map<string, number>();
+
+  for (const city of citiesList) {
+    cityCounts.set(
+      city.provinceId,
+      (cityCounts.get(city.provinceId) || 0) + 1,
+    );
+  }
+
+  return provincesList.map((province: {
+    id: string;
+    regionId: string;
+    name: string;
+    slug: string;
+  }) => ({
+    id: province.id,
+    regionId: province.regionId,
+    name: province.name,
+    slug: province.slug,
+    cityCount: cityCounts.get(province.id) || 0,
+  }));
 };
 
 export const getProvinceBySlug = async (slug: string): Promise<DirectoryProvince | null> => {
@@ -154,10 +174,14 @@ export const getCityBySlug = async (slug: string): Promise<DirectoryCity | null>
 };
 
 export const getApprovedBusinessesByCategory = async (
-  categoryId: string,
-  pagination: { page: number; limit: number }
+  categoryIdOrSlug: string,
+  pagination: { page: number; limit: number },
+  regionIdOrSlug?: string,
 ): Promise<SearchResult> => {
-  return searchApprovedBusinesses({ categoryId: categoryId }, pagination);
+  return searchApprovedBusinesses({
+    categoryId: categoryIdOrSlug,
+    regionId: regionIdOrSlug,
+  }, pagination);
 };
 
 export const getApprovedBusinessesByCity = async (
