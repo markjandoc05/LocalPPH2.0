@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { LucideArrowLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { generateBusinessMetadata } from '@/lib/seo/metadata';
-import { generateBreadcrumbJsonLd, generateLocalBusinessJsonLd } from '@/lib/seo/jsonld';
+import { generateBreadcrumbJsonLd, generateLocalBusinessJsonLd, serializeJsonLd } from '@/lib/seo/jsonld';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import PageTracker from '@/components/analytics/PageTracker';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -87,7 +87,7 @@ export default async function BusinessProfilePage({ params }: { params: Promise<
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex flex-col gap-4">

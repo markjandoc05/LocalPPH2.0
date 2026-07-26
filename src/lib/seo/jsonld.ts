@@ -5,7 +5,7 @@ import { getFullDesc } from '@/lib/utils';
 const clean = (value?: string | number | null) => {
   if (value === undefined || value === null) return undefined;
   const text = String(value).replace(/\s+/g, ' ').trim();
-  return text || undefined;
+  return text && text.toLowerCase() !== 'not assigned' ? text : undefined;
 };
 
 const parseGallery = (gallery: BusinessListing['gallery']) => {
@@ -44,6 +44,11 @@ const dayMap: Record<string, string> = {
   sun: 'Sunday',
   sunday: 'Sunday',
 };
+const dayTokenPattern = 'mon(?:day)?|tue(?:s|sday)?|wed(?:nesday)?|thu(?:r|rs|rsday|rday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?';
+const closedDayPattern = new RegExp(
+  `\\b(?:${dayTokenPattern})(?:\\s*(?:[-–]|to)\\s*(?:${dayTokenPattern}))?\\s*:?\\s*closed\\b`,
+  'gi',
+);
 
 const normalizeTime = (value: string) => {
   const trimmed = value.trim().toLowerCase().replace(/\./g, '');
@@ -63,7 +68,7 @@ const normalizeTime = (value: string) => {
 
 const parseDayNames = (value: string) => {
   const normalized = value.toLowerCase();
-  const rangeMatch = normalized.match(/\b(mon(?:day)?|tue(?:s|sday)?|wed(?:nesday)?|thu(?:r|rs|rsday|rday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\s*[-–]\s*(mon(?:day)?|tue(?:s|sday)?|wed(?:nesday)?|thu(?:r|rs|rsday|rday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b/);
+  const rangeMatch = normalized.match(/\b(mon(?:day)?|tue(?:s|sday)?|wed(?:nesday)?|thu(?:r|rs|rsday|rday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\s*(?:[-–]|to)\s*(mon(?:day)?|tue(?:s|sday)?|wed(?:nesday)?|thu(?:r|rs|rsday|rday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b/);
   const orderedDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   if (rangeMatch) {
@@ -82,12 +87,16 @@ const parseDayNames = (value: string) => {
 };
 
 const parseOpeningHoursSpecification = (value?: string | null) => {
-  const lines = clean(value)?.split(/\n|;/).map((line) => line.trim()).filter(Boolean) || [];
+  const lines = value
+    ?.split(/\r?\n|;/)
+    .map((line) => clean(line))
+    .filter((line): line is string => Boolean(line)) || [];
 
   return lines
     .map((line) => {
-      const days = parseDayNames(line);
-      const timeMatch = line.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)\s*[-–]\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)/i);
+      const activeHours = line.replace(closedDayPattern, ' ');
+      const days = parseDayNames(activeHours);
+      const timeMatch = activeHours.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)\s*(?:[-–]|to)\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)/i);
       const opens = timeMatch ? normalizeTime(timeMatch[1]) : undefined;
       const closes = timeMatch ? normalizeTime(timeMatch[2]) : undefined;
 
@@ -122,15 +131,46 @@ const removeEmpty = (value: any): any => {
   return value === undefined || value === null || value === '' ? undefined : value;
 };
 
-const getBusinessSchemaType = (category?: string) => {
-  const value = category?.toLowerCase() || '';
-  if (value.includes('food') || value.includes('restaurant') || value.includes('dining')) return 'Restaurant';
-  if (value.includes('health') || value.includes('clinic') || value.includes('medical')) return 'MedicalBusiness';
-  if (value.includes('hotel') || value.includes('travel') || value.includes('hospitality')) return 'LodgingBusiness';
-  if (value.includes('shop') || value.includes('retail')) return 'Store';
-  if (value.includes('professional') || value.includes('services')) return 'ProfessionalService';
+export const getBusinessSchemaType = (business: Pick<BusinessListing, 'categoryName' | 'categorySlug' | 'subcategoryName' | 'subcategorySlug'>) => {
+  const category = [business.categoryName, business.categorySlug].filter(Boolean).join(' ').toLowerCase();
+  const subcategory = [business.subcategoryName, business.subcategorySlug].filter(Boolean).join(' ').toLowerCase();
+
+  if (subcategory.includes('coffee shop')) return 'CafeOrCoffeeShop';
+  if (subcategory.includes('bakery')) return 'Bakery';
+  if (subcategory.includes('restaurant') || subcategory.includes('fast food')) return 'Restaurant';
+  if (category.includes('food') || category.includes('dining')) return 'FoodEstablishment';
+
+  if (subcategory.includes('gym') || subcategory.includes('fitness')) return 'HealthClub';
+  if (subcategory.includes('dental')) return 'Dentist';
+  if (subcategory.includes('pharmac')) return 'Pharmacy';
+  if (subcategory.includes('hospital')) return 'Hospital';
+  if (subcategory.includes('clinic') || category.includes('health-medical') || category.includes('health & medical')) return 'MedicalBusiness';
+  if (subcategory.includes('salon')) return 'BeautySalon';
+  if (subcategory.includes('spa')) return 'DaySpa';
+
+  if (subcategory.includes('auto repair')) return 'AutoRepair';
+  if (subcategory.includes('car dealer')) return 'AutoDealer';
+  if (category.includes('automotive')) return 'AutomotiveBusiness';
+  if (category.includes('travel') || category.includes('hospitality')) return 'LodgingBusiness';
+  if (category.includes('retail') || category.includes('shopping')) return 'Store';
+  if (category.includes('professional') || category.includes('technology') || category.includes('digital')) return 'ProfessionalService';
+  if (category.includes('real estate')) return 'RealEstateAgent';
+  if (category.includes('home') || category.includes('construction')) return 'HomeAndConstructionBusiness';
+
   return 'LocalBusiness';
 };
+
+export const serializeJsonLd = (value: unknown) =>
+  JSON.stringify(value).replace(/[<>&\u2028\u2029]/g, (character) => {
+    const escapes: Record<string, string> = {
+      '<': '\\u003c',
+      '>': '\\u003e',
+      '&': '\\u0026',
+      '\u2028': '\\u2028',
+      '\u2029': '\\u2029',
+    };
+    return escapes[character];
+  });
 
 export const generateBreadcrumbJsonLd = (items: Array<{ label: string; href?: string }>) => {
   return removeEmpty({
@@ -202,14 +242,13 @@ export const generateLocalBusinessJsonLd = (business: BusinessListing) => {
 
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': getBusinessSchemaType(category),
+    '@type': getBusinessSchemaType(business),
     '@id': `${businessUrl}#business`,
     name: clean(business.name),
     description,
     url: businessUrl,
     logo: toAbsoluteUrl(business.logoUrl),
     image: images,
-    slogan: category ? `${category} in ${location || 'the Philippines'}` : undefined,
     telephone: clean(business.contactMobile || business.contactPhone),
     email: clean(business.contactEmail),
     contactPoint: (business.contactMobile || business.contactPhone || business.contactEmail) ? {
@@ -233,10 +272,8 @@ export const generateLocalBusinessJsonLd = (business: BusinessListing) => {
       latitude: business.latitude,
       longitude: business.longitude,
     } : undefined,
-    openingHours: clean(business.businessHours),
     openingHoursSpecification,
     category,
-    keywords: keywords.length ? keywords.join(', ') : undefined,
     knowsAbout: Array.from(new Set([...keywords, ...productItems, ...serviceItems, category].filter(Boolean))),
     areaServed: {
       '@type': 'AdministrativeArea',
@@ -251,8 +288,6 @@ export const generateLocalBusinessJsonLd = (business: BusinessListing) => {
     })),
     sameAs,
     hasMap: clean(business.googleMapsUrl),
-    dateModified: clean(business.updatedAt),
-    dateCreated: clean(business.createdAt),
   };
 
   return removeEmpty(jsonLd);

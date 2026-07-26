@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next';
-import { SITE_URL } from '@/lib/seo/metadata';
+import { SITE_URL, toAbsoluteUrl } from '@/lib/seo/metadata';
 import { provider } from '@/lib/data-connect/provider';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +12,28 @@ const toDate = (value?: string | Date | null) => {
   if (!value) return undefined;
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
+const getBusinessImages = (business: any) => {
+  let gallery: unknown[] = [];
+  if (Array.isArray(business.gallery)) {
+    gallery = business.gallery;
+  } else if (typeof business.gallery === 'string') {
+    try {
+      const parsed = JSON.parse(business.gallery);
+      gallery = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      gallery = [];
+    }
+  }
+
+  return Array.from(new Set([
+    business.coverUrl,
+    business.logoUrl,
+    ...gallery,
+  ]
+    .map((image) => typeof image === 'string' ? toAbsoluteUrl(image) : undefined)
+    .filter((image): image is string => Boolean(image))));
 };
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -121,6 +143,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: toDate(business.updatedAt) || STATIC_LAST_MODIFIED,
         changeFrequency: 'weekly' as const,
         priority: business.isFeatured ? 0.75 : 0.6,
+        images: getBusinessImages(business),
       }));
 
     return [
