@@ -49,7 +49,7 @@ export default function AdminUsersPage() {
     <AdminLayout>
       <PageHeader
         title="User Management"
-        description="Manage platform users and roles."
+        description="Manage platform users and roles, ordered by registration date."
       />
 
       {error ? (

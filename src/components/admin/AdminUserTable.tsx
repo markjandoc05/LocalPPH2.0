@@ -15,6 +15,7 @@ import { getUserById, getMyBusinesses, updateSupportTicket } from '@/lib/data-co
 import { deleteUserAccount, updateUserAccountStatus, updateUserRole } from '@/lib/data-connect/admin-service';
 import { formatAppDate, formatAppDateTime } from '@/lib/time';
 import { BusinessListing } from '@/types/business';
+import { compareUsersByRegistration, getRegistrationTime } from '@/lib/admin-user-sorting';
 import { 
   LucideBan,
   LucideUser, 
@@ -48,7 +49,7 @@ type AccountAction = 'BAN' | 'DELETE' | 'UNBAN';
 
 type RoleFilter = 'ALL' | 'ADMIN' | 'MODERATOR' | 'BUSINESS' | 'SUBSCRIBER';
 type StatusFilter = 'ALL' | string;
-type UserSortOption = 'created_desc' | 'created_asc' | 'name_asc' | 'name_desc' | 'email_asc' | 'role_asc' | 'status_asc';
+type UserSortOption = 'registered_desc' | 'registered_asc' | 'name_asc' | 'name_desc' | 'email_asc' | 'role_asc' | 'status_asc';
 
 const roleOptions: { value: RoleFilter; label: string }[] = [
   { value: 'ALL', label: 'All roles' },
@@ -59,8 +60,8 @@ const roleOptions: { value: RoleFilter; label: string }[] = [
 ];
 
 const sortOptions: { value: UserSortOption; label: string }[] = [
-  { value: 'created_desc', label: 'Newest joined' },
-  { value: 'created_asc', label: 'Oldest joined' },
+  { value: 'registered_desc', label: 'Newest registered' },
+  { value: 'registered_asc', label: 'First registered' },
   { value: 'name_asc', label: 'Name A-Z' },
   { value: 'name_desc', label: 'Name Z-A' },
   { value: 'email_asc', label: 'Email A-Z' },
@@ -94,7 +95,7 @@ export default function AdminUserTable({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [joinedFrom, setJoinedFrom] = useState('');
   const [joinedTo, setJoinedTo] = useState('');
-  const [sortBy, setSortBy] = useState<UserSortOption>('created_desc');
+  const [sortBy, setSortBy] = useState<UserSortOption>('registered_desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
@@ -287,9 +288,10 @@ export default function AdminUserTable({
         if (roleFilter !== 'ALL' && normalizeRole(user.role) !== roleFilter) return false;
         if (statusFilter !== 'ALL' && user.accountStatus !== statusFilter) return false;
 
-        const joinedAt = getDateValue(user.createdAt);
-        if (fromDate && joinedAt < fromDate) return false;
-        if (toDate && joinedAt > toDate) return false;
+        const registeredAt = getRegistrationTime(user.createdAt);
+        if ((fromDate || toDate) && registeredAt === null) return false;
+        if (fromDate && registeredAt !== null && registeredAt < fromDate) return false;
+        if (toDate && registeredAt !== null && registeredAt > toDate) return false;
 
         if (!normalizedSearch) return true;
 
@@ -308,8 +310,8 @@ export default function AdminUserTable({
         const bName = b.displayName || 'No Name';
 
         switch (sortBy) {
-          case 'created_asc':
-            return getDateValue(a.createdAt) - getDateValue(b.createdAt);
+          case 'registered_asc':
+            return compareUsersByRegistration(a, b, 'asc');
           case 'name_asc':
             return aName.localeCompare(bName);
           case 'name_desc':
@@ -320,14 +322,14 @@ export default function AdminUserTable({
             return normalizeRole(a.role).localeCompare(normalizeRole(b.role));
           case 'status_asc':
             return a.accountStatus.localeCompare(b.accountStatus);
-          case 'created_desc':
+          case 'registered_desc':
           default:
-            return getDateValue(b.createdAt) - getDateValue(a.createdAt);
+            return compareUsersByRegistration(a, b, 'desc');
         }
       });
   }, [joinedFrom, joinedTo, roleFilter, searchTerm, sortBy, statusFilter, users]);
 
-  const hasActiveFilters = searchTerm || roleFilter !== 'ALL' || statusFilter !== 'ALL' || joinedFrom || joinedTo || sortBy !== 'created_desc';
+  const hasActiveFilters = searchTerm || roleFilter !== 'ALL' || statusFilter !== 'ALL' || joinedFrom || joinedTo || sortBy !== 'registered_desc';
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PER_PAGE));
   const visiblePage = Math.min(currentPage, totalPages);
   const pageStart = (visiblePage - 1) * USERS_PER_PAGE;
@@ -340,17 +342,18 @@ export default function AdminUserTable({
     setStatusFilter('ALL');
     setJoinedFrom('');
     setJoinedTo('');
-    setSortBy('created_desc');
+    setSortBy('registered_desc');
     setCurrentPage(1);
   };
 
   const exportFilteredUsersCsv = () => {
     const rows = [
-      ['Name', 'Email', 'User Role'],
+      ['Name', 'Email', 'User Role', 'Registration Date'],
       ...filteredUsers.map((user) => [
         user.displayName || 'No Name',
         user.email || '',
         normalizeRole(user.role),
+        formatAppDateTime(user.createdAt, 'N/A'),
       ]),
     ];
     const csv = rows
@@ -449,6 +452,9 @@ export default function AdminUserTable({
                 </div>
                 <p className="mt-1 text-xs text-slate-600">
 	                  {filteredUsers.length} of {users.length} users
+	                </p>
+	                <p className="mt-0.5 text-[11px] font-medium text-blue-700">
+	                  {sortOptions.find((option) => option.value === sortBy)?.label}
 	                </p>
 	              </div>
 	              <Button
@@ -554,7 +560,7 @@ export default function AdminUserTable({
                 </label>
 
                 <label className="space-y-1">
-                  <span className="text-xs font-medium text-slate-600">Joined from</span>
+                  <span className="text-xs font-medium text-slate-600">Registered from</span>
                   <input
                     type="date"
                     value={joinedFrom}
@@ -567,7 +573,7 @@ export default function AdminUserTable({
                 </label>
 
                 <label className="space-y-1">
-                  <span className="text-xs font-medium text-slate-600">Joined to</span>
+                  <span className="text-xs font-medium text-slate-600">Registered to</span>
                   <input
                     type="date"
                     value={joinedTo}
@@ -585,7 +591,7 @@ export default function AdminUserTable({
         {filteredUsers.length === 0 ? (
           <EmptyState
             title="No users match these filters"
-            description="Try adjusting the search, role, status, joined date range, or sorting option."
+            description="Try adjusting the search, role, status, registration date range, or sorting option."
           />
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -597,7 +603,7 @@ export default function AdminUserTable({
                   <TableHead>Status</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Request</TableHead>
-                  <TableHead>Joined Date</TableHead>
+                  <TableHead>Registration Date</TableHead>
                   {isCurrentUserAdmin && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
