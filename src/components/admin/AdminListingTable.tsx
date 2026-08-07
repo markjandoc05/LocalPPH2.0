@@ -19,9 +19,13 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/Table';
+import RevisionReminderButton from './RevisionReminderButton';
+import { hasVerificationDocuments } from '@/lib/listing-revision-reminders';
 
 interface AdminListingTableProps {
   listings: BusinessListing[];
+  showRevisionReminderActions?: boolean;
+  onRevisionReminderSent?: () => Promise<void> | void;
 }
 
 type SortOption = 'created_desc' | 'created_asc' | 'updated_desc' | 'updated_asc' | 'name_asc' | 'name_desc' | 'status_asc';
@@ -51,7 +55,11 @@ const sortOptions: { value: SortOption; label: string }[] = [
 const getDateValue = (value: string) => new Date(value).getTime() || 0;
 const LISTINGS_PER_PAGE = 10;
 
-export default function AdminListingTable({ listings }: AdminListingTableProps) {
+export default function AdminListingTable({
+  listings,
+  showRevisionReminderActions = false,
+  onRevisionReminderSent,
+}: AdminListingTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [submittedFrom, setSubmittedFrom] = useState('');
@@ -78,6 +86,8 @@ export default function AdminListingTable({ listings }: AdminListingTableProps) 
         return [
           listing.name,
           listing.ownerName,
+          listing.ownerEmail,
+          listing.moderatorNotes,
           listing.cityName,
           listing.provinceName,
           listing.regionName,
@@ -264,6 +274,7 @@ export default function AdminListingTable({ listings }: AdminListingTableProps) 
                 <TableHead>Business Details</TableHead>
                 <TableHead>Location & Category</TableHead>
                 <TableHead>Status</TableHead>
+                {showRevisionReminderActions && <TableHead>Revision Requirement</TableHead>}
                 <TableHead>Dates</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -274,6 +285,11 @@ export default function AdminListingTable({ listings }: AdminListingTableProps) 
                   <TableCell>
                     <div className="font-medium text-slate-900">{listing.name}</div>
                     <div className="text-xs text-slate-600 mt-1">Owner: {listing.ownerName}</div>
+                    {showRevisionReminderActions && (
+                      <div className="mt-1 break-all text-xs text-blue-700">
+                        {listing.ownerEmail || 'No registered owner email'}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="text-sm text-slate-900">{listing.cityName}</div>
@@ -282,17 +298,51 @@ export default function AdminListingTable({ listings }: AdminListingTableProps) 
                   <TableCell>
                     <BusinessStatusBadge status={listing.status} />
                   </TableCell>
+                  {showRevisionReminderActions && (
+                    <TableCell className="max-w-xs">
+                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                        hasVerificationDocuments(listing.documents)
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {hasVerificationDocuments(listing.documents)
+                          ? 'Document uploaded'
+                          : 'Document missing'}
+                      </span>
+                      <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-600">
+                        {listing.moderatorNotes || 'No revision notes provided.'}
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        {listing.revisionReminderCount
+                          ? `${listing.revisionReminderCount} reminder${listing.revisionReminderCount === 1 ? '' : 's'} sent · Last ${formatAppDate(listing.lastRevisionReminderAt)}`
+                          : 'No reminders sent'}
+                      </p>
+                      {listing.lastRevisionReminderStatus === 'FAILED' && (
+                        <p className="mt-1 line-clamp-1 text-[11px] text-red-600" title={listing.lastRevisionReminderError}>
+                          Last attempt failed: {listing.lastRevisionReminderError || 'Unknown email error'}
+                        </p>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell className="text-sm text-slate-700">
                     <div>Sub: {formatAppDate(listing.createdAt)}</div>
                     <div className="text-xs">Upd: {formatAppDate(listing.updatedAt)}</div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link href={`/admin/listings/${listing.id}`} title="Review Listing">
-                      <Button variant="outline" size="sm">
-                        <LucideEye className="w-4 h-4 mr-2" />
-                        Review
-                      </Button>
-                    </Link>
+                    <div className="flex flex-col items-end gap-2 xl:flex-row xl:justify-end">
+                      {showRevisionReminderActions && (
+                        <RevisionReminderButton
+                          listing={listing}
+                          onReminderSent={onRevisionReminderSent}
+                        />
+                      )}
+                      <Link href={`/admin/listings/${listing.id}`} title="Review Listing">
+                        <Button variant="outline" size="sm">
+                          <LucideEye className="w-4 h-4 mr-2" />
+                          Review
+                        </Button>
+                      </Link>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

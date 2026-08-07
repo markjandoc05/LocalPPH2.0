@@ -300,6 +300,12 @@ const invokeAllowedMethod = async ({
       });
     }
 
+    case 'sendBusinessRevisionReminder':
+      return databaseProvider.sendBusinessRevisionReminder({
+        id: requireString(variables.id, 'Business ID'),
+        adminUserId: userId,
+      });
+
     case 'getAllSupportTickets':
       return databaseProvider.getAllSupportTickets();
 

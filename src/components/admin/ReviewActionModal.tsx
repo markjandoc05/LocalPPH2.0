@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
+import { DTI_SEC_REVISION_MESSAGE } from '@/lib/listing-revision-reminders';
 
 type ActionType = 'APPROVE' | 'REJECT' | 'REVISION' | 'SUSPEND' | null;
 
@@ -83,6 +84,17 @@ export default function ReviewActionModal({ isOpen, actionType, onClose, onConfi
               rows={4}
               placeholder={`Provide context for the business owner...`}
             />
+            {actionType === 'REVISION' && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => setReason(DTI_SEC_REVISION_MESSAGE)}
+              >
+                Use DTI /SEC document request
+              </Button>
+            )}
           </div>
         )}
       </form>

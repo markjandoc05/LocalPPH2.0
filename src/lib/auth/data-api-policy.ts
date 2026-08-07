@@ -21,6 +21,7 @@ export const DATA_API_POLICIES = {
   getBusinessById: 'business-review',
   getAllBusinesses: 'reviewer',
   updateBusinessStatus: 'reviewer',
+  sendBusinessRevisionReminder: 'reviewer',
   getAllSupportTickets: 'reviewer',
   updateSupportTicket: 'reviewer',
   updateUserAccountStatus: 'admin',

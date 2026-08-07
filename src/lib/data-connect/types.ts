@@ -136,6 +136,10 @@ export interface DataProvider {
     moderatorNotes?: string;
     adminUserId?: string;
   }): Promise<{ data: { business_update: string; approvalEmailNotification?: any; revisionEmailNotification?: any } }>;
+  sendBusinessRevisionReminder(variables: {
+    id: string;
+    adminUserId?: string;
+  }): Promise<{ data: { revisionReminder: any } }>;
 
   // Public operations
   searchApprovedBusinesses(variables: {

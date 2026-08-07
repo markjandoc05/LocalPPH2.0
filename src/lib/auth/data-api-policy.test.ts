@@ -15,7 +15,7 @@ test('the authenticated data API exposes only its explicit operation allowlist',
   assert.equal(isDataApiMethod('__proto__'), false);
   assert.equal(isDataApiMethod('constructor'), false);
   assert.equal(isDataApiMethod(undefined), false);
-  assert.equal(Object.keys(DATA_API_POLICIES).length, 38);
+  assert.equal(Object.keys(DATA_API_POLICIES).length, 39);
 });
 
 test('bootstrap operations require a valid token but not an existing database profile', () => {
@@ -56,6 +56,7 @@ test('moderators can review listings and support tickets without admin powers', 
   assert.equal(canInvokeDataApiMethod('getBusinessById', 'MODERATOR'), true);
   assert.equal(canInvokeDataApiMethod('getAllBusinesses', 'MODERATOR'), true);
   assert.equal(canInvokeDataApiMethod('updateBusinessStatus', 'MODERATOR'), true);
+  assert.equal(canInvokeDataApiMethod('sendBusinessRevisionReminder', 'MODERATOR'), true);
   assert.equal(canInvokeDataApiMethod('updateSupportTicket', 'MODERATOR'), true);
   assert.equal(canInvokeDataApiMethod('getAllUsers', 'MODERATOR'), false);
   assert.equal(canInvokeDataApiMethod('createBackupSnapshot', 'MODERATOR'), false);

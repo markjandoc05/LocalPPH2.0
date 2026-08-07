@@ -2,6 +2,12 @@ const PRIVATE_BUSINESS_FIELDS = new Set([
   'ownerId',
   'owner',
   'ownerName',
+  'ownerEmail',
+  'ownerAccountStatus',
+  'revisionReminderCount',
+  'lastRevisionReminderAt',
+  'lastRevisionReminderStatus',
+  'lastRevisionReminderError',
   'documents',
   'moderatorNotes',
 ]);

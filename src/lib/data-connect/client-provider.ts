@@ -95,6 +95,7 @@ export const clientProvider: DataProvider = {
   submitBusiness: (vars) => apiFetch("submitBusiness", vars),
   getAllBusinesses: (vars) => apiFetch("getAllBusinesses", vars),
   updateBusinessStatus: (vars) => apiFetch("updateBusinessStatus", vars),
+  sendBusinessRevisionReminder: (vars) => apiFetch("sendBusinessRevisionReminder", vars),
   searchApprovedBusinesses: (vars) => publicApiFetch("searchApprovedBusinesses", vars),
   getSearchSuggestions: (vars) => publicApiFetch("getSearchSuggestions", vars),
   getApprovedBusinessBySlug: (vars) => publicApiFetch("getApprovedBusinessBySlug", vars),

@@ -27,6 +27,11 @@ type EmailNotificationResult = {
   diagnostics?: SmtpDiagnostics;
 };
 
+type TemplatedEmailNotificationResult = EmailNotificationResult & {
+  subject: string;
+  text: string;
+};
+
 let transporter: Transporter | null = null;
 let transporterConfigKey = '';
 
@@ -305,16 +310,17 @@ const sendTemplatedNotification = async (
   key: TemplateKey,
   to: EmailRecipient | EmailRecipient[],
   values: TemplateValues,
-): Promise<EmailNotificationResult> => {
+): Promise<TemplatedEmailNotificationResult> => {
   const template = await getEmailTemplate(key);
-  if (!template.enabled) {
-    return { sent: false, reason: 'template_disabled' };
-  }
-
   const subject = renderTemplate(template.subject || DEFAULT_EMAIL_TEMPLATES[key].subject, values).trim();
   const text = renderTemplate(template.body || DEFAULT_EMAIL_TEMPLATES[key].body, values).trim();
 
-  return sendEmailNotification({ to, subject, text });
+  if (!template.enabled) {
+    return { sent: false, reason: 'template_disabled', subject, text };
+  }
+
+  const result = await sendEmailNotification({ to, subject, text });
+  return { ...result, subject, text };
 };
 
 export const notifyAdminsOfUpgradeRequest = async (admins: EmailRecipient[], requester: EmailRecipient) => {
@@ -351,6 +357,19 @@ export const notifyUserOfListingRevision = async (
     userEmail: user.email || '',
     businessName: listing.businessName,
     revisionReason: listing.revisionReason || 'Please review the requested updates in your business listing.',
+    editListingUrl: `${SITE_URL}/business/listings/${listing.id}/edit`,
+  });
+};
+
+export const notifyUserOfListingRevisionReminder = async (
+  user: EmailRecipient,
+  listing: { id: string; businessName: string; revisionReason: string },
+) => {
+  return sendTemplatedNotification('listingRevisionReminderOwner', user, {
+    userName: user.name || 'there',
+    userEmail: user.email || '',
+    businessName: listing.businessName,
+    revisionReason: listing.revisionReason || 'Please upload the requested business registration document.',
     editListingUrl: `${SITE_URL}/business/listings/${listing.id}/edit`,
   });
 };

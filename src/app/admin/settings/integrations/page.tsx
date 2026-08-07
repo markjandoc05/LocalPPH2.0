@@ -64,6 +64,7 @@ interface IntegrationSettings {
     listingSubmittedAdmin: EmailTemplateConfig;
     listingApprovedOwner: EmailTemplateConfig;
     listingRevisionOwner: EmailTemplateConfig;
+    listingRevisionReminderOwner: EmailTemplateConfig;
     inquiryReceivedOwner: EmailTemplateConfig;
     inquiryReplyUser: EmailTemplateConfig;
   };
@@ -102,6 +103,11 @@ const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
     enabled: true,
     subject: 'Action needed for your LocalPages.ph listing: {{businessName}}',
     body: 'Hi {{userName}},\n\nThank you for submitting {{businessName}} to LocalPages.ph.\n\nOur review team needs a few updates before the listing can be approved and published.\n\nRevision notes:\n{{revisionReason}}\n\nPlease update your listing here: {{editListingUrl}}\n\nOnce you resubmit the listing, our team will review it again as soon as possible.\n\nThank you,\nThe LocalPages.ph Team',
+  },
+  listingRevisionReminderOwner: {
+    enabled: true,
+    subject: 'Reminder: DTI /SEC Certificate needed for {{businessName}}',
+    body: 'Hi {{userName}},\n\nThis is a reminder that your listing for {{businessName}} still requires an update before it can be approved.\n\nTo help us verify and approve your listing, please upload your DTI /SEC Certificate or any valid business registration document. Thank you!\n\nRevision notes:\n{{revisionReason}}\n\nUpdate your listing: {{editListingUrl}}\n\nOnce the document has been uploaded, please resubmit your listing for review.\n\nThank you,\nThe LocalPages.ph Team',
   },
   inquiryReceivedOwner: {
     enabled: true,
@@ -180,6 +186,12 @@ const EMAIL_TEMPLATE_META: {
     key: 'listingRevisionOwner',
     title: 'Revision Requested to Owner',
     description: 'Sent to the business owner when an admin requests listing revisions.',
+    variables: ['userName', 'userEmail', 'businessName', 'revisionReason', 'editListingUrl'],
+  },
+  {
+    key: 'listingRevisionReminderOwner',
+    title: 'Revision Reminder to Owner',
+    description: 'Sent manually from Needs Revision when a DTI /SEC Certificate or another registration document is still required.',
     variables: ['userName', 'userEmail', 'businessName', 'revisionReason', 'editListingUrl'],
   },
   {

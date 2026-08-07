@@ -15,6 +15,7 @@ import {
   siteSettings,
   backupSnapshots,
   backupSchedules,
+  listingRevisionReminders,
 } from "../../db/schema";
 import { eq, and, or, ilike, sql, desc, asc, inArray, notInArray } from "drizzle-orm";
 import { BusinessListing } from "@/types/business";
@@ -32,7 +33,9 @@ import {
   notifyUserOfAccountUpgrade,
   notifyUserOfApprovedListing,
   notifyUserOfListingRevision,
+  notifyUserOfListingRevisionReminder,
 } from "@/lib/email/notifications";
+import { getRevisionReminderRetryAt } from '@/lib/listing-revision-reminders';
 
 const businessInquiryCategory = 'BUSINESS_INQUIRY';
 const businessInquiryPrefix = 'LOCALPAGES_BUSINESS_INQUIRY::';
@@ -218,6 +221,8 @@ const formatBusinessRow = (b: any): BusinessListing => {
   return {
     ...b,
     ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
+    ownerEmail: b.owner?.email || undefined,
+    ownerAccountStatus: b.owner?.accountStatus || undefined,
     categoryName: b.category?.name || "Not assigned",
     categorySlug: b.category?.slug || undefined,
     subcategoryName: b.subcategory?.name || "Not assigned",
@@ -296,6 +301,7 @@ const backupGroups: Record<Exclude<BackupScope, 'ALL'>, { key: string; table: an
     { key: 'businesses', table: businesses, conflictTarget: businesses.id, dateFields: ['createdAt', 'updatedAt'] },
     { key: 'businessPhotos', table: businessPhotos, conflictTarget: businessPhotos.id, dateFields: ['uploadedAt'] },
     { key: 'businessProfileViews', table: businessProfileViews, conflictTarget: businessProfileViews.id, dateFields: ['firstViewedAt', 'lastViewedAt'] },
+    { key: 'listingRevisionReminders', table: listingRevisionReminders, conflictTarget: listingRevisionReminders.id, dateFields: ['sentAt', 'createdAt'] },
   ],
   DIRECTORY: [
     { key: 'categories', table: categories, conflictTarget: categories.id, dateFields: [] },
@@ -1451,7 +1457,38 @@ export const databaseProvider: DataProvider = {
       }
     });
     
-    const formatted = res.map(formatBusinessRow);
+    const businessIds = res.map((business) => business.id);
+    const reminderRows = businessIds.length > 0
+      ? await db.select().from(listingRevisionReminders)
+        .where(inArray(listingRevisionReminders.businessId, businessIds))
+        .orderBy(desc(listingRevisionReminders.createdAt))
+      : [];
+    const remindersByBusiness = new Map<string, typeof reminderRows>();
+
+    reminderRows.forEach((reminder) => {
+      const existing = remindersByBusiness.get(reminder.businessId) || [];
+      existing.push(reminder);
+      remindersByBusiness.set(reminder.businessId, existing);
+    });
+
+    const formatted = res.map((business) => {
+      const formattedBusiness = formatBusinessRow(business);
+      const reminders = remindersByBusiness.get(business.id) || [];
+      const latestAttempt = reminders[0];
+      const latestSent = reminders.find((reminder) => reminder.status === 'SENT');
+
+      return {
+        ...formattedBusiness,
+        revisionReminderCount: reminders.filter((reminder) => reminder.status === 'SENT').length,
+        lastRevisionReminderAt: latestSent?.sentAt instanceof Date
+          ? latestSent.sentAt.toISOString()
+          : latestSent?.sentAt || undefined,
+        lastRevisionReminderStatus: latestAttempt?.status === 'SENT' || latestAttempt?.status === 'FAILED'
+          ? latestAttempt.status
+          : undefined,
+        lastRevisionReminderError: latestAttempt?.errorMessage || undefined,
+      } as BusinessListing;
+    });
     return { data: { businesses: formatted } };
   },
 
@@ -1541,6 +1578,128 @@ export const databaseProvider: DataProvider = {
         business_update: res[0]?.id || variables.id,
         approvalEmailNotification,
         revisionEmailNotification,
+      },
+    };
+  },
+
+  async sendBusinessRevisionReminder(variables) {
+    const business = await db.query.businesses.findFirst({
+      where: eq(businesses.id, variables.id),
+      with: { owner: true },
+    });
+
+    if (!business) {
+      return {
+        data: {
+          revisionReminder: {
+            sent: false,
+            reason: 'listing_not_found',
+            message: 'Business listing was not found.',
+          },
+        },
+      };
+    }
+
+    if (business.status !== 'REVISION_REQUESTED') {
+      return {
+        data: {
+          revisionReminder: {
+            sent: false,
+            reason: 'listing_not_in_revision',
+            message: 'A reminder can only be sent while the listing needs revision.',
+          },
+        },
+      };
+    }
+
+    const ownerRecipient = toEmailRecipient(business.owner);
+    if (!ownerRecipient.email) {
+      return {
+        data: {
+          revisionReminder: {
+            sent: false,
+            reason: 'missing_owner_email',
+            message: 'The business owner does not have a registered email address.',
+          },
+        },
+      };
+    }
+
+    if (business.owner?.accountStatus !== 'ACTIVE') {
+      return {
+        data: {
+          revisionReminder: {
+            sent: false,
+            reason: 'inactive_owner_account',
+            message: 'The business owner account is not active.',
+          },
+        },
+      };
+    }
+
+    const lastSentReminder = await db.query.listingRevisionReminders.findFirst({
+      where: and(
+        eq(listingRevisionReminders.businessId, business.id),
+        eq(listingRevisionReminders.status, 'SENT'),
+      ),
+      orderBy: [desc(listingRevisionReminders.sentAt)],
+    });
+    const retryAt = getRevisionReminderRetryAt(lastSentReminder?.sentAt);
+
+    if (retryAt) {
+      return {
+        data: {
+          revisionReminder: {
+            sent: false,
+            reason: 'cooldown',
+            message: `A reminder was already sent recently. Try again after ${formatAppDateTime(retryAt)}.`,
+            retryAt: retryAt.toISOString(),
+          },
+        },
+      };
+    }
+
+    const emailResult = await sendNotificationSafely(() =>
+      notifyUserOfListingRevisionReminder(ownerRecipient, {
+        id: business.id,
+        businessName: business.name || 'Your business listing',
+        revisionReason: business.moderatorNotes || 'Please upload the requested business registration document.',
+      }),
+    ) as {
+      sent?: boolean;
+      reason?: string;
+      message?: string;
+      messageId?: string;
+      subject?: string;
+      text?: string;
+    };
+    const sentAt = emailResult.sent ? new Date() : null;
+    const fallbackSubject = `Reminder: DTI /SEC Certificate needed for ${business.name}`;
+    const fallbackBody = 'Please upload your DTI /SEC Certificate or any valid business registration document.';
+    const inserted = await db.insert(listingRevisionReminders).values({
+      businessId: business.id,
+      ownerId: business.ownerId,
+      sentById: variables.adminUserId || null,
+      recipientEmail: ownerRecipient.email,
+      subject: emailResult.subject || fallbackSubject,
+      body: emailResult.text || fallbackBody,
+      status: emailResult.sent ? 'SENT' : 'FAILED',
+      smtpMessageId: emailResult.messageId || null,
+      errorMessage: emailResult.sent ? null : (emailResult.message || emailResult.reason || 'Email was not sent.'),
+      sentAt,
+    }).returning({ id: listingRevisionReminders.id });
+
+    return {
+      data: {
+        revisionReminder: {
+          sent: Boolean(emailResult.sent),
+          reason: emailResult.reason,
+          message: emailResult.message,
+          messageId: emailResult.messageId,
+          reminderId: inserted[0]?.id,
+          sentAt: sentAt?.toISOString(),
+          recipientEmail: ownerRecipient.email,
+        },
       },
     };
   },

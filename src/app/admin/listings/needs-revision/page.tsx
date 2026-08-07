@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { canAccessAdmin } from '@/lib/auth/roles';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -14,12 +14,16 @@ export default function AdminNeedsRevisionListingsPage() {
   const [listings, setListings] = useState<BusinessListing[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
+  const fetchListings = useCallback(async () => {
+    const data = await getAllBusinesses({ status: 'REVISION_REQUESTED' });
+    setListings(data);
+  }, []);
+
   useEffect(() => {
     if (user && canAccessAdmin(role)) {
       const fetchData = async () => {
         try {
-          const data = await getAllBusinesses({ status: 'REVISION_REQUESTED' });
-          setListings(data);
+          await fetchListings();
         } catch (error) {
           console.error("Failed to fetch listings", error);
         } finally {
@@ -28,7 +32,7 @@ export default function AdminNeedsRevisionListingsPage() {
       };
       fetchData();
     }
-  }, [user, role]);
+  }, [user, role, fetchListings]);
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (!user || !canAccessAdmin(role)) return null;
@@ -37,13 +41,17 @@ export default function AdminNeedsRevisionListingsPage() {
     <AdminLayout>
       <PageHeader
         title="Needs Revision"
-        description="Listings sent back for owner revision."
+        description="Track requested changes and remind owners to upload their DTI /SEC Certificate or another valid business registration document."
       />
 
       {dataLoading ? (
         <div className="p-8 text-center text-slate-500 bg-white border border-slate-200 rounded-lg shadow-sm">Loading listings...</div>
       ) : (
-        <AdminListingTable listings={listings} />
+        <AdminListingTable
+          listings={listings}
+          showRevisionReminderActions
+          onRevisionReminderSent={fetchListings}
+        />
       )}
     </AdminLayout>
   );

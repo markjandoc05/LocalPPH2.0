@@ -15,6 +15,8 @@ test('removes private owner, verification, and moderation data from public listi
     },
     documents: [{ name: 'business-permit.pdf', url: 'https://private.example/document' }],
     moderatorNotes: 'Internal review notes',
+    ownerEmail: 'private@example.com',
+    revisionReminderCount: 2,
     contactEmail: 'hello@example-business.ph',
     gallery: ['https://public.example/photo.jpg'],
   });

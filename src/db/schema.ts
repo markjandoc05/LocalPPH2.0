@@ -238,11 +238,32 @@ export const emailCampaignRecipients = pgTable('email_campaign_recipients', {
   emailIdx: index('email_campaign_recipients_email_idx').on(table.email),
 }));
 
+export const listingRevisionReminders = pgTable('listing_revision_reminders', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  businessId: uuid('business_id').references(() => businesses.id, { onDelete: 'cascade' }).notNull(),
+  ownerId: text('owner_id').references(() => users.id, { onDelete: 'set null' }),
+  sentById: text('sent_by_id').references(() => users.id, { onDelete: 'set null' }),
+  recipientEmail: text('recipient_email').notNull(),
+  subject: text('subject').notNull(),
+  body: text('body').notNull(),
+  status: text('status').default('PENDING').notNull(),
+  smtpMessageId: text('smtp_message_id'),
+  errorMessage: text('error_message'),
+  sentAt: timestamp('sent_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  businessCreatedAtIdx: index('listing_revision_reminders_business_created_at_idx').on(table.businessId, table.createdAt),
+  ownerCreatedAtIdx: index('listing_revision_reminders_owner_created_at_idx').on(table.ownerId, table.createdAt),
+  statusIdx: index('listing_revision_reminders_status_idx').on(table.status),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   businesses: many(businesses),
   supportTickets: many(supportTickets),
   emailCampaignRecipients: many(emailCampaignRecipients),
+  revisionRemindersReceived: many(listingRevisionReminders, { relationName: 'listingRevisionReminderOwner' }),
+  revisionRemindersSent: many(listingRevisionReminders, { relationName: 'listingRevisionReminderSender' }),
 }));
 
 export const businessesRelations = relations(businesses, ({ one, many }) => ({
@@ -272,6 +293,7 @@ export const businessesRelations = relations(businesses, ({ one, many }) => ({
   }),
   photos: many(businessPhotos),
   profileViews: many(businessProfileViews),
+  revisionReminders: many(listingRevisionReminders),
 }));
 
 export const businessProfileViewsRelations = relations(businessProfileViews, ({ one }) => ({
@@ -308,6 +330,23 @@ export const emailCampaignRecipientsRelations = relations(emailCampaignRecipient
   user: one(users, {
     fields: [emailCampaignRecipients.userId],
     references: [users.id],
+  }),
+}));
+
+export const listingRevisionRemindersRelations = relations(listingRevisionReminders, ({ one }) => ({
+  business: one(businesses, {
+    fields: [listingRevisionReminders.businessId],
+    references: [businesses.id],
+  }),
+  owner: one(users, {
+    fields: [listingRevisionReminders.ownerId],
+    references: [users.id],
+    relationName: 'listingRevisionReminderOwner',
+  }),
+  sentBy: one(users, {
+    fields: [listingRevisionReminders.sentById],
+    references: [users.id],
+    relationName: 'listingRevisionReminderSender',
   }),
 }));
 

@@ -35,6 +35,7 @@ export interface IntegrationSettings {
     listingSubmittedAdmin: EmailTemplateConfig;
     listingApprovedOwner: EmailTemplateConfig;
     listingRevisionOwner: EmailTemplateConfig;
+    listingRevisionReminderOwner: EmailTemplateConfig;
     inquiryReceivedOwner: EmailTemplateConfig;
     inquiryReplyUser: EmailTemplateConfig;
   };
@@ -117,6 +118,27 @@ export const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
       'Please update your listing here: {{editListingUrl}}',
       '',
       'Once you resubmit the listing, our team will review it again as soon as possible.',
+      '',
+      'Thank you,',
+      'The LocalPages.ph Team',
+    ].join('\n'),
+  },
+  listingRevisionReminderOwner: {
+    enabled: true,
+    subject: 'Reminder: DTI /SEC Certificate needed for {{businessName}}',
+    body: [
+      'Hi {{userName}},',
+      '',
+      'This is a reminder that your listing for {{businessName}} still requires an update before it can be approved.',
+      '',
+      'To help us verify and approve your listing, please upload your DTI /SEC Certificate or any valid business registration document. Thank you!',
+      '',
+      'Revision notes:',
+      '{{revisionReason}}',
+      '',
+      'Update your listing: {{editListingUrl}}',
+      '',
+      'Once the document has been uploaded, please resubmit your listing for review.',
       '',
       'Thank you,',
       'The LocalPages.ph Team',

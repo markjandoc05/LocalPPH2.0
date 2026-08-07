@@ -83,6 +83,11 @@ export const requestBusinessRevision = async (
   return result.data;
 };
 
+export const sendBusinessRevisionReminder = async (id: string) => {
+  const result = await provider.sendBusinessRevisionReminder({ id });
+  return result.data.revisionReminder;
+};
+
 export const suspendBusiness = async (
   id: string,
   adminUserId: string,

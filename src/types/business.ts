@@ -67,6 +67,12 @@ export interface BusinessListing {
   
   // Relations for UI display
   ownerName?: string;
+  ownerEmail?: string;
+  ownerAccountStatus?: string;
+  revisionReminderCount?: number;
+  lastRevisionReminderAt?: string;
+  lastRevisionReminderStatus?: 'SENT' | 'FAILED';
+  lastRevisionReminderError?: string;
   categoryName?: string;
   categorySlug?: string;
   subcategoryName?: string;
