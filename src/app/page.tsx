@@ -26,23 +26,21 @@ export default async function Home() {
       <HomeHero />
       
       <div className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-20">
-        <section>
-          <Suspense fallback={<CategoriesGridSkeleton />}>
-            <CategoriesGrid />
-          </Suspense>
-        </section>
+        <Suspense fallback={<RecentlyAddedSkeleton />}>
+          <RecentlyAddedSection />
+        </Suspense>
 
         <Suspense fallback={<FeaturedBusinessesSkeleton />}>
           <FeaturedBusinessesSection />
         </Suspense>
 
-        <Suspense fallback={<RecentlyAddedSkeleton />}>
-          <RecentlyAddedSection />
-        </Suspense>
-        
         <WhyLocalPagesSection />
         
         <BusinessOwnerCTA />
+
+        <Suspense fallback={<CategoriesGridSkeleton />}>
+          <CategoriesGrid />
+        </Suspense>
 
       </div>
     </div>

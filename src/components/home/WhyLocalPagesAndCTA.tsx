@@ -10,21 +10,45 @@ import { canManageBusiness, normalizeRole, ROLES } from '@/lib/auth/roles';
 
 export default function WhyLocalPagesSection() {
   const features = [
-    { title: 'Trusted Local Businesses', description: 'Verified and quality business listings.', icon: LucideCheckCircle },
-    { title: 'Nationwide Coverage', description: 'Businesses from all regions of the Philippines.', icon: LucideGlobe },
-    { title: 'Easy Business Discovery', description: 'Search by category or location.', icon: LucideSearch },
-    { title: 'Free Business Listing', description: 'Business owners can list their business for free.', icon: LucideUserPlus },
+    {
+      title: 'Build another online presence',
+      description: 'Give your business a dedicated public profile beyond social media.',
+      icon: LucideGlobe,
+    },
+    {
+      title: 'Be easier to discover',
+      description: 'Help customers searching for local services find accurate information about you.',
+      icon: LucideSearch,
+    },
+    {
+      title: 'Keep your information clear',
+      description: 'Share your category, location, contact details, hours, and services in one place.',
+      icon: LucideCheckCircle,
+    },
   ];
 
   return (
     <section>
-        <h2 className="text-3xl font-bold tracking-tight text-slate-900 text-center mb-12">Why LocalPages.ph</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feature, i) => (
-                <div key={i} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-                    <feature.icon className="w-10 h-10 text-blue-600 mb-6" />
-                    <h3 className="font-bold text-lg text-slate-900 mb-2">{feature.title}</h3>
-                    <p className="text-slate-600 text-sm">{feature.description}</p>
+        <div className="mx-auto mb-12 max-w-5xl text-center lg:mb-16">
+          <div>
+            <h2 className="text-4xl font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+              <span className="block lg:whitespace-nowrap">Help more customers discover</span>
+              <span className="block">your business online</span>
+            </h2>
+            <p className="mx-auto mt-7 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
+              Create a public LocalPages.ph profile that gives customers, search engines, and AI-powered search tools another accurate source of information about your business.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            {features.map((feature) => (
+                <div key={feature.title} className="flex min-h-64 flex-col items-center rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm sm:p-10">
+                    <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-3xl bg-blue-50 text-blue-600">
+                      <feature.icon className="h-11 w-11" />
+                    </div>
+                    <h3 className="mb-3 text-xl font-bold leading-tight text-slate-900">{feature.title}</h3>
+                    <p className="max-w-xs text-sm leading-6 text-slate-600">{feature.description}</p>
                 </div>
             ))}
         </div>
@@ -95,23 +119,27 @@ export function BusinessOwnerCTA() {
 
     return (
         <>
-            <section className="bg-[#0C0C1C] rounded-3xl p-8 text-center text-white sm:p-12">
-                <h2 className="mb-4 text-2xl font-bold sm:text-3xl">Grow Your Business with LocalPages.ph</h2>
-                <p className="mx-auto mb-8 max-w-2xl text-base text-slate-300 sm:text-lg">Create your free business profile and reach more customers across the Philippines.</p>
-                {isPublicViewer ? (
-                    <Link href="/auth/register" className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-blue-700 sm:text-lg">
-                        Create Free Business Listing
-                    </Link>
-                ) : (
-                    <button
-                        type="button"
-                        onClick={handleCtaClick}
-                        disabled={loading}
-                        className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70 sm:text-lg"
-                    >
-                        {loading ? 'Checking Account...' : 'Create Free Business Listing'}
-                    </button>
-                )}
+            <section className="rounded-3xl bg-[#0C0C1C] p-8 text-white sm:p-10">
+                <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:gap-4">
+                    <div className="min-w-0 flex-1">
+                        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Be Visible. Be Searchable. Be AI-Ready.</h2>
+                        <p className="mt-3 max-w-none text-base leading-7 text-slate-100 lg:whitespace-nowrap">Get listed on LocalPages.ph and improve your visibility across Google and AI-powered search.</p>
+                    </div>
+                    {isPublicViewer ? (
+                        <Link href="/auth/register" className="inline-flex shrink-0 items-center justify-center rounded-xl bg-white px-7 py-4 text-base font-bold text-blue-700 transition-colors hover:bg-blue-50 sm:px-8">
+                            Create Free Business Listing
+                        </Link>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={handleCtaClick}
+                            disabled={loading}
+                            className="inline-flex shrink-0 items-center justify-center rounded-xl bg-white px-7 py-4 text-base font-bold text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-70 sm:px-8"
+                        >
+                            {loading ? 'Checking Account...' : 'Create Free Business Listing'}
+                        </button>
+                    )}
+                </div>
             </section>
 
             {showUpgradePrompt && (
