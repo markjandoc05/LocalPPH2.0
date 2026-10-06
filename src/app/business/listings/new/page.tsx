@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { canManageBusiness } from '@/lib/auth/roles';
 import BusinessPortalLayout from '@/components/dashboard/BusinessPortalLayout';
 import BusinessForm from '@/components/business/BusinessForm';
-import { createBusinessDraft, submitBusiness } from '@/lib/data-connect/business-service';
+import { createBusinessDraftWithResult, getBusinessById, submitBusiness } from '@/lib/data-connect/business-service';
+import { completeListingRequest, getPendingListingRequest, rememberListingRequest } from '@/lib/data-connect/listing-draft-session';
 import { BusinessListing } from '@/types/business';
 import Link from 'next/link';
 import { LucideArrowLeft } from 'lucide-react';
@@ -16,25 +17,96 @@ import { trackEvent } from '@/lib/analytics';
 
 import { parseError, handleAuthRedirect } from '@/lib/utils/error';
 
+const draftStorage = () => {
+  try { return window.sessionStorage; } catch { return null; }
+};
+
 export default function NewBusinessListingPage() {
   const { user, role, loading } = useAuth();
+
+  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (!user || !canManageBusiness(role)) return null;
+
+  // A different signed-in owner gets a separate form and request lifecycle.
+  return <NewListingForm key={user.uid} ownerId={user.uid} />;
+}
+
+function NewListingForm({ ownerId }: { ownerId: string }) {
   const router = useRouter();
+  const [request] = useState(() => {
+    const pendingId = getPendingListingRequest(ownerId, draftStorage());
+    return { id: pendingId || crypto.randomUUID(), pending: Boolean(pendingId) };
+  });
+  const requestId = request.id;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [canCreate, setCanCreate] = useState(true);
+  const [savedListingId, setSavedListingId] = useState<string | null>(null);
+  const [checkingSavedListing, setCheckingSavedListing] = useState(request.pending);
+  const inFlight = useRef(false);
+  const mounted = useRef(true);
+  const confirmedListing = useRef<string | null>(null);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!request.pending) return;
+    let cancelled = false;
+    const checkSavedListing = async () => {
+      try {
+        const existing = await getBusinessById(requestId);
+        if (!cancelled && existing?.ownerId === ownerId) {
+          confirmedListing.current = requestId;
+          setSavedListingId(requestId);
+        } else if (!cancelled && existing) {
+          setCanCreate(false);
+          setError("You don't have permission to open this listing.");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const friendly = parseError(err);
+          setError(friendly.message);
+          handleAuthRedirect(friendly, router);
+        }
+      }
+      if (!cancelled) setCheckingSavedListing(false);
+    };
+    void checkSavedListing();
+    return () => { cancelled = true; };
+  }, [ownerId, request.pending, requestId, router]);
 
   const handleSubmit = async (data: Partial<BusinessListing>, action: 'save' | 'submit') => {
-    if (!user) return;
+    if (!canCreate || inFlight.current) return;
+    if (confirmedListing.current) {
+      router.replace(`/business/listings/${confirmedListing.current}/edit`);
+      return;
+    }
+    const isCurrent = () => mounted.current;
+    inFlight.current = true;
+    rememberListingRequest(ownerId, requestId, draftStorage());
     
     setIsSubmitting(true);
     setError('');
 
     try {
-      // 1. Always create draft first
-      const businessId = await createBusinessDraft({ ...data, ownerId: user.uid });
+      const result = await createBusinessDraftWithResult({ ...data, id: requestId, ownerId });
+      const businessId = result.id;
+      if (!isCurrent()) return;
+      confirmedListing.current = businessId;
+      if (!result.created) {
+        setSavedListingId(businessId);
+        setIsSubmitting(false);
+        router.replace(`/business/listings/${businessId}/edit`);
+        return;
+      }
       
       // 2. If submit action, run submit mutation
       if (action === 'submit') {
         await submitBusiness(businessId);
+        if (!isCurrent()) return;
         trackEvent('submit_listing', {
           business_id: businessId,
           business_name: data.name || '',
@@ -58,19 +130,28 @@ export default function NewBusinessListingPage() {
         });
       }
       
-      // Redirect back to listings
-      router.push('/business/listings');
+      completeListingRequest(ownerId, businessId, draftStorage());
+      router.replace('/business/listings');
       router.refresh(); // Force refresh to show new data
-    } catch (err: any) {
+    } catch (err) {
+      if (!isCurrent()) return;
       const friendly = parseError(err);
-      setError(friendly.message);
+      if (confirmedListing.current || friendly.status === 409) {
+        const savedId = confirmedListing.current || requestId;
+        confirmedListing.current = savedId;
+        setSavedListingId(savedId);
+        rememberListingRequest(ownerId, savedId, draftStorage());
+        setError('Your listing was saved, but we could not confirm the next step. Open it to check its details and status.');
+      } else {
+        setError(friendly.message);
+        handleAuthRedirect(friendly, router);
+      }
+      inFlight.current = false;
       setIsSubmitting(false);
-      handleAuthRedirect(friendly, router);
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
-  if (!user || !canManageBusiness(role)) return null;
+  if (checkingSavedListing) return <div className="p-8 text-center">Loading...</div>;
 
   return (
     <BusinessPortalLayout>
@@ -92,7 +173,15 @@ export default function NewBusinessListingPage() {
         </div>
       )}
 
-      <BusinessForm onSubmit={handleSubmit} isLoading={isSubmitting} />
+      {savedListingId ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-6" role="status">
+          <p className="mb-4 text-sm text-slate-700">Open your saved listing to review its details and status before making further changes.</p>
+          <Link href={`/business/listings/${savedListingId}/edit`} className="font-semibold text-blue-600 hover:underline">Open saved listing</Link>
+          <p className="mt-4"><Link href="/business/listings" className="text-sm text-slate-600 hover:underline">View all listings</Link></p>
+        </div>
+      ) : canCreate ? (
+        <BusinessForm key={requestId} initialData={{ id: requestId }} onSubmit={handleSubmit} isLoading={isSubmitting} />
+      ) : null}
     </BusinessPortalLayout>
   );
 }

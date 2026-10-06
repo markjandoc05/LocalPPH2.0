@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { businesses, users } from '@/db/schema';
-import { canManageBusiness, normalizeRole } from '@/lib/auth/roles';
-import { adminAuth } from '@/lib/firebase/admin';
+import { businesses } from '@/db/schema';
+import { ROLES } from '@/lib/auth/roles';
+import { requireActiveUser } from '@/lib/auth/server-authorization';
 
 const VALID_CATEGORIES = new Set(['logo', 'cover', 'gallery', 'documents']);
 const UUID_PATTERN =
@@ -14,19 +14,8 @@ const jsonError = (message: string, status: number) =>
   NextResponse.json({ error: message }, { status });
 
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return jsonError('Unauthorized.', 401);
-  }
-
-  let decodedToken;
-  try {
-    decodedToken = await adminAuth.verifyIdToken(
-      authHeader.slice('Bearer '.length).trim(),
-    );
-  } catch {
-    return jsonError('Unauthorized. Invalid or expired token.', 401);
-  }
+  const authorization = await requireActiveUser(req, [ROLES.BUSINESS, ROLES.ADMIN]);
+  if (authorization.error) return authorization.error;
 
   let body: Record<string, unknown>;
   try {
@@ -50,21 +39,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const userId = decodedToken.uid;
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, userId),
-    });
-
-    if (
-      !user ||
-      user.accountStatus !== 'ACTIVE' ||
-      !canManageBusiness(normalizeRole(user.role))
-    ) {
-      return jsonError(
-        'You do not have permission to upload business media.',
-        403,
-      );
-    }
+    const userId = authorization.user.id;
 
     const business = await db.query.businesses.findFirst({
       where: eq(businesses.id, businessId),

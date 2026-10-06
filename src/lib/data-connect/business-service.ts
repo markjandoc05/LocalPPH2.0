@@ -17,10 +17,13 @@ export const getBusinessById = async (
   return result.data.business as BusinessListing | null;
 };
 
-export const createBusinessDraft = async (data: any) => {
+export const createBusinessDraftWithResult = async (data: Partial<BusinessListing>) => {
   const result = await provider.createBusinessDraft(data);
-  return result.data.business_insert;
+  return { id: result.data.business_insert, created: result.data.business_created !== false };
 };
+
+export const createBusinessDraft = async (data: Partial<BusinessListing>) =>
+  (await createBusinessDraftWithResult(data)).id;
 
 export const updateBusiness = async (id: string, data: any) => {
   const result = await provider.updateBusiness({ id, data });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth } from "@/lib/firebase-admin";
-import { isAdmin, normalizeRole } from "@/lib/auth/roles";
+import { normalizeRole } from "@/lib/auth/roles";
+import { requireActiveAdmin } from '@/lib/auth/server-authorization';
 import { databaseProvider } from "@/lib/data-connect/database-provider";
 import { sendEmailNotification } from "@/lib/email/notifications";
 import { db } from "@/db";
@@ -255,27 +255,9 @@ const sendExistingCampaignRecipient = async (campaignId: string, recipientId: st
   }, { status: result.sent ? 200 : 400 });
 };
 
-const requireAdmin = async (req: NextRequest) => {
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  const token = authHeader.split(" ")[1];
-  const decodedToken = await adminAuth.verifyIdToken(token);
-  const adminUserRes = await databaseProvider.getUserById({ id: decodedToken.uid });
-  const adminUser = adminUserRes?.data?.user;
-
-  if (!isAdmin(adminUser?.role)) {
-    return { error: NextResponse.json({ error: "Access denied. Administrator privileges required." }, { status: 403 }) };
-  }
-
-  return { adminUser };
-};
-
 export async function GET(req: NextRequest) {
   try {
-    const authResult = await requireAdmin(req);
+    const authResult = await requireActiveAdmin(req);
     if (authResult.error) return authResult.error;
 
     const usersRes = await databaseProvider.getAllUsers();
@@ -301,7 +283,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const authResult = await requireAdmin(req);
+    const authResult = await requireActiveAdmin(req);
     if (authResult.error) return authResult.error;
 
     const body = await req.json();
@@ -374,7 +356,7 @@ export async function POST(req: NextRequest) {
           replyToEmail: formatSender("LocalPages.ph Support", DEFAULT_SENDER),
           intervalSeconds,
           totalRecipients: recipients.length,
-          createdById: authResult.adminUser?.id,
+          createdById: authResult.user.id,
         })
         .returning();
       campaign = campaignRows[0];

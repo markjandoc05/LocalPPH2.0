@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { adminAuth, adminStorage } from "@/lib/firebase/admin";
-import { databaseProvider } from "@/lib/data-connect/database-provider";
-import { isAdmin } from "@/lib/auth/roles";
+import { adminStorage } from "@/lib/firebase/admin";
+import { requireActiveAdmin } from '@/lib/auth/server-authorization';
 
 const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -13,27 +12,9 @@ const sanitizeFileName = (fileName: string) =>
     .replace(/-+/g, "-")
     .slice(0, 90);
 
-const requireAdmin = async (req: NextRequest) => {
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  const token = authHeader.split(" ")[1];
-  const decodedToken = await adminAuth.verifyIdToken(token);
-  const userRes = await databaseProvider.getUserById({ id: decodedToken.uid });
-  const adminUser = userRes?.data?.user;
-
-  if (!isAdmin(adminUser?.role)) {
-    return { error: NextResponse.json({ error: "Access denied. Administrator privileges required." }, { status: 403 }) };
-  }
-
-  return { adminUser };
-};
-
 export async function POST(req: NextRequest) {
   try {
-    const authResult = await requireAdmin(req);
+    const authResult = await requireActiveAdmin(req);
     if (authResult.error) return authResult.error;
 
     const formData = await req.formData();

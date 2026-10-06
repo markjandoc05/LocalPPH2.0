@@ -3,24 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-interface IntegrationService {
-  enabled: boolean;
-  [key: string]: any;
-}
-
-interface IntegrationSettings {
-  googleAnalytics: IntegrationService & { measurementId: string };
-  searchConsole: IntegrationService & { verificationTag: string };
-  tagManager: IntegrationService & { containerId: string };
-  clarity: IntegrationService & { projectId: string };
-  metaPixel: IntegrationService & { pixelId: string };
-  cookieConsent: IntegrationService & { message: string; privacyPolicyUrl: string };
-  sitemap: IntegrationService & { url: string; autoGenerate: boolean };
-  robots: IntegrationService & { url: string; status: string };
-  openGraph: IntegrationService & { title: string; description: string; imageUrl: string };
-  favicon: IntegrationService & { url: string };
-}
+import type { PublicIntegrationSettings } from '@/lib/settings/public-settings';
 
 // HTML Head Injection & Script Loading Helpers (declared at top-level to satisfy linter hoisting)
 
@@ -128,7 +111,7 @@ const loadMetaPixel = (id: string) => {
 export default function SiteIntegrations() {
   const pathname = usePathname();
   const isAdminRoute = pathname?.startsWith('/admin') ?? false;
-  const [settings, setSettings] = useState<IntegrationSettings | null>(null);
+  const [settings, setSettings] = useState<PublicIntegrationSettings | null>(null);
   
   // Lazy-initialize consentGiven synchronously to prevent unnecessary useEffect re-renders
   const [consentGiven, setConsentGiven] = useState<boolean | null>(() => {

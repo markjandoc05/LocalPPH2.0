@@ -1,3 +1,4 @@
+import { BusinessDraftCreationError } from '@/lib/data-connect/business-draft';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { adminAuth } from '@/lib/firebase-admin';
@@ -500,7 +501,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    if (error instanceof ApiRequestError) {
+    if (error instanceof ApiRequestError || error instanceof BusinessDraftCreationError) {
       return jsonError(error.message, error.status);
     }
 

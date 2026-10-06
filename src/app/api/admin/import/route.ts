@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminUser } from "@/lib/auth/admin";
+import { requireActiveAdmin } from '@/lib/auth/server-authorization';
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -9,10 +9,8 @@ function slugify(text: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const admin = await getAdminUser();
-  if (!admin || admin.role !== 'ADMIN') {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-  }
+  const authorization = await requireActiveAdmin(req);
+  if (authorization.error) return authorization.error;
 
   const { type, data } = await req.json();
   console.log("Import type:", type, "Data length:", data?.length);

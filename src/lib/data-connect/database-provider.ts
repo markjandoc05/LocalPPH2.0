@@ -1,3 +1,5 @@
+import { toBusinessInquirySender } from './business-inquiry-sender';
+import { BusinessDraftCreationError, getBusinessDraftReplay } from './business-draft';
 import { DataProvider } from "./types";
 import { db } from "../../db/index";
 import { 
@@ -128,6 +130,7 @@ const formatBusinessInquiry = (ticket: any) => {
   if (!ticket) return null;
   const details = parseBusinessInquiryMessage(ticket.message);
   if (!details) return null;
+  const sender = toBusinessInquirySender(ticket.user);
   const threadMessages = parseBusinessInquiryThread(ticket.adminResponse);
   const initialMessage = {
     id: `${ticket.id}-initial`,
@@ -185,8 +188,8 @@ const formatBusinessInquiry = (ticket: any) => {
     businessSlug: details.businessSlug,
     ownerId: details.ownerId,
     subject: details.subject || ticket.subject || 'Business inquiry',
-    senderName: details.senderName || ticket.user?.displayName || '',
-    senderEmail: details.senderEmail || ticket.user?.email || '',
+    senderName: details.senderName || sender?.displayName || '',
+    senderEmail: details.senderEmail || sender?.email || '',
     senderContactNumber: details.senderContactNumber || '',
     message: details.message || '',
     response: ticket.adminResponse || '',
@@ -196,7 +199,7 @@ const formatBusinessInquiry = (ticket: any) => {
     deletedForOwner: latestOwnerDeleteTime >= latestMessageTime,
     unreadForSender: latestOwnerMessageTime > latestSenderReadTime,
     unreadForOwner: latestSenderMessageTime > latestOwnerReadTime,
-    sender: ticket.user || null,
+    sender,
   };
 };
 
@@ -831,7 +834,7 @@ export const databaseProvider: DataProvider = {
       res = await db.query.supportTickets.findMany({
         where: eq(supportTickets.category, businessInquiryCategory),
         with: {
-          user: true,
+          user: { columns: { displayName: true, email: true } },
         },
         orderBy: [desc(supportTickets.createdAt)],
       });
@@ -1371,16 +1374,31 @@ export const databaseProvider: DataProvider = {
 
   async createBusinessDraft(variables) {
     const id = variables.id || crypto.randomUUID();
+    const ownerId = variables.ownerId;
+    if (typeof ownerId !== 'string' || !ownerId) {
+      throw new BusinessDraftCreationError('A business owner is required.', 403);
+    }
+    const findExisting = () => db.query.businesses.findFirst({
+      columns: { id: true, ownerId: true, status: true },
+      where: eq(businesses.id, id),
+    });
+    const replay = getBusinessDraftReplay(await findExisting(), ownerId);
+    if (replay) return replay;
     const insertData = prepareBusinessWriteData(variables);
     const res = await db.insert(businesses)
       .values({
         ...insertData,
         id,
+        ownerId,
         status: 'DRAFT',
       })
+      .onConflictDoNothing({ target: businesses.id })
       .returning({ id: businesses.id });
-    
-    return { data: { business_insert: res[0].id } };
+
+    if (res[0]) return { data: { business_insert: res[0].id, business_created: true } };
+    const concurrentReplay = getBusinessDraftReplay(await findExisting(), ownerId);
+    if (concurrentReplay) return concurrentReplay;
+    throw new BusinessDraftCreationError('Unable to confirm draft creation. Please retry.', 503);
   },
 
   async updateBusiness(variables) {

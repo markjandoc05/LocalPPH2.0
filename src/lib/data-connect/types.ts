@@ -117,7 +117,7 @@ export interface DataProvider {
   }): Promise<{ data: { business: BusinessListing | null } }>;
   createBusinessDraft(
     variables: any,
-  ): Promise<{ data: { business_insert: string } }>;
+  ): Promise<{ data: { business_insert: string; business_created?: boolean } }>;
   updateBusiness(variables: {
     id: string;
     data: any;

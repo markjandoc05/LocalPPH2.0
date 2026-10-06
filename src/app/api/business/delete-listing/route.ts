@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth } from "@/lib/firebase/admin";
+import { requireActiveUser } from '@/lib/auth/server-authorization';
+import { ROLES } from '@/lib/auth/roles';
 import { db } from "@/db";
 import { businesses } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const token = authHeader.split("Bearer ")[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    const userId = decodedToken.uid;
+    const authorization = await requireActiveUser(req, [ROLES.BUSINESS, ROLES.ADMIN]);
+    if (authorization.error) return authorization.error;
+    const userId = authorization.user.id;
 
     const { businessId } = await req.json();
     if (!businessId) {
@@ -29,7 +26,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Delete business
-    await db.delete(businesses).where(eq(businesses.id, businessId));
+    const deleted = await db.delete(businesses)
+      .where(and(eq(businesses.id, businessId), eq(businesses.ownerId, userId)))
+      .returning({ id: businesses.id });
+    if (!deleted.length) {
+      return NextResponse.json({ error: "Forbidden: You do not own this business" }, { status: 403 });
+    }
 
     return NextResponse.json({ success: true });
 

@@ -1,25 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth } from "@/lib/firebase-admin";
-import { isAdmin } from "@/lib/auth/roles";
-import { databaseProvider } from "@/lib/data-connect/database-provider";
+import { requireActiveAdmin } from '@/lib/auth/server-authorization';
 import { getSmtpDiagnostics, sendEmailNotification } from "@/lib/email/notifications";
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const token = authHeader.split(" ")[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    const userId = decodedToken.uid;
-    const userRes = await databaseProvider.getUserById({ id: userId });
-    const adminUser = userRes?.data?.user;
-
-    if (!isAdmin(adminUser?.role)) {
-      return NextResponse.json({ error: "Access denied. Administrator privileges required." }, { status: 403 });
-    }
+    const authorization = await requireActiveAdmin(req);
+    if (authorization.error) return authorization.error;
+    const adminUser = authorization.user;
 
     if (!adminUser?.email) {
       return NextResponse.json({ error: "No registered email address found for this administrator." }, { status: 400 });
