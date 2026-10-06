@@ -1,7 +1,9 @@
 import type { IntegrationSettings } from './settings-service';
+import { extractAdSensePublisherId } from '@/lib/integrations/adsense';
 
 export interface PublicIntegrationSettings {
   googleAnalytics: { enabled: boolean; measurementId: string };
+  googleAdSense: { enabled: boolean; publisherId: string };
   searchConsole: { enabled: boolean; verificationTag: string };
   tagManager: { enabled: boolean; containerId: string };
   clarity: { enabled: boolean; projectId: string };
@@ -23,6 +25,14 @@ export const toPublicSettings = (
     enabled: settings?.googleAnalytics?.enabled === true,
     measurementId: publicString(settings?.googleAnalytics?.measurementId),
   },
+  googleAdSense: (() => {
+    const publisherId = extractAdSensePublisherId(settings?.googleAdSense?.codeSnippet);
+    const enabled = settings?.googleAdSense?.enabled === true && Boolean(publisherId);
+    return {
+      enabled,
+      publisherId: enabled ? publisherId : '',
+    };
+  })(),
   searchConsole: {
     enabled: settings?.searchConsole?.enabled === true,
     verificationTag: publicString(settings?.searchConsole?.verificationTag),

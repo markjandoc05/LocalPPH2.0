@@ -12,7 +12,7 @@
     "postbuild": "node scripts/copy-standalone-assets.mjs",
     "start": "node .next/standalone/server.js",
     "lint": "eslint",
-    "test": "node --import tsx --test src/lib/admin-user-sorting.test.ts src/lib/auth/data-api-policy.test.ts src/lib/data-connect/public-business-payload.test.ts src/lib/listing-revision-reminders.test.ts src/lib/seo/seo.test.ts src/lib/server/rate-limit.test.ts src/app/api/settings/route.test.ts src/lib/data-connect/business-inquiry-privacy.test.ts src/lib/auth/protected-routes.test.ts src/lib/data-connect/business-draft.test.ts src/lib/data-connect/listing-draft-session.test.ts src/lib/data-connect/listing-moderation.test.ts src/lib/email/listing-moderation-notifications.test.ts src/lib/data-connect/moderation-cache.test.ts",
+    "test": "node --import tsx --test src/lib/admin-user-sorting.test.ts src/lib/auth/data-api-policy.test.ts src/lib/data-connect/public-business-payload.test.ts src/lib/integrations/adsense.test.ts src/lib/listing-revision-reminders.test.ts src/lib/seo/seo.test.ts src/lib/server/rate-limit.test.ts src/app/api/settings/route.test.ts src/lib/data-connect/business-inquiry-privacy.test.ts src/lib/auth/protected-routes.test.ts src/lib/data-connect/business-draft.test.ts src/lib/data-connect/listing-draft-session.test.ts src/lib/data-connect/listing-moderation.test.ts src/lib/email/listing-moderation-notifications.test.ts src/lib/data-connect/moderation-cache.test.ts",
     "test:api-permissions": "node --import tsx --test src/lib/auth/data-api-policy.test.ts",
     "security:check-public-assets": "node scripts/security/check-public-assets.mjs",
     "db:seed": "tsx src/db/seed.ts",

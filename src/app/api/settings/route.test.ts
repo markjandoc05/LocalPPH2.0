@@ -29,6 +29,7 @@ const loadRoute = (getSettings: () => Promise<unknown>) => {
 
 const publicSettings: PublicIntegrationSettings = {
   googleAnalytics: { enabled: true, measurementId: 'G-SYNTHETIC' },
+  googleAdSense: { enabled: true, publisherId: 'ca-pub-1234567890123456' },
   searchConsole: { enabled: true, verificationTag: '<meta name="google-site-verification" content="synthetic-public-tag">' },
   tagManager: { enabled: true, containerId: 'GTM-SYNTHETIC' },
   clarity: { enabled: true, projectId: 'synthetic-clarity' },
@@ -43,6 +44,10 @@ const publicSettings: PublicIntegrationSettings = {
 const privateMarker = 'SYNTHETIC_PRIVATE_CREDENTIAL_DO_NOT_RETURN';
 const storedSettings = {
   ...publicSettings,
+  googleAdSense: {
+    enabled: true,
+    codeSnippet: '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456" crossorigin="anonymous"></script>',
+  },
   smtp: { enabled: true, host: 'smtp.invalid', port: '465', secure: true, user: 'synthetic@example.invalid', password: privateMarker, from: 'synthetic@example.invalid', rejectUnauthorized: true },
   emailTemplates: { inquiryReplyUser: { enabled: true, subject: privateMarker, body: privateMarker } },
   unexpectedPrivateField: { apiKey: privateMarker },
@@ -60,6 +65,7 @@ test('anonymous settings route excludes SMTP, templates, and unexpected private 
   assert.deepEqual(Object.keys(body).sort(), Object.keys(publicSettings).sort());
   assert.equal('smtp' in body, false);
   assert.equal('emailTemplates' in body, false);
+  assert.equal('codeSnippet' in body.googleAdSense, false);
   assert.equal('lastChecked' in body.googleAnalytics, false);
   assert.equal('privateCredential' in body.googleAnalytics, false);
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
@@ -78,6 +84,7 @@ test('missing settings produce disabled public integrations without private fiel
     assert.deepEqual(Object.keys(body).sort(), Object.keys(publicSettings).sort());
     assert.equal(Object.values(body).every((service) => (service as { enabled: boolean }).enabled === false), true);
     assert.deepEqual(body.googleAnalytics, { enabled: false, measurementId: '' });
+    assert.deepEqual(body.googleAdSense, { enabled: false, publisherId: '' });
   }
 });
 
@@ -90,6 +97,7 @@ test('malformed public fields cannot serialize private objects or enable trackin
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.deepEqual(body.googleAnalytics, { enabled: false, measurementId: '' });
+  assert.deepEqual(body.googleAdSense, { enabled: false, publisherId: '' });
   assert.deepEqual(body.searchConsole, { enabled: false, verificationTag: '' });
   assert.deepEqual(body.favicon, { enabled: false, url: '' });
   assert.equal(JSON.stringify(body).includes(privateMarker), false);

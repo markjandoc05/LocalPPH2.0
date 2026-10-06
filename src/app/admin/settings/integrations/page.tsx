@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { AnalyticsDocumentation } from '@/components/admin/AnalyticsDocumentation';
+import { extractAdSensePublisherId } from '@/lib/integrations/adsense';
 import { formatAppDateTime } from '@/lib/time';
 import { 
   LucideTrendingUp, 
@@ -27,7 +28,8 @@ import {
   LucideRefreshCw, 
   LucideCheckCircle, 
   LucideXCircle,
-  LucideMail
+  LucideMail,
+  LucideDollarSign
 } from 'lucide-react';
 
 interface IntegrationService {
@@ -39,6 +41,7 @@ interface IntegrationService {
 
 interface IntegrationSettings {
   googleAnalytics: IntegrationService & { measurementId: string };
+  googleAdSense: IntegrationService & { codeSnippet: string };
   searchConsole: IntegrationService & { verificationTag: string };
   tagManager: IntegrationService & { containerId: string };
   clarity: IntegrationService & { projectId: string };
@@ -135,6 +138,7 @@ const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
 
 const DEFAULT_SETTINGS: IntegrationSettings = {
   googleAnalytics: { enabled: false, measurementId: "" },
+  googleAdSense: { enabled: false, codeSnippet: "" },
   searchConsole: { enabled: false, verificationTag: "" },
   tagManager: { enabled: false, containerId: "" },
   clarity: { enabled: false, projectId: "" },
@@ -160,6 +164,10 @@ const DEFAULT_SETTINGS: IntegrationSettings = {
 const mergeSettings = (settings?: Partial<IntegrationSettings>): IntegrationSettings => ({
   ...DEFAULT_SETTINGS,
   ...(settings || {}),
+  googleAdSense: {
+    ...DEFAULT_SETTINGS.googleAdSense,
+    ...(settings?.googleAdSense || {}),
+  },
   smtp: {
     ...DEFAULT_SETTINGS.smtp,
     ...(settings?.smtp || {}),
@@ -445,6 +453,19 @@ export default function IntegrationsSettingsPage() {
         }
         break;
 
+      case 'googleAdSense': {
+        const publisherId = extractAdSensePublisherId(config.codeSnippet);
+        if (!config.codeSnippet?.trim()) {
+          message = "Paste the complete Google AdSense script snippet first.";
+        } else if (!publisherId) {
+          message = "Invalid AdSense snippet. Include Google's official adsbygoogle.js script and a ca-pub publisher ID.";
+        } else {
+          success = true;
+          message = `Google AdSense snippet validated for publisher ${publisherId}.`;
+        }
+        break;
+      }
+
       case 'searchConsole':
         if (!config.verificationTag) {
           message = "Verification tag/content is required.";
@@ -565,6 +586,7 @@ export default function IntegrationsSettingsPage() {
   const getServiceLabel = (service: keyof IntegrationSettings): string => {
     switch (service) {
       case 'googleAnalytics': return "Google Analytics 4";
+      case 'googleAdSense': return "Google AdSense";
       case 'searchConsole': return "Google Search Console";
       case 'tagManager': return "Google Tag Manager";
       case 'clarity': return "Microsoft Clarity";
@@ -597,6 +619,7 @@ export default function IntegrationsSettingsPage() {
     let hasRequiredFields = false;
     switch (serviceKey) {
       case "googleAnalytics": hasRequiredFields = !!config.measurementId; break;
+      case "googleAdSense": hasRequiredFields = Boolean(extractAdSensePublisherId(config.codeSnippet)); break;
       case "searchConsole": hasRequiredFields = !!config.verificationTag; break;
       case "tagManager": hasRequiredFields = !!config.containerId; break;
       case "clarity": hasRequiredFields = !!config.projectId; break;
@@ -1192,6 +1215,93 @@ export default function IntegrationsSettingsPage() {
                 {testResults.metaPixel && (
                   <p className={`text-[11px] mt-2 p-2 rounded ${testResults.metaPixel.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                     {testResults.metaPixel.message}
+                  </p>
+                )}
+              </Card>
+            )}
+
+            {/* GOOGLE ADSENSE */}
+            {(activeTab === 'all' || activeTab === 'analytics') && (
+              <Card className="p-6 border-slate-200 shadow-sm flex flex-col justify-between space-y-4 lg:col-span-2">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                        <LucideDollarSign className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm">Google AdSense</h3>
+                        <p className="text-xs text-slate-400">Run Google auto ads across the public site.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getServiceStatus('googleAdSense').variant}>
+                        {getServiceStatus('googleAdSense').text}
+                      </Badge>
+                      <button
+                        type="button"
+                        aria-label="Toggle Google AdSense"
+                        aria-pressed={settings.googleAdSense.enabled}
+                        onClick={() => handleToggle('googleAdSense')}
+                        className={`w-10 h-6 rounded-full p-1 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                          settings.googleAdSense.enabled ? 'bg-blue-600' : 'bg-slate-300'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ${
+                          settings.googleAdSense.enabled ? 'translate-x-4' : 'translate-x-0'
+                        }`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-900">
+                    Paste the complete script from Google AdSense. LocalPages.ph validates the official Google loader and publisher ID, then loads only that controlled script on the public site.
+                  </div>
+
+                  <div className="space-y-2 pt-2">
+                    <label className="block text-xs font-semibold text-slate-700" htmlFor="google-adsense-snippet">
+                      AdSense code snippet
+                    </label>
+                    <Textarea
+                      id="google-adsense-snippet"
+                      placeholder={'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>'}
+                      value={settings.googleAdSense.codeSnippet}
+                      onChange={(e) => handleInputChange('googleAdSense', 'codeSnippet', e.target.value)}
+                      disabled={!settings.googleAdSense.enabled}
+                      rows={4}
+                      className="text-xs font-mono leading-relaxed"
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      Ads load only in production after cookie consent is accepted. The raw snippet is never exposed through the public settings API.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-xs">
+                  <span className="text-[10px] text-slate-400">
+                    {settings.googleAdSense.lastChecked ? `Checked: ${settings.googleAdSense.lastChecked}` : 'Not tested yet'}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => runVerificationTest('googleAdSense')}
+                      disabled={!settings.googleAdSense.enabled || testingService === 'googleAdSense'}
+                      className="h-8 text-[11px] px-3 font-semibold"
+                    >
+                      Verify Format
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSave('googleAdSense')}
+                      className="h-8 text-[11px] px-3 font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+                {testResults.googleAdSense && (
+                  <p className={`text-[11px] mt-2 p-2 rounded ${testResults.googleAdSense.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    {testResults.googleAdSense.message}
                   </p>
                 )}
               </Card>
