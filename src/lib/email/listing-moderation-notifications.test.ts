@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
+import { extractAdSensePublisherId } from '../integrations/adsense';
 
 const load = (path: string, dependencies: Record<string, unknown>) => {
   const exports: Record<string, any> = {};
@@ -13,7 +14,12 @@ const load = (path: string, dependencies: Record<string, unknown>) => {
   } });
   return exports;
 };
-const { DEFAULT_EMAIL_TEMPLATES } = load('../settings/settings-service.ts', { '@/db': { db: {} }, '@/db/schema': { siteSettings: {} }, 'drizzle-orm': {} });
+const { DEFAULT_EMAIL_TEMPLATES } = load('../settings/settings-service.ts', {
+  '@/db': { db: {} },
+  '@/db/schema': { siteSettings: {} },
+  '@/lib/integrations/adsense': { extractAdSensePublisherId },
+  'drizzle-orm': {},
+});
 
 const fixture = (enabled = true, configured = true) => {
   const sent: Array<{ subject: string; text: string; html: string }> = [];

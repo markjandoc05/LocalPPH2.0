@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
+import { extractAdSensePublisherId } from "@/lib/integrations/adsense";
 import { eq } from "drizzle-orm";
 
 export interface IntegrationServiceConfig {
@@ -10,6 +11,7 @@ export interface IntegrationServiceConfig {
 
 export interface IntegrationSettings {
   googleAnalytics: { enabled: boolean; measurementId: string; lastChecked?: string };
+  googleAdSense: { enabled: boolean; codeSnippet: string; lastChecked?: string };
   searchConsole: { enabled: boolean; verificationTag: string; lastChecked?: string };
   tagManager: { enabled: boolean; containerId: string; lastChecked?: string };
   clarity: { enabled: boolean; projectId: string; lastChecked?: string };
@@ -191,6 +193,7 @@ export const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
 
 const DEFAULT_SETTINGS: IntegrationSettings = {
   googleAnalytics: { enabled: false, measurementId: "" },
+  googleAdSense: { enabled: false, codeSnippet: "" },
   searchConsole: { enabled: false, verificationTag: "" },
   tagManager: { enabled: false, containerId: "" },
   clarity: { enabled: false, projectId: "" },
@@ -216,6 +219,10 @@ const DEFAULT_SETTINGS: IntegrationSettings = {
 const mergeSettings = (settings?: Partial<IntegrationSettings>): IntegrationSettings => ({
   ...DEFAULT_SETTINGS,
   ...(settings || {}),
+  googleAdSense: {
+    ...DEFAULT_SETTINGS.googleAdSense,
+    ...(settings?.googleAdSense || {}),
+  },
   smtp: {
     ...DEFAULT_SETTINGS.smtp,
     ...(settings?.smtp || {}),
@@ -242,7 +249,12 @@ export async function getSettings(): Promise<IntegrationSettings> {
 }
 
 export async function saveSettings(settings: IntegrationSettings): Promise<void> {
-  const jsonStr = JSON.stringify(settings);
+  const mergedSettings = mergeSettings(settings);
+  if (mergedSettings.googleAdSense.enabled && !extractAdSensePublisherId(mergedSettings.googleAdSense.codeSnippet)) {
+    throw new Error("Google AdSense must contain a valid official AdSense script snippet before it can be enabled.");
+  }
+
+  const jsonStr = JSON.stringify(mergedSettings);
 
   // Real Database mode
   try {

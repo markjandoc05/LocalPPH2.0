@@ -58,6 +58,17 @@ const loadGA4 = (id: string) => {
   document.head.appendChild(script2);
 };
 
+const loadAdSense = (publisherId: string) => {
+  if (document.getElementById('localpages-adsense-script')) return;
+
+  const script = document.createElement('script');
+  script.id = 'localpages-adsense-script';
+  script.async = true;
+  script.crossOrigin = 'anonymous';
+  script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(publisherId)}`;
+  document.head.appendChild(script);
+};
+
 const loadGTM = (id: string) => {
   if (window.hasOwnProperty('gtm_initialized')) return;
   (window as any).gtm_initialized = true;
@@ -177,6 +188,10 @@ export default function SiteIntegrations() {
       // 4. Meta Pixel
       if (settings.metaPixel?.enabled && settings.metaPixel.pixelId) {
         loadMetaPixel(settings.metaPixel.pixelId);
+      }
+
+      if (settings.googleAdSense?.enabled && settings.googleAdSense.publisherId) {
+        loadAdSense(settings.googleAdSense.publisherId);
       }
     }
   }, [settings, consentGiven, isAdminRoute]);
