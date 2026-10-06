@@ -17,7 +17,7 @@ const supportCategories = [
 ];
 
 const getCategoryLabel = (value: string) =>
-  supportCategories.find((category) => category.value === value)?.label || value;
+  value === 'LISTING_REVIEW' ? 'Listing review request' : value === 'LISTING_CHANGE' ? 'Listing change request' : supportCategories.find((category) => category.value === value)?.label || value;
 
 export default function SupportPage() {
   const [category, setCategory] = useState('CONTACT_REQUEST');

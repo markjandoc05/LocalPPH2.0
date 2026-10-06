@@ -54,7 +54,9 @@ service firebase.storage {
     }
 
     function isValidWriteContext(ownerId, businessId, category, fileName) {
-      return isOwner(ownerId)
+      return resource == null
+        && request.resource != null
+        && isOwner(ownerId)
         && isValidOwnerId(ownerId)
         && isValidBusinessId(businessId)
         && isValidFileName(fileName)
@@ -66,7 +68,8 @@ service firebase.storage {
 
     match /businesses/{ownerId}/{businessId}/logo/{fileName} {
       allow read: if true;
-      allow write: if isValidWriteContext(ownerId, businessId, 'logo', fileName)
+      // Uploaded objects are immutable; deletion uses the authorized server endpoint.
+      allow create: if isValidWriteContext(ownerId, businessId, 'logo', fileName)
         && (
           request.resource == null
           || (
@@ -79,7 +82,8 @@ service firebase.storage {
 
     match /businesses/{ownerId}/{businessId}/cover/{fileName} {
       allow read: if true;
-      allow write: if isValidWriteContext(ownerId, businessId, 'cover', fileName)
+      // Uploaded objects are immutable; deletion uses the authorized server endpoint.
+      allow create: if isValidWriteContext(ownerId, businessId, 'cover', fileName)
         && (
           request.resource == null
           || (
@@ -92,7 +96,8 @@ service firebase.storage {
 
     match /businesses/{ownerId}/{businessId}/gallery/{fileName} {
       allow read: if true;
-      allow write: if isValidWriteContext(ownerId, businessId, 'gallery', fileName)
+      // Uploaded objects are immutable; deletion uses the authorized server endpoint.
+      allow create: if isValidWriteContext(ownerId, businessId, 'gallery', fileName)
         && (
           request.resource == null
           || (
@@ -105,7 +110,8 @@ service firebase.storage {
 
     match /businesses/{ownerId}/{businessId}/documents/{fileName} {
       allow read: if isOwner(ownerId) || isReviewer();
-      allow write: if isValidWriteContext(ownerId, businessId, 'documents', fileName)
+      // Uploaded objects are immutable; deletion uses the authorized server endpoint.
+      allow create: if isValidWriteContext(ownerId, businessId, 'documents', fileName)
         && (
           request.resource == null
           || (

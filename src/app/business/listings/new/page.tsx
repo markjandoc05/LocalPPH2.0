@@ -78,7 +78,7 @@ function NewListingForm({ ownerId }: { ownerId: string }) {
     return () => { cancelled = true; };
   }, [ownerId, request.pending, requestId, router]);
 
-  const handleSubmit = async (data: Partial<BusinessListing>, action: 'save' | 'submit') => {
+  const handleSubmit = async (data: Partial<BusinessListing>, action: 'save' | 'submit', policyVersion?: string) => {
     if (!canCreate || inFlight.current) return;
     if (confirmedListing.current) {
       router.replace(`/business/listings/${confirmedListing.current}/edit`);
@@ -105,7 +105,7 @@ function NewListingForm({ ownerId }: { ownerId: string }) {
       
       // 2. If submit action, run submit mutation
       if (action === 'submit') {
-        await submitBusiness(businessId);
+        await submitBusiness(businessId, policyVersion);
         if (!isCurrent()) return;
         trackEvent('submit_listing', {
           business_id: businessId,

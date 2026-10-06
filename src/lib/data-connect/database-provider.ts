@@ -22,7 +22,7 @@ import {
 import { eq, and, or, ilike, sql, desc, asc, inArray, notInArray } from "drizzle-orm";
 import { BusinessListing } from "@/types/business";
 import { formatAppDateTime } from "@/lib/time";
-import { sanitizePublicBusinessPayload } from "./public-business-payload";
+import { formatBusinessRow, formatPublicBusinessRow } from "./public-business-payload";
 import {
   getCategorySlugsForSearch,
   legacyCategorySlugs,
@@ -35,9 +35,13 @@ import {
   notifyUserOfAccountUpgrade,
   notifyUserOfApprovedListing,
   notifyUserOfListingRevision,
+  notifyUserOfListingModeration,
   notifyUserOfListingRevisionReminder,
 } from "@/lib/email/notifications";
 import { getRevisionReminderRetryAt } from '@/lib/listing-revision-reminders';
+import { ListingPolicyError, LISTING_POLICY_VERSION, assertOwnerCanEditListing, assertPolicyAcknowledgement, canReviewListing, getOwnerModerationMessage, readModerationMetadata, requirePolicyRequestId, serializeModerationMetadata, validateModerationRequest } from '@/lib/listing-policy';
+
+const legacySupportTicketColumns = { id: true, userId: true, category: true, subject: true, message: true, status: true, adminResponse: true, respondedById: true, respondedAt: true, createdAt: true, updatedAt: true } as const;
 
 const businessInquiryCategory = 'BUSINESS_INQUIRY';
 const businessInquiryPrefix = 'LOCALPAGES_BUSINESS_INQUIRY::';
@@ -203,51 +207,6 @@ const formatBusinessInquiry = (ticket: any) => {
   };
 };
 
-const formatBusinessRow = (b: any): BusinessListing => {
-  if (!b) return b;
-  let parsedDocuments = [];
-  if (b.documents) {
-    try {
-      parsedDocuments = typeof b.documents === 'string' ? JSON.parse(b.documents) : b.documents;
-    } catch (e) {
-      console.error("Error parsing business documents JSON:", e);
-    }
-  }
-  let parsedGallery = [];
-  if (b.gallery) {
-    try {
-      parsedGallery = typeof b.gallery === 'string' ? JSON.parse(b.gallery) : b.gallery;
-    } catch (e) {
-      console.error("Error parsing business gallery JSON:", e);
-    }
-  }
-  return {
-    ...b,
-    ownerName: b.owner?.displayName || b.owner?.email || "Not assigned",
-    ownerEmail: b.owner?.email || undefined,
-    ownerAccountStatus: b.owner?.accountStatus || undefined,
-    categoryName: b.category?.name || "Not assigned",
-    categorySlug: b.category?.slug || undefined,
-    subcategoryName: b.subcategory?.name || "Not assigned",
-    subcategorySlug: b.subcategory?.slug || undefined,
-    cityName: b.city?.name || "Not assigned",
-    citySlug: b.city?.slug || undefined,
-    provinceName: b.province?.name || "Not assigned",
-    provinceSlug: b.province?.slug || undefined,
-    regionName: b.region?.name || "Not assigned",
-    regionSlug: b.region?.slug || undefined,
-    documents: parsedDocuments,
-    gallery: parsedGallery,
-    createdAt: b.createdAt instanceof Date ? b.createdAt.toISOString() : (b.createdAt || new Date().toISOString()),
-    updatedAt: b.updatedAt instanceof Date ? b.updatedAt.toISOString() : (b.updatedAt || new Date().toISOString()),
-  } as unknown as BusinessListing;
-};
-
-const formatPublicBusinessRow = (business: any) =>
-  sanitizePublicBusinessPayload(
-    formatBusinessRow(business) as unknown as Record<string, unknown>,
-  ) as unknown as BusinessListing;
-
 const allowedBusinessWriteColumns = [
   'id', 'ownerId', 'categoryId', 'subcategoryId', 'regionId', 'provinceId', 'cityId', 'barangayId',
   'name', 'slug', 'description', 'addressLine1', 'zipCode',
@@ -256,7 +215,7 @@ const allowedBusinessWriteColumns = [
   'paymentMethods', 'parkingAvailability', 'deliveryAvailability', 'accessibilityOptions',
   'logoUrl', 'coverUrl', 'gallery', 'documents',
   'facebookUrl', 'instagramUrl', 'linkedinUrl', 'tiktokUrl', 'shopeeUrl', 'lazadaUrl',
-  'status', 'isFeatured', 'keywords', 'moderatorNotes'
+  'keywords'
 ];
 
 const nullableUuidColumns = new Set(['subcategoryId', 'barangayId']);
@@ -658,6 +617,7 @@ export const databaseProvider: DataProvider = {
 
   async createSupportTicket(variables) {
     const category = variables.category?.trim();
+    if (['LISTING_REVIEW', 'LISTING_CHANGE'].includes(category)) throw new ListingPolicyError('Use the listing review request form.');
     const subject = variables.subject?.trim();
     let message = variables.message?.trim();
 
@@ -753,6 +713,29 @@ export const databaseProvider: DataProvider = {
     }
 
     return { data: { support_ticket_insert: ticketId } };
+  },
+
+  async requestListingReview(variables) {
+    requirePolicyRequestId(variables.requestId);
+    const explanation = typeof variables.message === 'string' ? variables.message.trim() : '';
+    if (!explanation || explanation.length > 5000) throw new ListingPolicyError('A review explanation of 1–5,000 characters is required.');
+    return db.transaction(async (tx) => {
+      const [business] = await tx.select().from(businesses).where(eq(businesses.id, variables.id)).for('update');
+      if (!business) throw new ListingPolicyError('Business listing was not found.', 404);
+      if (business.ownerId !== variables.userId) throw new ListingPolicyError('You do not own this listing.', 403);
+      if (!['REJECTED', 'SUSPENDED', 'APPROVED', 'PENDING'].includes(business.status)) throw new ListingPolicyError('This listing can be corrected and submitted through its edit form.', 409);
+      const category = business.status === 'APPROVED' ? 'LISTING_CHANGE' : 'LISTING_REVIEW';
+      // Use existing support columns, including installations without inquiry-specific columns.
+      const existing = await tx.query.supportTickets.findFirst({ columns: legacySupportTicketColumns, where: eq(supportTickets.id, variables.requestId) });
+      if (existing) {
+        if (existing.userId !== variables.userId || !['LISTING_REVIEW', 'LISTING_CHANGE'].includes(existing.category) || !existing.message.startsWith(`Listing ID: ${business.id}\n`) || !existing.message.endsWith(`Owner explanation:\n${explanation}`)) throw new ListingPolicyError('This request ID has already been used for another request.', 409);
+        return { data: { support_ticket_insert: existing.id, alreadyRequested: true } };
+      }
+      const message = [`Listing ID: ${business.id}`, `Listing status: ${business.status}`, `Policy version: ${LISTING_POLICY_VERSION}`, `Decision ID: ${readModerationMetadata(business.moderatorNotes)?.decision?.id || 'Legacy decision / none'}`, '', 'Reviewer message:', getOwnerModerationMessage(business.moderatorNotes) || 'None', '', 'Owner explanation:', explanation].join('\n');
+      const inserted = await tx.insert(supportTickets).values({ id: variables.requestId, userId: variables.userId!, category, subject: `${category === 'LISTING_CHANGE' ? 'Listing change request' : 'Listing review request'}: ${business.name}`.slice(0, 200), message }).onConflictDoNothing({ target: supportTickets.id }).returning({ id: supportTickets.id });
+      if (!inserted[0]) throw new ListingPolicyError('This request ID has already been used. Please retry with a new request.', 409);
+      return { data: { support_ticket_insert: inserted[0].id } };
+    });
   },
 
   async getMySupportTickets(variables) {
@@ -1406,20 +1389,30 @@ export const databaseProvider: DataProvider = {
     delete filteredData.id;
     delete filteredData.ownerId;
 
-    const res = await db.update(businesses)
-      .set({
-        ...filteredData,
-        updatedAt: new Date(),
-      })
-      .where(eq(businesses.id, variables.id))
-      .returning({ id: businesses.id });
-    
-    return {
-      data: { business_update: res[0]?.id || variables.id },
-    };
+    return db.transaction(async (tx) => {
+      const [business] = await tx.select().from(businesses).where(eq(businesses.id, variables.id)).for('update');
+      if (!business) throw new ListingPolicyError('Business listing was not found.', 404);
+      if (business.ownerId !== variables.ownerId) throw new ListingPolicyError('You do not own this listing.', 403);
+      assertOwnerCanEditListing(business.status);
+      const res = await tx.update(businesses).set({ ...filteredData, updatedAt: new Date(Math.max(Date.now(), business.updatedAt.getTime() + 1)) }).where(eq(businesses.id, variables.id)).returning({ id: businesses.id });
+      return { data: { business_update: res[0].id } };
+    });
   },
 
   async submitBusiness(variables) {
+    assertPolicyAcknowledgement(variables.policyVersion);
+    const submission = await db.transaction(async (tx) => {
+      const [business] = await tx.select().from(businesses).where(eq(businesses.id, variables.id)).for('update');
+      if (!business) throw new ListingPolicyError('Business listing was not found.', 404);
+      if (business.ownerId !== variables.ownerId) throw new ListingPolicyError('You do not own this listing.', 403);
+      if (business.status === 'PENDING') return { id: business.id, alreadySubmitted: true };
+      assertOwnerCanEditListing(business.status);
+      const now = new Date(Math.max(Date.now(), business.updatedAt.getTime() + 1));
+      const previous = readModerationMetadata(business.moderatorNotes);
+      await tx.update(businesses).set({ status: 'PENDING', updatedAt: now, moderatorNotes: serializeModerationMetadata({ version: 1, ownerMessage: getOwnerModerationMessage(business.moderatorNotes), decision: previous?.decision, acknowledgement: { policyVersion: LISTING_POLICY_VERSION, acceptedAt: now.toISOString() } }) }).where(eq(businesses.id, business.id));
+      return { id: business.id, alreadySubmitted: false };
+    });
+    if (submission.alreadySubmitted) return { data: { business_update: submission.id } };
     const businessBeforeSubmit = await db.query.businesses.findFirst({
       where: eq(businesses.id, variables.id),
       with: {
@@ -1430,15 +1423,7 @@ export const databaseProvider: DataProvider = {
       },
     });
 
-    const res = await db.update(businesses)
-      .set({
-        status: 'PENDING',
-        updatedAt: new Date(),
-      })
-      .where(eq(businesses.id, variables.id))
-      .returning({ id: businesses.id });
-
-    if (res[0]?.id && businessBeforeSubmit?.status !== 'PENDING') {
+    if (submission.id) {
       await sendNotificationSafely(async () => {
         const admins = await getAdminEmailRecipients();
         const location = [businessBeforeSubmit?.city?.name, businessBeforeSubmit?.province?.name]
@@ -1446,7 +1431,7 @@ export const databaseProvider: DataProvider = {
           .join(', ');
 
         await notifyAdminsOfSubmittedListing(admins, {
-          id: res[0].id,
+          id: submission.id,
           businessName: businessBeforeSubmit?.name || 'New business listing',
           ownerName: getUserDisplayName(businessBeforeSubmit?.owner),
           ownerEmail: businessBeforeSubmit?.owner?.email,
@@ -1457,7 +1442,7 @@ export const databaseProvider: DataProvider = {
     }
     
     return {
-      data: { business_update: res[0]?.id || variables.id },
+      data: { business_update: submission.id },
     };
   },
 
@@ -1511,93 +1496,40 @@ export const databaseProvider: DataProvider = {
   },
 
   async updateBusinessStatus(variables) {
-    const businessBeforeUpdate = await db.query.businesses.findFirst({
-      where: eq(businesses.id, variables.id),
-      with: {
-        owner: true,
-      },
-    });
-
-    const isFirstApproval = variables.status === 'APPROVED' && businessBeforeUpdate?.status !== 'APPROVED';
-    const isRevisionRequest = variables.status === 'REVISION_REQUESTED';
-    let ownerRecipient: ReturnType<typeof toEmailRecipient> | null = null;
-
-    if (isFirstApproval || isRevisionRequest) {
-      const owner = businessBeforeUpdate?.owner || (
-        businessBeforeUpdate?.ownerId
-          ? await db.query.users.findFirst({ where: eq(users.id, businessBeforeUpdate.ownerId) })
-          : null
-      );
-      ownerRecipient = toEmailRecipient(owner);
-
-      if (!ownerRecipient.email) {
-        console.warn('Listing owner email notification skipped: business owner registered email was not found.', {
-          businessId: variables.id,
-          ownerId: businessBeforeUpdate?.ownerId,
-          status: variables.status,
-        });
-        ownerRecipient = null;
-      } else {
-        console.info('Listing owner email notification will be sent to registered owner email.', {
-          businessId: variables.id,
-          ownerId: businessBeforeUpdate?.ownerId,
-          ownerEmail: ownerRecipient.email,
-          status: variables.status,
-        });
+    const request = validateModerationRequest(variables.status, variables);
+    if (!variables.adminUserId) throw new ListingPolicyError('The authenticated reviewer is required.', 403);
+    const decision = await db.transaction(async (tx) => {
+      const [business] = await tx.select().from(businesses).where(eq(businesses.id, variables.id)).for('update');
+      if (!business) throw new ListingPolicyError('Business listing was not found.', 404);
+      const previous = readModerationMetadata(business.moderatorNotes);
+      if (previous?.decision?.id === request.decisionId) {
+        if (previous.decision.status !== variables.status || previous.decision.reasonCode !== request.reasonCode || previous.decision.ownerMessage !== request.moderatorNotes || previous.decision.reviewerId !== variables.adminUserId || business.status !== variables.status) throw new ListingPolicyError('This decision ID has already been used for another decision.', 409);
+        return { business, alreadyApplied: true };
       }
-    }
-
-    const res = await db.update(businesses)
-      .set({
+      if (business.status !== request.expectedStatus || business.updatedAt.toISOString() !== new Date(request.expectedUpdatedAt).toISOString()) throw new ListingPolicyError('The listing changed after you opened it. Refresh it and review the latest version before confirming.', 409);
+      if (!canReviewListing(business.status, variables.status as import('@/lib/listing-policy').ReviewStatus)) throw new ListingPolicyError('This action is not allowed for the current listing status. Published listings require suspension to unpublish.', 409);
+      const now = new Date(Math.max(Date.now(), business.updatedAt.getTime() + 1));
+      await tx.update(businesses).set({
         status: variables.status,
-        moderatorNotes: variables.moderatorNotes,
-        updatedAt: new Date(),
-      })
-      .where(eq(businesses.id, variables.id))
-      .returning({ id: businesses.id });
-
-    let approvalEmailNotification: unknown = null;
-    let revisionEmailNotification: unknown = null;
-
-    if (res[0]?.id && isFirstApproval && ownerRecipient) {
-      approvalEmailNotification = await sendNotificationSafely(async () => {
-        return notifyUserOfApprovedListing(
-          ownerRecipient,
-          businessBeforeUpdate?.name || 'Your business listing',
-          businessBeforeUpdate?.slug,
-        );
-      });
-    } else if (res[0]?.id && isFirstApproval && !ownerRecipient) {
-      approvalEmailNotification = {
-        sent: false,
-        reason: 'missing_owner_email',
-        message: 'Business owner registered email was not found.',
-      };
-    }
-
-    if (res[0]?.id && isRevisionRequest && ownerRecipient) {
-      revisionEmailNotification = await sendNotificationSafely(async () => {
-        return notifyUserOfListingRevision(ownerRecipient, {
-          id: variables.id,
-          businessName: businessBeforeUpdate?.name || 'Your business listing',
-          revisionReason: variables.moderatorNotes || 'Please review the requested updates in your business listing.',
-        });
-      });
-    } else if (res[0]?.id && isRevisionRequest && !ownerRecipient) {
-      revisionEmailNotification = {
-        sent: false,
-        reason: 'missing_owner_email',
-        message: 'Business owner registered email was not found.',
-      };
-    }
-    
-    return {
-      data: {
-        business_update: res[0]?.id || variables.id,
-        approvalEmailNotification,
-        revisionEmailNotification,
-      },
-    };
+        moderatorNotes: serializeModerationMetadata({ version: 1, ownerMessage: request.moderatorNotes || '', acknowledgement: previous?.acknowledgement, decision: {
+          id: request.decisionId, status: variables.status as import('@/lib/listing-policy').ReviewStatus,
+          reasonCode: request.reasonCode, ownerMessage: request.moderatorNotes || '', reviewerId: variables.adminUserId!, policyVersion: LISTING_POLICY_VERSION, decidedAt: now.toISOString(),
+        } }), updatedAt: now,
+      }).where(eq(businesses.id, business.id));
+      return { business, alreadyApplied: false };
+    });
+    const notificationKey = variables.status === 'APPROVED' ? 'approvalEmailNotification' : variables.status === 'REVISION_REQUESTED' ? 'revisionEmailNotification' : 'moderationEmailNotification';
+    if (decision.alreadyApplied) return { data: { business_update: variables.id, alreadyApplied: true, [notificationKey]: { sent: false, reason: 'already_applied', message: 'This decision was already saved. No duplicate notification was sent.' } } };
+    // The transaction commits before notification work; delivery failure never undoes a decision.
+    const emailResult = await sendNotificationSafely(async () => {
+      const owner = await db.query.users.findFirst({ where: eq(users.id, decision.business.ownerId) });
+      const recipient = toEmailRecipient(owner);
+      if (!recipient.email) return { sent: false, reason: 'missing_owner_email', message: 'Business owner registered email was not found.' };
+      if (variables.status === 'APPROVED') return notifyUserOfApprovedListing(recipient, decision.business.name, decision.business.slug);
+      if (variables.status === 'REVISION_REQUESTED') return notifyUserOfListingRevision(recipient, { id: variables.id, businessName: decision.business.name, revisionReason: request.moderatorNotes! });
+      return notifyUserOfListingModeration(recipient, { id: variables.id, businessName: decision.business.name, status: variables.status as 'REJECTED' | 'SUSPENDED', moderationReason: request.moderatorNotes! });
+    });
+    return { data: { business_update: variables.id, alreadyApplied: false, [notificationKey]: emailResult } };
   },
 
   async sendBusinessRevisionReminder(variables) {
@@ -1681,7 +1613,7 @@ export const databaseProvider: DataProvider = {
       notifyUserOfListingRevisionReminder(ownerRecipient, {
         id: business.id,
         businessName: business.name || 'Your business listing',
-        revisionReason: business.moderatorNotes || 'Please upload the requested business registration document.',
+        revisionReason: getOwnerModerationMessage(business.moderatorNotes) || 'Please upload the requested business registration document.',
       }),
     ) as {
       sent?: boolean;

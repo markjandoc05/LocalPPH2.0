@@ -13,6 +13,7 @@ export const {
   deleteUserAccount,
   getAllUsers,
   createSupportTicket,
+  requestListingReview,
   getMySupportTickets,
   getAllSupportTickets,
   updateSupportTicket,

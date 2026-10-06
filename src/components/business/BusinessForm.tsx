@@ -21,6 +21,8 @@ import {
 import { auth } from '@/lib/firebase/config';
 import { Button } from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
+import Link from 'next/link';
+import { LISTING_POLICY_TEXT, LISTING_POLICY_VERSION } from '@/lib/listing-policy';
 import {
   getAllCategories,
   getAllRegions,
@@ -31,7 +33,7 @@ import {
 
 interface BusinessFormProps {
   initialData?: Partial<BusinessListing>;
-  onSubmit: (data: Partial<BusinessListing>, action: 'save' | 'submit') => Promise<void>;
+  onSubmit: (data: Partial<BusinessListing>, action: 'save' | 'submit', policyVersion?: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -101,6 +103,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [policyAccepted, setPolicyAccepted] = useState(false);
   
   // Unique ID for uploads (either editing business ID or generated client-side)
   const [businessId] = useState(() => initialData.id || crypto.randomUUID());
@@ -435,6 +438,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
     }
 
     if (action === 'submit') {
+      if (!policyAccepted) customErrors.policy = 'Acknowledge the listing policy before submitting.';
       if (!logoUrl) {
         customErrors.logoUrl = 'Business logo is required';
       }
@@ -473,7 +477,7 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
       coverUrl: coverUrl || undefined,
       documents: documents,
       gallery: gallery
-    }, action);
+    }, action, action === 'submit' && policyAccepted ? LISTING_POLICY_VERSION : undefined);
   };
 
   return (
@@ -1066,6 +1070,17 @@ export default function BusinessForm({ initialData = {}, onSubmit, isLoading }: 
             </div>
           </div>
         </CardContent>
+      </Card>
+
+      <Card className="border-slate-200 p-6" id="section-listing-policy">
+        <h2 className="text-lg font-bold text-slate-900">Listing policy</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-700">{LISTING_POLICY_TEXT}</p>
+        <p className="mt-2 text-sm text-slate-600">Our team reviews each submission. You may request a review if you believe a decision is incorrect. <Link href="/terms#listing-policy" className="font-semibold text-blue-700 underline">Read the directory policy</Link>.</p>
+        <label className="mt-4 flex items-start gap-3 text-sm text-slate-800">
+          <input type="checkbox" checked={policyAccepted} onChange={(event) => setPolicyAccepted(event.target.checked)} aria-describedby={errors.policy ? 'listing-policy-error' : undefined} className="mt-1 h-4 w-4 shrink-0" />
+          I have read the listing policy and confirm that this business is eligible for the directory.
+        </label>
+        {errors.policy && <p id="listing-policy-error" role="alert" className="mt-2 text-sm text-red-600">{errors.policy}</p>}
       </Card>
 
       {/* Action Buttons */}

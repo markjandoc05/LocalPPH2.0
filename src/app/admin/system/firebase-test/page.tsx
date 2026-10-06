@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { canAccessAdmin } from "@/lib/auth/roles";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { firebaseProvider } from "@/lib/data-connect/firebase-provider";
+import { LISTING_POLICY_TEXT, LISTING_POLICY_VERSION } from "@/lib/listing-policy";
 import {
   LucidePlay,
   LucideCheckCircle,
@@ -43,7 +44,7 @@ export default function FirebaseTestPage() {
     if (isMutation) {
       if (
         !window.confirm(
-          `This is a mutation test that will modify the database. Are you sure you want to run '${id}'?`,
+          `This is a mutation test that will modify the database. Are you sure you want to run '${id}'?${id === 'submitBusiness' ? `\n\nListing policy (${LISTING_POLICY_VERSION}):\n${LISTING_POLICY_TEXT}\n\nConfirm to acknowledge this policy and submit the synthetic test listing.` : ''}`,
         )
       ) {
         return;
@@ -153,11 +154,10 @@ export default function FirebaseTestPage() {
     {
       id: "submitBusiness",
       name: "Submit Business",
-      description: "Requires a valid business ID to submit.",
+      description: "Creates and submits a synthetic listing after confirming the current listing policy.",
       isMutation: true,
       fn: async () => {
-        // Just testing if the mutation call works, we might get a not found error if we use a fake ID.
-        // Let's create one first to submit.
+        // The mutation confirmation includes the policy acknowledgement.
         const fakeId = crypto.randomUUID();
         await firebaseProvider.createBusinessDraft({
           id: fakeId,
@@ -166,49 +166,10 @@ export default function FirebaseTestPage() {
           slug: `test-business-submit-${Date.now()}`,
           status: "DRAFT",
         });
-        return firebaseProvider.submitBusiness({ id: fakeId });
+        return firebaseProvider.submitBusiness({ id: fakeId, policyVersion: LISTING_POLICY_VERSION });
       },
     },
-    {
-      id: "approveBusiness",
-      name: "Approve Business",
-      description: "Requires a valid business ID to approve.",
-      isMutation: true,
-      fn: async () => {
-        const fakeId = crypto.randomUUID();
-        await firebaseProvider.createBusinessDraft({
-          id: fakeId,
-          ownerId: user.uid,
-          name: "Firebase Test Business (Approve)",
-          slug: `test-business-approve-${Date.now()}`,
-          status: "PENDING",
-        });
-        return firebaseProvider.updateBusinessStatus({
-          id: fakeId,
-          status: "APPROVED",
-        });
-      },
-    },
-    {
-      id: "rejectBusiness",
-      name: "Reject Business",
-      description: "Requires a valid business ID to reject.",
-      isMutation: true,
-      fn: async () => {
-        const fakeId = crypto.randomUUID();
-        await firebaseProvider.createBusinessDraft({
-          id: fakeId,
-          ownerId: user.uid,
-          name: "Firebase Test Business (Reject)",
-          slug: `test-business-reject-${Date.now()}`,
-          status: "PENDING",
-        });
-        return firebaseProvider.updateBusinessStatus({
-          id: fakeId,
-          status: "REJECTED",
-        });
-      },
-    },
+
   ];
 
   const getStatusBadge = (status: TestResult["status"] | undefined) => {

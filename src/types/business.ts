@@ -55,6 +55,8 @@ export interface BusinessListing {
   
   // Moderator Notes
   moderatorNotes?: string;
+  moderationReasonCode?: string;
+  moderationPolicyVersion?: string;
   
   // Media and documents
   logoUrl?: string;

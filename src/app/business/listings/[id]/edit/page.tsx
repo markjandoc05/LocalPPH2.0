@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { canManageBusiness } from '@/lib/auth/roles';
 import BusinessPortalLayout from '@/components/dashboard/BusinessPortalLayout';
 import BusinessForm from '@/components/business/BusinessForm';
+import ListingReviewRequest from '@/components/business/ListingReviewRequest';
+import { OWNER_EDITABLE_STATUSES } from '@/lib/listing-policy';
 import { getBusinessById, updateBusiness, submitBusiness } from '@/lib/data-connect/business-service';
 import { BusinessListing } from '@/types/business';
 import Link from 'next/link';
@@ -15,6 +17,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { Button } from '@/components/ui/Button';
 
 import { parseError, handleAuthRedirect } from '@/lib/utils/error';
+import { ApiError } from '@/lib/data-connect/client-provider';
 
 export default function EditBusinessListingPage() {
   const { user, role, loading: authLoading } = useAuth();
@@ -26,6 +29,7 @@ export default function EditBusinessListingPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const busy = useRef(false);
 
   useEffect(() => {
     if (user && canManageBusiness(role) && id) {
@@ -48,10 +52,11 @@ export default function EditBusinessListingPage() {
       };
       fetchBusiness();
     }
-  }, [user, role, id]);
+  }, [user, role, id, router]);
 
-  const handleSubmit = async (data: Partial<BusinessListing>, action: 'save' | 'submit') => {
-    if (!user || !business) return;
+  const handleSubmit = async (data: Partial<BusinessListing>, action: 'save' | 'submit', policyVersion?: string) => {
+    if (!user || !business || busy.current) return;
+    busy.current = true;
     
     setIsSubmitting(true);
     setError('');
@@ -62,7 +67,7 @@ export default function EditBusinessListingPage() {
       
       // 2. If submit action, run submit mutation
       if (action === 'submit') {
-        await submitBusiness(id);
+        await submitBusiness(id, policyVersion);
       }
       
       // Redirect back to listings
@@ -70,9 +75,11 @@ export default function EditBusinessListingPage() {
       router.refresh();
     } catch (err: any) {
       const friendly = parseError(err);
-      setError(friendly.message);
+      setError(err instanceof ApiError && [400, 409].includes(err.status) ? err.message : friendly.message);
       setIsSubmitting(false);
       handleAuthRedirect(friendly, router);
+    } finally {
+      busy.current = false;
     }
   };
 
@@ -105,7 +112,7 @@ export default function EditBusinessListingPage() {
 
       <PageHeader
         title="Edit Business"
-        description="Update your business information."
+        description={business?.status === 'APPROVED' ? 'Your approved listing remains published. Request changes below.' : 'View the review decision or update eligible listing information.'}
       />
 
       {error && (
@@ -114,19 +121,24 @@ export default function EditBusinessListingPage() {
         </div>
       )}
 
-      {business?.status === 'REVISION_REQUESTED' && business.moderatorNotes && (
+      {business && ['REVISION_REQUESTED', 'REJECTED', 'SUSPENDED'].includes(business.status) && (
         <div className="mb-8 p-6 bg-yellow-50 rounded-xl border border-yellow-200 flex gap-4">
           <LucideAlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0" />
           <div>
-            <h3 className="font-bold text-yellow-800">Revision Required</h3>
-            <p className="text-sm text-yellow-700 mt-1">{business.moderatorNotes}</p>
+            <h3 className="font-bold text-yellow-800">{business.status === 'REVISION_REQUESTED' ? 'Revision required' : business.status === 'REJECTED' ? 'Listing rejected' : 'Listing suspended'}</h3>
+            <p className="text-sm text-yellow-700 mt-1 whitespace-pre-wrap">{business.moderatorNotes || 'No reason was recorded for this older decision. Request a review for clarification.'}</p>
           </div>
         </div>
       )}
 
-      {business && (
+      {business && OWNER_EDITABLE_STATUSES.includes(business.status) && (
         <BusinessForm initialData={business} onSubmit={handleSubmit} isLoading={isSubmitting} />
       )}
+      {business && ['APPROVED', 'REJECTED', 'SUSPENDED', 'PENDING'].includes(business.status) && <>
+        {business.status === 'PENDING' && <p className="mb-4 text-sm text-slate-700">Your submission is awaiting review. Request changes or clarification below; ordinary resubmission is disabled.</p>}
+        <ListingReviewRequest key={business.id} id={business.id} approved={business.status === 'APPROVED'} />
+      </>}
+      {business?.status === 'INACTIVE' && <p className="text-sm text-slate-700">This listing is inactive. <Link href="/support" className="text-blue-700 underline">Contact support</Link> for assistance.</p>}
     </BusinessPortalLayout>
   );
 }

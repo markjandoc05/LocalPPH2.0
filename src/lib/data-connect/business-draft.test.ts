@@ -10,6 +10,7 @@ import * as policy from '../auth/data-api-policy';
 import * as roles from '../auth/roles';
 import * as draftHelpers from './business-draft';
 import * as senderHelpers from './business-inquiry-sender';
+import * as listingPolicy from '../listing-policy';
 import * as publicPayload from './public-business-payload';
 import * as reminders from '../listing-revision-reminders';
 import * as categoryHelpers from './seed/categories';
@@ -80,7 +81,7 @@ const fixture = (initial: Row[] = [], concurrent = false) => {
   } });
   const { databaseProvider } = execute<{ databaseProvider: DataProvider }>(providerSource, {
     '../../db/index': { db }, '../../db/schema': schema, 'drizzle-orm': drizzle,
-    './business-draft': draftHelpers, './business-inquiry-sender': senderHelpers,
+    './business-draft': draftHelpers, './business-inquiry-sender': senderHelpers, '@/lib/listing-policy': listingPolicy,
     './public-business-payload': publicPayload, './public-data-cache': {}, './seed/categories': categoryHelpers,
     '@/lib/time': { formatAppDateTime: () => 'Synthetic' }, '@/lib/email/notifications': {}, '@/lib/listing-revision-reminders': reminders,
   });
@@ -89,7 +90,7 @@ const fixture = (initial: Row[] = [], concurrent = false) => {
     const { POST } = execute<{ POST: (request: NextRequest) => Promise<Response> }>(routeSource, {
       'next/server': { NextRequest, NextResponse }, '@/lib/firebase-admin': { adminAuth: { verifyIdToken: async () => ({ uid: ownerId }) } },
       '@/lib/auth/data-api-policy': policy, '@/lib/auth/roles': roles,
-      '@/lib/data-connect/database-provider': { databaseProvider: provider }, '@/lib/data-connect/business-draft': draftHelpers,
+      '@/lib/data-connect/database-provider': { databaseProvider: provider }, '@/lib/data-connect/business-draft': draftHelpers, '@/lib/listing-policy': listingPolicy,
       '@/lib/server/rate-limit': { consumeRateLimit: () => ({ allowed: true }), getRequestClientIp: () => 'synthetic' },
       '@/lib/data-connect/public-cache-invalidation': {},
     });

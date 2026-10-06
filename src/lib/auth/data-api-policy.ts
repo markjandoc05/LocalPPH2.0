@@ -5,6 +5,7 @@ export const DATA_API_POLICIES = {
   getUserById: 'bootstrap',
   updateUser: 'authenticated',
   createSupportTicket: 'authenticated',
+  requestListingReview: 'business',
   getMySupportTickets: 'authenticated',
   getMySentBusinessInquiries: 'authenticated',
   deleteMyBusinessInquiry: 'authenticated',

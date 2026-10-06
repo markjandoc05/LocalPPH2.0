@@ -1,6 +1,7 @@
 import { provider } from "./provider";
 import { BusinessListing, BusinessStatus } from "@/types/business";
 import { UserAccount, AdminDashboardStats, SupportTicket } from "@/types/admin";
+import type { ModerationRequest } from '@/lib/listing-policy';
 import { normalizeRole } from "@/lib/auth/roles";
 
 // Wrapper service around the Data Connect operations (or mocks) for Admin functionality
@@ -46,61 +47,20 @@ export const getBusinessForReview = async (
   return result.data.business as BusinessListing | null;
 };
 
-export const approveBusiness = async (id: string, adminUserId: string) => {
-  const result = await provider.updateBusinessStatus({
-    id,
-    status: "APPROVED",
-    adminUserId,
-  });
+const saveBusinessReview = async (id: string, status: 'APPROVED' | 'REJECTED' | 'REVISION_REQUESTED' | 'SUSPENDED', adminUserId: string, request: ModerationRequest, reason = '') => {
+  const result = await provider.updateBusinessStatus({ ...request, id, status, adminUserId, moderatorNotes: reason });
   return result.data;
 };
-
-export const rejectBusiness = async (
-  id: string,
-  adminUserId: string,
-  reason: string,
-) => {
-  const result = await provider.updateBusinessStatus({
-    id,
-    status: "REJECTED",
-    moderatorNotes: reason,
-    adminUserId,
-  });
-  return result.data.business_update;
-};
-
-export const requestBusinessRevision = async (
-  id: string,
-  adminUserId: string,
-  note: string,
-) => {
-  const result = await provider.updateBusinessStatus({
-    id,
-    status: "REVISION_REQUESTED",
-    moderatorNotes: note,
-    adminUserId,
-  });
-  return result.data;
-};
+export const approveBusiness = (id: string, adminUserId: string, request: ModerationRequest) => saveBusinessReview(id, 'APPROVED', adminUserId, request);
+export const rejectBusiness = (id: string, adminUserId: string, reason: string, request: ModerationRequest) => saveBusinessReview(id, 'REJECTED', adminUserId, request, reason);
+export const requestBusinessRevision = (id: string, adminUserId: string, reason: string, request: ModerationRequest) => saveBusinessReview(id, 'REVISION_REQUESTED', adminUserId, request, reason);
 
 export const sendBusinessRevisionReminder = async (id: string) => {
   const result = await provider.sendBusinessRevisionReminder({ id });
   return result.data.revisionReminder;
 };
 
-export const suspendBusiness = async (
-  id: string,
-  adminUserId: string,
-  reason: string,
-) => {
-  const result = await provider.updateBusinessStatus({
-    id,
-    status: "SUSPENDED",
-    moderatorNotes: reason,
-    adminUserId,
-  });
-  return result.data.business_update;
-};
+export const suspendBusiness = (id: string, adminUserId: string, reason: string, request: ModerationRequest) => saveBusinessReview(id, 'SUSPENDED', adminUserId, request, reason);
 
 export const getAllUsers = async (): Promise<UserAccount[]> => {
   const result = await provider.getAllUsers();

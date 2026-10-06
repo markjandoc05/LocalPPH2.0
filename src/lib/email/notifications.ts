@@ -361,6 +361,14 @@ export const notifyUserOfListingRevision = async (
   });
 };
 
+export const notifyUserOfListingModeration = async (
+  user: EmailRecipient,
+  listing: { id: string; businessName: string; status: 'REJECTED' | 'SUSPENDED'; moderationReason: string },
+) => sendTemplatedNotification(listing.status === 'REJECTED' ? 'listingRejectedOwner' : 'listingSuspendedOwner', user, {
+  userName: user.name || 'there', userEmail: user.email || '', businessName: listing.businessName,
+  moderationReason: listing.moderationReason, editListingUrl: `${SITE_URL}/business/listings/${listing.id}/edit`,
+});
+
 export const notifyUserOfListingRevisionReminder = async (
   user: EmailRecipient,
   listing: { id: string; businessName: string; revisionReason: string },

@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { LISTING_POLICY_TEXT } from '@/lib/listing-policy';
 
 export const metadata: Metadata = {
   title: 'Terms and Conditions | LocalPages.ph',
@@ -33,6 +34,8 @@ const sections = [
     body: [
       'If you submit or manage a business listing, you represent that you are authorized to act for the business and to publish the submitted information on LocalPages.ph.',
       'Business listings must be accurate, lawful, relevant, and not misleading. You are responsible for keeping business name, description, category, address, phone numbers, email address, website, images, hours, and other details up to date.',
+      LISTING_POLICY_TEXT,
+      'This is a directory eligibility policy, not a legal determination about a business. Reviewers make decisions manually. If a listing is rejected or suspended, its owner can view the reason in the business dashboard and request a review through support. Missing information or registration documents normally require correction and resubmission instead.',
       'We may review, approve, reject, edit, unpublish, suspend, or remove listings that are incomplete, inaccurate, duplicated, misleading, abusive, unlawful, spam-like, irrelevant, or inconsistent with the purpose of the directory.',
     ],
   },
@@ -140,7 +143,7 @@ export default function TermsPage() {
 
         <div className="space-y-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           {sections.map((section) => (
-            <section key={section.title}>
+            <section key={section.title} id={section.title === '4. Business listings' ? 'listing-policy' : undefined}>
               <h2 className="text-xl font-bold text-slate-950">{section.title}</h2>
               <div className="mt-3 space-y-3">
                 {section.body.map((paragraph) => (

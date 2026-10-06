@@ -34,6 +34,8 @@ export interface IntegrationSettings {
     upgradeApprovedUser: EmailTemplateConfig;
     listingSubmittedAdmin: EmailTemplateConfig;
     listingApprovedOwner: EmailTemplateConfig;
+    listingRejectedOwner: EmailTemplateConfig;
+    listingSuspendedOwner: EmailTemplateConfig;
     listingRevisionOwner: EmailTemplateConfig;
     listingRevisionReminderOwner: EmailTemplateConfig;
     inquiryReceivedOwner: EmailTemplateConfig;
@@ -101,6 +103,16 @@ export const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
       '',
       'View listing: {{businessUrl}}',
     ].join('\n'),
+  },
+  listingRejectedOwner: {
+    enabled: true,
+    subject: 'Your LocalPages.ph listing was rejected: {{businessName}}',
+    body: 'Hi {{userName}},\n\nWe cannot publish {{businessName}}.\n\nReason:\n{{moderationReason}}\n\nView the decision and request a review: {{editListingUrl}}\n\nA review request does not automatically republish your listing.',
+  },
+  listingSuspendedOwner: {
+    enabled: true,
+    subject: 'Your LocalPages.ph listing was suspended: {{businessName}}',
+    body: 'Hi {{userName}},\n\n{{businessName}} is no longer publicly listed. Its saved information has been retained.\n\nReason:\n{{moderationReason}}\n\nView the decision and request a review: {{editListingUrl}}\n\nA review request does not automatically republish your listing.',
   },
   listingRevisionOwner: {
     enabled: true,

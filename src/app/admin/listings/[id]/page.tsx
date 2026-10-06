@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { canAccessAdmin } from '@/lib/auth/roles';
@@ -14,6 +14,7 @@ import {
   requestBusinessRevision, 
   suspendBusiness 
 } from '@/lib/data-connect/admin-service';
+import { canReviewListing, type ModerationRequest, type ModerationReasonCode } from '@/lib/listing-policy';
 import { BusinessListing } from '@/types/business';
 import Link from 'next/link';
 import { LucideArrowLeft } from 'lucide-react';
@@ -21,6 +22,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { Button } from '@/components/ui/Button';
 
 import { parseError, handleAuthRedirect } from '@/lib/utils/error';
+import { ApiError } from '@/lib/data-connect/client-provider';
 
 export default function ReviewListingPage() {
   const { user, role, loading: authLoading } = useAuth();
@@ -37,6 +39,8 @@ export default function ReviewListingPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [actionType, setActionType] = useState<'APPROVE' | 'REJECT' | 'REVISION' | 'SUSPEND' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reviewRequest, setReviewRequest] = useState<ModerationRequest | null>(null);
+  const busy = useRef(false);
 
   useEffect(() => {
     if (user && canAccessAdmin(role) && id) {
@@ -58,67 +62,40 @@ export default function ReviewListingPage() {
       };
       fetchBusiness();
     }
-  }, [user, role, id]);
+  }, [user, role, id, router]);
 
   const openAction = (type: 'APPROVE' | 'REJECT' | 'REVISION' | 'SUSPEND') => {
+    if (!business || busy.current) return;
+    setReviewRequest({ decisionId: crypto.randomUUID(), expectedStatus: business.status, expectedUpdatedAt: business.updatedAt });
     setActionType(type);
     setModalOpen(true);
     setActionError('');
     setActionNotice(null);
   };
 
-  const handleConfirmAction = async (reason: string) => {
-    if (!user || !business || !actionType) return;
-    
-    setIsSubmitting(true);
-    setActionError('');
-    setActionNotice(null);
+  const handleConfirmAction = async (reason: string, reasonCode?: ModerationReasonCode) => {
+    if (!user || !business || !actionType || !reviewRequest || busy.current) return;
+    busy.current = true;
+    setIsSubmitting(true); setActionError(''); setActionNotice(null);
     try {
-      if (actionType === 'APPROVE') {
-        const result = await approveBusiness(id, user.uid);
-        const emailResult = result?.approvalEmailNotification;
-        if (emailResult?.sent) {
-          setActionNotice({
-            type: 'success',
-            message: `Listing approved. Approval email was accepted by SMTP${emailResult.messageId ? ` (${emailResult.messageId})` : ''}.`,
-          });
-        } else {
-          setActionNotice({
-            type: 'warning',
-            message: `Listing approved, but approval email was not sent${emailResult?.message ? `: ${emailResult.message}` : emailResult?.reason ? `: ${emailResult.reason}` : '.'}`,
-          });
-        }
-      } else if (actionType === 'REJECT') {
-        await rejectBusiness(id, user.uid, reason);
-      } else if (actionType === 'REVISION') {
-        const result = await requestBusinessRevision(id, user.uid, reason);
-        const emailResult = result?.revisionEmailNotification;
-        if (emailResult?.sent) {
-          setActionNotice({
-            type: 'success',
-            message: `Revision requested. Email was accepted by SMTP${emailResult.messageId ? ` (${emailResult.messageId})` : ''}.`,
-          });
-        } else {
-          setActionNotice({
-            type: 'warning',
-            message: `Revision requested, but email was not sent${emailResult?.message ? `: ${emailResult.message}` : emailResult?.reason ? `: ${emailResult.reason}` : '.'}`,
-          });
-        }
-      } else if (actionType === 'SUSPEND') {
-        await suspendBusiness(id, user.uid, reason);
-      }
-      
+      const request = { ...reviewRequest, reasonCode };
+      const result = actionType === 'APPROVE' ? await approveBusiness(id, user.uid, request)
+        : actionType === 'REJECT' ? await rejectBusiness(id, user.uid, reason, request)
+        : actionType === 'REVISION' ? await requestBusinessRevision(id, user.uid, reason, request)
+        : await suspendBusiness(id, user.uid, reason, request);
+      const emailResult = result.approvalEmailNotification || result.revisionEmailNotification || result.moderationEmailNotification;
+      const label = actionType === 'APPROVE' ? 'Listing approved' : actionType === 'REJECT' ? 'Listing rejected' : actionType === 'REVISION' ? 'Revision requested' : 'Listing suspended';
+      setActionNotice({ type: emailResult?.sent || result.alreadyApplied ? 'success' : 'warning', message: result.alreadyApplied
+        ? 'This decision was already saved. No duplicate notification was sent.'
+        : emailResult?.sent ? `${label}. Email notification was accepted by SMTP.` : `${label}. The decision was saved, but email was not sent${emailResult?.message ? `: ${emailResult.message}` : '.'}` });
       setModalOpen(false);
-      // Reload business data to reflect new status
-      const updated = await getBusinessForReview(id);
-      setBusiness(updated);
-    } catch (err: any) {
+      try { setBusiness(await getBusinessForReview(id)); }
+      catch { setActionError('The decision was saved, but the listing could not be reloaded. Refresh this page before taking another action.'); }
+    } catch (err) {
       const friendly = parseError(err);
-      setActionError(friendly.message);
+      setActionError(err instanceof ApiError && [400, 409].includes(err.status) ? err.message : friendly.message);
       handleAuthRedirect(friendly, router);
-    } finally {
-      setIsSubmitting(false);
-    }
+    } finally { busy.current = false; setIsSubmitting(false); }
   };
 
   if (authLoading || dataLoading) return <div className="p-8 text-center">Loading...</div>;
@@ -152,7 +129,7 @@ export default function ReviewListingPage() {
         
         {business && (
           <div className="flex gap-2">
-            {business.status !== 'APPROVED' && (
+            {canReviewListing(business.status, 'APPROVED') && (
               <Button
                 onClick={() => openAction('APPROVE')}
                 isLoading={isSubmitting && actionType === 'APPROVE'}
@@ -162,7 +139,7 @@ export default function ReviewListingPage() {
               </Button>
             )}
             
-            {(business.status === 'PENDING' || business.status === 'APPROVED') && (
+            {(canReviewListing(business.status, 'REVISION_REQUESTED')) && (
               <Button
                 onClick={() => openAction('REVISION')}
                 isLoading={isSubmitting && actionType === 'REVISION'}
@@ -172,7 +149,7 @@ export default function ReviewListingPage() {
               </Button>
             )}
             
-            {business.status !== 'REJECTED' && (
+            {canReviewListing(business.status, 'REJECTED') && (
               <Button
                 onClick={() => openAction('REJECT')}
                 variant="outline"
@@ -183,7 +160,7 @@ export default function ReviewListingPage() {
               </Button>
             )}
             
-            {business.status === 'APPROVED' && (
+            {canReviewListing(business.status, 'SUSPENDED') && (
               <Button
                 onClick={() => openAction('SUSPEND')}
                 isLoading={isSubmitting && actionType === 'SUSPEND'}
@@ -216,7 +193,13 @@ export default function ReviewListingPage() {
         <>
           <ListingReviewPanel business={business} />
           
-          <ReviewActionModal 
+          <ReviewActionModal key={reviewRequest?.decisionId}
+            listingName={business.name}
+            errorMessage={actionError}
+            onReload={() => {
+              setModalOpen(false);
+              void getBusinessForReview(id).then((updated) => { setBusiness(updated); setActionError(''); }).catch(() => setActionError('Unable to refresh the listing. Please reload this page.'));
+            }}
             isOpen={modalOpen} 
             actionType={actionType} 
             onClose={() => setModalOpen(false)} 

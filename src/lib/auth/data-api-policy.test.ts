@@ -15,7 +15,7 @@ test('the authenticated data API exposes only its explicit operation allowlist',
   assert.equal(isDataApiMethod('__proto__'), false);
   assert.equal(isDataApiMethod('constructor'), false);
   assert.equal(isDataApiMethod(undefined), false);
-  assert.equal(Object.keys(DATA_API_POLICIES).length, 39);
+  assert.equal(Object.keys(DATA_API_POLICIES).length, 40);
 });
 
 test('bootstrap operations require a valid token but not an existing database profile', () => {
@@ -46,6 +46,8 @@ test('subscribers are limited to their profile, support, and sent inquiries', ()
 
 test('business accounts can manage business-owned operations but cannot review or administer', () => {
   assert.equal(canInvokeDataApiMethod('getMyBusinesses', 'BUSINESS'), true);
+  assert.equal(canInvokeDataApiMethod('requestListingReview', 'BUSINESS'), true);
+  assert.equal(canInvokeDataApiMethod('requestListingReview', 'SUBSCRIBER'), false);
   assert.equal(canInvokeDataApiMethod('createBusinessDraft', 'BUSINESS'), true);
   assert.equal(canInvokeDataApiMethod('getBusinessById', 'BUSINESS'), true);
   assert.equal(canInvokeDataApiMethod('getAllBusinesses', 'BUSINESS'), false);

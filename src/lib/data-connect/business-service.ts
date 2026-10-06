@@ -30,14 +30,14 @@ export const updateBusiness = async (id: string, data: any) => {
   return result.data.business_update;
 };
 
-export const submitBusiness = async (id: string) => {
-  const result = await provider.submitBusiness({ id });
+export const submitBusiness = async (id: string, policyVersion?: string) => {
+  const result = await provider.submitBusiness({ id, policyVersion });
   return result.data.business_update;
 };
 
-export const resubmitBusiness = async (id: string) => {
+export const resubmitBusiness = async (id: string, policyVersion?: string) => {
   // same action right now
-  const result = await provider.submitBusiness({ id });
+  const result = await provider.submitBusiness({ id, policyVersion });
   return result.data.business_update;
 };
 

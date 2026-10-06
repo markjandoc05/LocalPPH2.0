@@ -1,3 +1,4 @@
+import * as listingPolicy from '../listing-policy';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -40,6 +41,7 @@ type Scenario = {
   role?: string; accountStatus?: string; deleted?: boolean; anonymous?: boolean;
   tokenError?: string; profileError?: boolean; nonOwner?: boolean; noDeletedRow?: boolean;
   settingsFailure?: boolean; saveFailure?: boolean; header?: string;
+  businessStatus?: string;
 };
 
 // Load actual handlers and the shared guard with all service boundaries replaced.
@@ -55,9 +57,9 @@ const loadEndpoint = (endpoint: Endpoint, scenario: Scenario = {}) => {
     let table: unknown;
     const chain: Record<string, unknown> = {
       from: (value: unknown) => { table = value; return chain; },
-      where: () => chain, orderBy: () => chain, limit: () => chain, leftJoin: () => chain,
+      where: () => chain, for: (mode: string) => { assert.equal(mode, 'update'); return chain; }, orderBy: () => chain, limit: () => chain, leftJoin: () => chain,
       then: (resolve: (value: unknown[]) => unknown, reject: (reason: unknown) => unknown) => {
-        try { return Promise.resolve(table === schema.users ? (profile() ? [user] : []) : []).then(resolve, reject); }
+        try { return Promise.resolve(table === schema.users ? (profile() ? [user] : []) : table === schema.businesses ? [{ id: businessId, ownerId: scenario.nonOwner ? 'other-user' : user.id, status: 'DRAFT' }] : []).then(resolve, reject); }
         catch (error) { return Promise.reject(error).then(resolve, reject); }
       },
     };
@@ -69,10 +71,11 @@ const loadEndpoint = (endpoint: Endpoint, scenario: Scenario = {}) => {
       businesses: { findFirst: async ({ where }: { where: drizzle.SQL }) => {
         const params = new PgDialect().sqlToQuery(where).params;
         if (scenario.nonOwner && params.includes(user.id)) return null;
-        return { id: businessId, ownerId: scenario.nonOwner ? 'other-user' : user.id };
+        return { id: businessId, ownerId: scenario.nonOwner ? 'other-user' : user.id, status: scenario.businessStatus || 'DRAFT' };
       } },
     },
     select,
+    transaction: async (callback: (tx: { select: typeof select }) => Promise<unknown>) => callback({ select }),
     delete: () => ({ where: (where: drizzle.SQL) => {
       effects.writes++; effects.deleteWhere = where;
       return { returning: async () => scenario.noDeletedRow ? [] : [{ id: businessId }] };
@@ -104,6 +107,7 @@ const loadEndpoint = (endpoint: Endpoint, scenario: Scenario = {}) => {
       sendEmailNotification: async () => { effects.mail++; return { sent: true }; }, getSmtpDiagnostics: async () => ({}),
     },
     '@/lib/data-connect/seed/seeder': { seedMetadata: async () => { effects.seed++; return { success: true }; } },
+    '@/lib/listing-policy': listingPolicy,
     '@/lib/data-connect/public-cache-invalidation': {
       invalidatePublicBusinessCache: () => { effects.cache++; }, invalidatePublicDirectoryCache: () => { effects.cache++; },
     },
@@ -188,9 +192,19 @@ test('listing deletion repeats the owner condition in the DELETE and handles own
   const params = new PgDialect().sqlToQuery(allowed.effects.deleteWhere!).params;
   assert.equal(params.includes('user-a'), true);
   assert.equal(params.includes(businessId), true);
+  assert.equal(params.includes('REJECTED'), true);
+  assert.equal(params.includes('SUSPENDED'), true);
   const changed = loadEndpoint(endpoint, { noDeletedRow: true });
   assert.equal((await changed.request()).status, 403);
   assert.equal(changed.effects.cache, 0);
+});
+
+test('policy decisions cannot be erased through owner listing deletion', async () => {
+  for (const businessStatus of ['REJECTED', 'SUSPENDED']) {
+    const fixture = loadEndpoint(endpoints[0], { businessStatus });
+    assert.equal((await fixture.request()).status, 409);
+    assertNoMutation(fixture.effects);
+  }
 });
 
 test('administrator settings preserve masked SMTP passwords and keep failures generic', async () => {

@@ -9,7 +9,12 @@ import {
 } from '@/lib/auth/data-api-policy';
 import { isAdmin, isAdminOrModerator, normalizeRole, ROLES } from '@/lib/auth/roles';
 import { databaseProvider } from '@/lib/data-connect/database-provider';
+import { ListingPolicyError, assertOwnerCanEditListing, assertPolicyAcknowledgement, requirePolicyRequestId, validateModerationRequest } from '@/lib/listing-policy';
 import { consumeRateLimit, getRequestClientIp } from '@/lib/server/rate-limit';
+import {
+  expirePublicBusinessCache,
+  invalidatePublicBusinessCache,
+} from '@/lib/data-connect/public-cache-invalidation';
 
 type Variables = Record<string, any>;
 
@@ -28,6 +33,9 @@ const PROTECTED_BUSINESS_FIELDS = new Set([
   'status',
   'isFeatured',
   'moderatorNotes',
+  'moderationReasonCode',
+  'moderationPolicyVersion',
+  'policyVersion',
 ]);
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -189,10 +197,19 @@ const invokeAllowedMethod = async ({
     }
 
     case 'createSupportTicket':
+      if (['LISTING_REVIEW', 'LISTING_CHANGE'].includes(variables.category)) {
+        throw new ApiRequestError('Use the listing’s Request review or Request changes form.', 400);
+      }
       return databaseProvider.createSupportTicket({
         ...variables,
         userId,
       } as Parameters<typeof databaseProvider.createSupportTicket>[0]);
+
+    case 'requestListingReview': {
+      const id = requireString(variables.id, 'Business ID');
+      await getOwnedBusiness(id, userId, role || '', false);
+      return databaseProvider.requestListingReview({ id, userId, requestId: requirePolicyRequestId(variables.requestId), message: requireString(variables.message, 'Review explanation') });
+    }
 
     case 'getMySupportTickets':
       return databaseProvider.getMySupportTickets({ userId });
@@ -248,9 +265,11 @@ const invokeAllowedMethod = async ({
 
     case 'updateBusiness': {
       const id = requireString(variables.id, 'Business ID');
-      await getOwnedBusiness(id, userId, role || '', false);
+      const owned = await getOwnedBusiness(id, userId, role || '', false);
+      assertOwnerCanEditListing(owned.data.business!.status);
       return databaseProvider.updateBusiness({
         id,
+        ownerId: userId,
         data: sanitizeBusinessData(variables.data),
       });
     }
@@ -258,7 +277,8 @@ const invokeAllowedMethod = async ({
     case 'submitBusiness': {
       const id = requireString(variables.id, 'Business ID');
       await getOwnedBusiness(id, userId, role || '', false);
-      return databaseProvider.submitBusiness({ id });
+      assertPolicyAcknowledgement(variables.policyVersion);
+      return databaseProvider.submitBusiness({ id, ownerId: userId, policyVersion: variables.policyVersion });
     }
 
     case 'getMyBusinessInquiries':
@@ -293,8 +313,9 @@ const invokeAllowedMethod = async ({
       if (!REVIEW_STATUSES.has(status)) {
         throw new ApiRequestError('Invalid listing review status.', 400);
       }
+      const decision = validateModerationRequest(status, variables);
       return databaseProvider.updateBusinessStatus({
-        ...variables,
+        ...decision,
         id: requireString(variables.id, 'Business ID'),
         status: status as Parameters<typeof databaseProvider.updateBusinessStatus>[0]['status'],
         adminUserId: userId,
@@ -495,13 +516,25 @@ export async function POST(req: NextRequest) {
       existingUser: user,
     });
 
+    switch (method) {
+      case 'updateBusinessStatus':
+        expirePublicBusinessCache();
+        break;
+      case 'updateBusiness':
+      case 'deleteUserAccount':
+        invalidatePublicBusinessCache();
+        break;
+      default:
+        break;
+    }
+
     return NextResponse.json(result, {
       headers: {
         'Cache-Control': 'no-store',
       },
     });
   } catch (error) {
-    if (error instanceof ApiRequestError || error instanceof BusinessDraftCreationError) {
+    if (error instanceof ApiRequestError || error instanceof BusinessDraftCreationError || error instanceof ListingPolicyError) {
       return jsonError(error.message, error.status);
     }
 

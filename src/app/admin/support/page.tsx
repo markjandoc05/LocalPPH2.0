@@ -8,10 +8,14 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { formatAppDateTime } from '@/lib/time';
 import { LucideInbox, LucideMail, LucideMessageSquare, LucideUser } from 'lucide-react';
+import Link from 'next/link';
+import { getListingSupportId } from '@/lib/listing-policy';
 
 const statuses = ['OPEN', 'IN_REVIEW', 'RESOLVED', 'CLOSED'];
 
 const categoryLabels: Record<string, string> = {
+  LISTING_REVIEW: 'Listing review request',
+  LISTING_CHANGE: 'Listing change request',
   CONTACT_REQUEST: 'Contact Request',
   BUG_REPORT: 'Bug Report',
   FEATURE_REQUEST: 'Feature Request',
@@ -189,6 +193,7 @@ export default function AdminSupportPage() {
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700 shadow-sm">
                     <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">User Message</p>
                     <p className="whitespace-pre-wrap break-words">{selectedTicket.message}</p>
+                    {getListingSupportId(selectedTicket.category, selectedTicket.message) && <Link href={`/admin/listings/${getListingSupportId(selectedTicket.category, selectedTicket.message)}`} className="mt-3 inline-block font-semibold text-blue-700 underline">Open listing for review</Link>}
                   </div>
                   {selectedTicket.adminResponse && (
                     <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-slate-800 shadow-sm">

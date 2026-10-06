@@ -1,4 +1,5 @@
 import { BusinessListing, BusinessStatus } from "@/types/business";
+import type { ModerationRequest } from '@/lib/listing-policy';
 
 export interface DataProvider {
   // User operations
@@ -37,6 +38,9 @@ export interface DataProvider {
     subject: string;
     message: string;
   }): Promise<{ data: { support_ticket_insert: string } }>;
+  requestListingReview(variables: {
+    id: string; userId?: string; requestId: string; message: string;
+  }): Promise<{ data: { support_ticket_insert: string; alreadyRequested?: boolean } }>;
   getMySupportTickets(variables: {
     userId: string;
   }): Promise<{ data: { supportTickets: any[] } }>;
@@ -121,21 +125,24 @@ export interface DataProvider {
   updateBusiness(variables: {
     id: string;
     data: any;
+    ownerId?: string;
   }): Promise<{ data: { business_update: string } }>;
   submitBusiness(variables: {
     id: string;
+    ownerId?: string;
+    policyVersion?: string;
   }): Promise<{ data: { business_update: string } }>;
 
   // Admin operations
   getAllBusinesses(variables?: {
     status?: BusinessStatus;
   }): Promise<{ data: { businesses: BusinessListing[] } }>;
-  updateBusinessStatus(variables: {
+  updateBusinessStatus(variables: ModerationRequest & {
     id: string;
     status: BusinessStatus;
     moderatorNotes?: string;
     adminUserId?: string;
-  }): Promise<{ data: { business_update: string; approvalEmailNotification?: any; revisionEmailNotification?: any } }>;
+  }): Promise<{ data: { business_update: string; alreadyApplied?: boolean; approvalEmailNotification?: any; revisionEmailNotification?: any; moderationEmailNotification?: any } }>;
   sendBusinessRevisionReminder(variables: {
     id: string;
     adminUserId?: string;

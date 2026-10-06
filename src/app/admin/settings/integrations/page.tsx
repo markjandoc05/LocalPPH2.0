@@ -63,6 +63,8 @@ interface IntegrationSettings {
     upgradeApprovedUser: EmailTemplateConfig;
     listingSubmittedAdmin: EmailTemplateConfig;
     listingApprovedOwner: EmailTemplateConfig;
+    listingRejectedOwner: EmailTemplateConfig;
+    listingSuspendedOwner: EmailTemplateConfig;
     listingRevisionOwner: EmailTemplateConfig;
     listingRevisionReminderOwner: EmailTemplateConfig;
     inquiryReceivedOwner: EmailTemplateConfig;
@@ -98,6 +100,16 @@ const DEFAULT_EMAIL_TEMPLATES: IntegrationSettings['emailTemplates'] = {
     enabled: true,
     subject: 'Your listing is approved: {{businessName}}',
     body: 'Hi {{userName}},\n\n{{businessName}} has been approved and is now visible on LocalPages.ph.\n\nView listing: {{businessUrl}}',
+  },
+  listingRejectedOwner: {
+    enabled: true,
+    subject: 'Your LocalPages.ph listing was rejected: {{businessName}}',
+    body: 'Hi {{userName}},\n\nWe cannot publish {{businessName}}.\n\nReason:\n{{moderationReason}}\n\nView the decision and request a review: {{editListingUrl}}\n\nA review request does not automatically republish your listing.',
+  },
+  listingSuspendedOwner: {
+    enabled: true,
+    subject: 'Your LocalPages.ph listing was suspended: {{businessName}}',
+    body: 'Hi {{userName}},\n\n{{businessName}} is no longer publicly listed. Its saved information has been retained.\n\nReason:\n{{moderationReason}}\n\nView the decision and request a review: {{editListingUrl}}\n\nA review request does not automatically republish your listing.',
   },
   listingRevisionOwner: {
     enabled: true,
@@ -187,6 +199,16 @@ const EMAIL_TEMPLATE_META: {
     title: 'Revision Requested to Owner',
     description: 'Sent to the business owner when an admin requests listing revisions.',
     variables: ['userName', 'userEmail', 'businessName', 'revisionReason', 'editListingUrl'],
+  },
+  {
+    key: 'listingRejectedOwner', title: 'Listing Rejected to Owner',
+    description: 'Sent after a rejection is saved, with the owner-facing reason and review request link.',
+    variables: ['userName', 'userEmail', 'businessName', 'moderationReason', 'editListingUrl'],
+  },
+  {
+    key: 'listingSuspendedOwner', title: 'Listing Suspended to Owner',
+    description: 'Sent after a suspension is saved, with the owner-facing reason and review request link.',
+    variables: ['userName', 'userEmail', 'businessName', 'moderationReason', 'editListingUrl'],
   },
   {
     key: 'listingRevisionReminderOwner',

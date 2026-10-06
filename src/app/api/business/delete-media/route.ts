@@ -6,6 +6,7 @@ import { businesses } from '@/db/schema';
 import { ROLES } from '@/lib/auth/roles';
 import { adminStorage } from '@/lib/firebase/admin';
 import { requireActiveUser } from '@/lib/auth/server-authorization';
+import { OWNER_EDITABLE_STATUSES } from '@/lib/listing-policy';
 
 const VALID_CATEGORIES = new Set(['logo', 'cover', 'gallery', 'documents']);
 const SAFE_FILE_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,199}$/;
@@ -79,22 +80,14 @@ export async function POST(req: NextRequest) {
       return jsonError('You do not own this media file.', 403);
     }
 
-    const business = await db.query.businesses.findFirst({
-      where: eq(businesses.id, parsedPath.businessId),
+    return await db.transaction(async (tx) => {
+      const [business] = await tx.select().from(businesses).where(eq(businesses.id, parsedPath.businessId)).for('update');
+      if ((business && business.ownerId !== userId) || (parsedPath.legacy && !business)) return jsonError('You do not own this business or media file.', 403);
+      if (business && !OWNER_EDITABLE_STATUSES.includes(business.status)) return jsonError('This listing’s media is protected during review and after approval or a moderation decision.', 409);
+      // Hold the listing lock until deletion finishes so approval cannot race the check.
+      await adminStorage.bucket().file(filePath).delete();
+      return NextResponse.json({ success: true });
     });
-
-    if (
-      (business && business.ownerId !== userId) ||
-      (parsedPath.legacy && !business)
-    ) {
-      return jsonError(
-        'You do not own this business or media file.',
-        403,
-      );
-    }
-
-    await adminStorage.bucket().file(filePath).delete();
-    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Delete media failed.', error);
     return jsonError('Unable to delete the media file.', 500);

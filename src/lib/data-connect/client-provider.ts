@@ -70,6 +70,7 @@ export const clientProvider: DataProvider = {
   deleteUserAccount: (vars) => apiFetch("deleteUserAccount", vars),
   getAllUsers: () => apiFetch("getAllUsers"),
   createSupportTicket: (vars) => apiFetch("createSupportTicket", vars),
+  requestListingReview: (vars) => apiFetch("requestListingReview", vars),
   getMySupportTickets: (vars) => apiFetch("getMySupportTickets", vars),
   getAllSupportTickets: () => apiFetch("getAllSupportTickets"),
   updateSupportTicket: (vars) => apiFetch("updateSupportTicket", vars),

@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { businesses } from '@/db/schema';
 import { ROLES } from '@/lib/auth/roles';
 import { requireActiveUser } from '@/lib/auth/server-authorization';
+import { OWNER_EDITABLE_STATUSES } from '@/lib/listing-policy';
 
 const VALID_CATEGORIES = new Set(['logo', 'cover', 'gallery', 'documents']);
 const UUID_PATTERN =
@@ -50,6 +51,9 @@ export async function POST(req: NextRequest) {
         'You do not have permission to upload files for this business.',
         403,
       );
+    }
+    if (business && !OWNER_EDITABLE_STATUSES.includes(business.status)) {
+      return jsonError('Media changes require an editable draft or requested revision. Use the listing review request form.', 409);
     }
 
     return NextResponse.json({

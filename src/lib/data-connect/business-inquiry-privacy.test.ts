@@ -12,6 +12,7 @@ import * as roles from '../auth/roles';
 import * as senderHelpers from './business-inquiry-sender';
 const inquiryHelpers = { BUSINESS_INQUIRY_PREFIX: 'LOCALPAGES_BUSINESS_INQUIRY::' };
 import * as draftHelpers from './business-draft';
+import * as listingPolicy from '../listing-policy';
 import * as publicPayload from './public-business-payload';
 import * as reminders from '../listing-revision-reminders';
 import * as categoryHelpers from './seed/categories';
@@ -81,7 +82,7 @@ const loadInquiryRoute = (options: {
   const { databaseProvider } = executeModule<{ databaseProvider: DataProvider }>(providerSource, {
     '../../db/index': { db }, '../../db/schema': schema, 'drizzle-orm': drizzle,
     './business-inquiry-sender': senderHelpers, './public-business-payload': publicPayload,
-    './business-draft': draftHelpers,
+    './business-draft': draftHelpers, '@/lib/listing-policy': listingPolicy,
     './public-data-cache': {}, './seed/categories': categoryHelpers,
     '@/lib/time': { formatAppDateTime: () => 'Synthetic time' },
     '@/lib/email/notifications': {}, '@/lib/listing-revision-reminders': reminders,
@@ -90,7 +91,7 @@ const loadInquiryRoute = (options: {
     'next/server': { NextRequest, NextResponse }, '@/lib/firebase-admin': { adminAuth: { verifyIdToken: async () => ({ uid }) } },
     '@/lib/auth/data-api-policy': policy, '@/lib/auth/roles': roles,
     '@/lib/data-connect/database-provider': { databaseProvider },
-    '@/lib/data-connect/business-draft': draftHelpers,
+    '@/lib/data-connect/business-draft': draftHelpers, '@/lib/listing-policy': listingPolicy,
     '@/lib/server/rate-limit': { consumeRateLimit: () => ({ allowed: true }), getRequestClientIp: () => 'synthetic' },
     '@/lib/data-connect/public-cache-invalidation': {},
   });

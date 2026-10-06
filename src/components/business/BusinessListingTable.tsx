@@ -78,7 +78,7 @@ export default function BusinessListingTable({ listings }: { listings: BusinessL
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-2">
-                <Link href={`/business/listings/${listing.id}/edit`} title="Edit">
+                <Link href={`/business/listings/${listing.id}/edit`} title={listing.status === 'APPROVED' ? 'Request listing changes' : ['DRAFT', 'REVISION_REQUESTED'].includes(listing.status) ? 'Edit listing' : 'View listing decision'}>
                   <Button variant="ghost" size="icon">
                     <LucideEdit className="w-4 h-4" />
                   </Button>
@@ -90,9 +90,9 @@ export default function BusinessListingTable({ listings }: { listings: BusinessL
                     </Button>
                   </Link>
                 )}
-                <Button variant="ghost" size="icon" onClick={() => handleDelete(listing.id)} title="Delete" className="text-red-500 hover:text-red-700">
+                {!['REJECTED', 'SUSPENDED'].includes(listing.status) && <Button variant="ghost" size="icon" onClick={() => handleDelete(listing.id)} title="Delete" className="text-red-500 hover:text-red-700">
                   <LucideTrash2 className="w-4 h-4" />
-                </Button>
+                </Button>}
               </div>
             </TableCell>
           </TableRow>
