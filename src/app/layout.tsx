@@ -5,10 +5,13 @@ import { AuthProvider } from "@/lib/auth/AuthContext";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import SiteIntegrations from "@/components/integrations/SiteIntegrations";
+import AdSenseVerificationScript from "@/components/integrations/AdSenseVerificationScript";
 import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
 import ProfileCompletionGuard from "@/components/auth/ProfileCompletionGuard";
 import { SITE_SOCIAL_IMAGE, SITE_URL } from "@/lib/seo/metadata";
 import { generateSiteJsonLd, serializeJsonLd } from "@/lib/seo/jsonld";
+
+export const dynamic = "force-dynamic";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -57,6 +60,7 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: serializeJsonLd(siteJsonLd) }}
         />
+        <AdSenseVerificationScript />
       </head>
       <body className="min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white bg-[#F8FAFC]">
         <AuthProvider>
