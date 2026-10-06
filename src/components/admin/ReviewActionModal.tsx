@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
-import { MODERATION_PRESETS, REVIEW_ACTION_STATUS, LISTING_POLICY_TEXT, type ModerationReasonCode, type ReviewAction } from '@/lib/listing-policy';
+import { MODERATION_PRESETS, REVIEW_ACTION_STATUS, type ModerationReasonCode, type ReviewAction } from '@/lib/listing-policy';
 
 interface ReviewActionModalProps {
   isOpen: boolean;
@@ -13,9 +13,10 @@ interface ReviewActionModalProps {
   isSubmitting: boolean;
   errorMessage?: string;
   onReload: () => void;
+  onRequestRevision?: () => void;
 }
 
-export default function ReviewActionModal({ isOpen, actionType, listingName, onClose, onConfirm, isSubmitting, errorMessage, onReload }: ReviewActionModalProps) {
+export default function ReviewActionModal({ isOpen, actionType, listingName, onClose, onConfirm, isSubmitting, errorMessage, onReload, onRequestRevision }: ReviewActionModalProps) {
   const [reason, setReason] = useState('');
   const [reasonCode, setReasonCode] = useState<ModerationReasonCode | undefined>();
   const [preview, setPreview] = useState(false);
@@ -24,7 +25,9 @@ export default function ReviewActionModal({ isOpen, actionType, listingName, onC
   const requiresReason = actionType !== 'APPROVE';
   const status = REVIEW_ACTION_STATUS[actionType];
   const titles = { APPROVE: 'Approve listing', REJECT: 'Reject listing', REVISION: 'Request revision', SUSPEND: 'Suspend listing' };
-  const valid = !requiresReason || (!!reasonCode && !!reason.trim() && reason.trim().length <= 5000);
+  const selectedPreset = MODERATION_PRESETS.find((preset) => preset.code === reasonCode);
+  const missingRegistrationPreset = MODERATION_PRESETS.find((preset) => preset.code === 'MISSING_REGISTRATION_DOCUMENTS');
+  const valid = !requiresReason || (!!selectedPreset && (selectedPreset.statuses as readonly string[]).includes(status) && !!reason.trim() && reason.trim().length <= 5000);
   const confirm = async () => {
     if (busy.current || isSubmitting || !preview || !valid) return;
     busy.current = true;
@@ -45,9 +48,15 @@ export default function ReviewActionModal({ isOpen, actionType, listingName, onC
     </div> : requiresReason ? <div className="space-y-4">
       <p className="text-sm text-slate-600">Select a reusable reason, then edit the response before previewing it. Missing information and documents require a revision request.</p>
       <div className="flex flex-wrap gap-2" aria-label="Reusable review reasons">
-        {MODERATION_PRESETS.filter((preset) => (preset.statuses as readonly string[]).includes(status)).map((preset) => <Button key={preset.code} type="button" variant="outline" size="sm" aria-pressed={reasonCode === preset.code} onClick={() => { setReasonCode(preset.code); setReason(preset.message); }}>{preset.label}</Button>)}
+        {MODERATION_PRESETS.filter((preset) => (preset.statuses as readonly string[]).includes(status)).map((preset) => <Button key={preset.code} type="button" variant="outline" size="sm" className="h-auto min-h-9 max-w-full whitespace-normal py-2" aria-pressed={reasonCode === preset.code} onClick={() => { setReasonCode(preset.code); setReason(preset.message); }}>{preset.label}</Button>)}
+        {actionType === 'REJECT' && onRequestRevision && missingRegistrationPreset && <Button type="button" variant="outline" size="sm" className="h-auto min-h-9 max-w-full whitespace-normal py-2" disabled={isSubmitting} onClick={() => {
+          if (busy.current) return;
+          setReasonCode(missingRegistrationPreset.code);
+          setReason(missingRegistrationPreset.message);
+          setPreview(false);
+          onRequestRevision();
+        }}>{missingRegistrationPreset.label}</Button>}
       </div>
-      {reasonCode === 'GAMBLING_RELATED_BUSINESS' && <p className="text-sm text-slate-600">{LISTING_POLICY_TEXT} Confirm the business’s actual services; a matching keyword alone is insufficient.</p>}
       <label htmlFor="review-owner-response" className="block text-sm font-medium">Owner-facing response (required)</label>
       <Textarea id="review-owner-response" value={reason} onChange={(event) => setReason(event.target.value)} rows={5} maxLength={5000} placeholder="Choose a reason above and describe the decision for the owner." />
     </div> : <p className="text-sm text-slate-600">Review the listing’s eligibility before approving it. Preview the publication action to continue.</p>}

@@ -39,7 +39,7 @@ export function Modal({ isOpen, onClose, title, description, children, footer, c
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
       <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onClick={onClose} />
       
-      <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} className={cn("relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto flex flex-col max-h-[90vh] overflow-hidden", className)}>
+      <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} className={cn("relative bg-white text-slate-900 rounded-xl shadow-xl w-full max-w-lg mx-auto flex flex-col max-h-[90vh] overflow-hidden", className)}>
         <div className="flex items-start justify-between px-6 py-4 border-b border-slate-100">
           <div>
             <h2 id={titleId} className="text-lg font-semibold text-slate-900">{title}</h2>

@@ -196,6 +196,11 @@ export default function ReviewListingPage() {
           <ReviewActionModal key={reviewRequest?.decisionId}
             listingName={business.name}
             errorMessage={actionError}
+            onRequestRevision={canReviewListing(business.status, 'REVISION_REQUESTED') ? () => {
+              if (busy.current) return;
+              setActionType('REVISION');
+              setActionError('');
+            } : undefined}
             onReload={() => {
               setModalOpen(false);
               void getBusinessForReview(id).then((updated) => { setBusiness(updated); setActionError(''); }).catch(() => setActionError('Unable to refresh the listing. Please reload this page.'));
